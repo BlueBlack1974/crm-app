@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}E-posta Ayarları - CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">E-posta Ayarları</h1>
+        {% if is_admin %}
+        <div class="mt-2">
+            <label for="firma_secimi" class="form-label">Firma Seçin:</label>
+            <select id="firma_secimi" class="form-select" style="width: auto; display: inline-block;" onchange="changeFirma()">
+                {% for f in tum_firmalar %}
+                <option value="{{ f.FirmaID }}" {{ 'selected' if f.FirmaID == selected_firma_id else '' }}>
+                    {{ f.FirmaAdi }} ({{ f.FirmaKodu }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">
+            <i class="fas fa-building me-1"></i>{{ firma.FirmaAdi }} ({{ firma.FirmaKodu }})
+        </p>
+        {% endif %}
+    </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('ayarlar') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Geri
+        </a>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-envelope me-2"></i>SMTP Ayarları
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if email_ayar %}
+                    <form method="POST" action="{{ url_for('ayarlar_email_guncelle', ayar_id=email_ayar.EmailAyarID) }}">
+                        {% if is_admin %}
+                        <input type="hidden" name="firma_id" value="{{ selected_firma_id }}">
+                        {% endif %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="smtp_sunucu" class="form-label">SMTP Sunucu</label>
+                                    <input type="text" class="form-control" id="smtp_sunucu" name="smtp_sunucu" 
+                                           value="{{ email_ayar.SMTP_Sunucu }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="smtp_port" class="form-label">SMTP Port</label>
+                                    <input type="number" class="form-control" id="smtp_port" name="smtp_port" 
+                                           value="{{ email_ayar.SMTP_Port }}" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="kullanici_adi" class="form-label">Kullanıcı Adı</label>
+                                    <input type="text" class="form-control" id="kullanici_adi" name="kullanici_adi" 
+                                           value="{{ email_ayar.KullaniciAdi }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="sifre" class="form-label">Şifre</label>
+                                    <input type="password" class="form-control" id="sifre" name="sifre" 
+                                           value="{{ email_ayar.Sifre }}" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="gonderen_adi" class="form-label">Varsayılan Gönderen Adı</label>
+                                    <input type="text" class="form-control" id="gonderen_adi" name="gonderen_adi" 
+                                           value="{{ email_ayar.VarsayilanGonderenAdi or '' }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="gonderen_email" class="form-label">Varsayılan Gönderen E-posta</label>
+                                    <input type="email" class="form-control" id="gonderen_email" name="gonderen_email" 
+                                           value="{{ email_ayar.VarsayilanGonderenEmail or '' }}">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="ssl_kullan" name="ssl_kullan" 
+                                       {{ 'checked' if email_ayar.SSL_Kullan else '' }}>
+                                <label class="form-check-label" for="ssl_kullan">
+                                    SSL/TLS Kullan
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="aktif" name="aktif" 
+                                       {{ 'checked' if email_ayar.Aktif else '' }}>
+                                <label class="form-check-label" for="aktif">
+                                    Aktif
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Güncelle
+                        </button>
+                        <a href="{{ url_for('ayarlar_email_sil', ayar_id=email_ayar.EmailAyarID) }}" 
+                           class="btn btn-danger ms-2" 
+                           onclick="return confirm('E-posta ayarlarını silmek istediğinizden emin misiniz?')">
+                            <i class="fas fa-trash me-1"></i>Sil
+                        </a>
+                    </form>
+                {% else %}
+                    <form method="POST" action="{{ url_for('ayarlar_email_ekle') }}">
+                        {% if is_admin %}
+                        <input type="hidden" name="firma_id" value="{{ selected_firma_id }}">
+                        {% endif %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="smtp_sunucu" class="form-label">SMTP Sunucu</label>
+                                    <input type="text" class="form-control" id="smtp_sunucu" name="smtp_sunucu" 
+                                           placeholder="smtp.gmail.com" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="smtp_port" class="form-label">SMTP Port</label>
+                                    <input type="number" class="form-control" id="smtp_port" name="smtp_port" 
+                                           placeholder="587" value="587" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="kullanici_adi" class="form-label">Kullanıcı Adı</label>
+                                    <input type="text" class="form-control" id="kullanici_adi" name="kullanici_adi" 
+                                           placeholder="ornek@gmail.com" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="sifre" class="form-label">Şifre</label>
+                                    <input type="password" class="form-control" id="sifre" name="sifre" 
+                                           placeholder="Uygulama şifresi" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="gonderen_adi" class="form-label">Varsayılan Gönderen Adı</label>
+                                    <input type="text" class="form-control" id="gonderen_adi" name="gonderen_adi" 
+                                           placeholder="Firma Adı">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="gonderen_email" class="form-label">Varsayılan Gönderen E-posta</label>
+                                    <input type="email" class="form-control" id="gonderen_email" name="gonderen_email" 
+                                           placeholder="noreply@firma.com">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="ssl_kullan" name="ssl_kullan" checked>
+                                <label class="form-check-label" for="ssl_kullan">
+                                    SSL/TLS Kullan
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="aktif" name="aktif" checked>
+                                <label class="form-check-label" for="aktif">
+                                    Aktif
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-plus me-1"></i>E-posta Ayarı Ekle
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Yardım
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6>Gmail için:</h6>
+                <ul class="small">
+                    <li>SMTP Sunucu: smtp.gmail.com</li>
+                    <li>Port: 587 (TLS) veya 465 (SSL)</li>
+                    <li>2 faktörlü doğrulama aktif olmalı</li>
+                    <li>Uygulama şifresi kullanın</li>
+                </ul>
+                
+                <h6>Outlook için:</h6>
+                <ul class="small">
+                    <li>SMTP Sunucu: smtp-mail.outlook.com</li>
+                    <li>Port: 587</li>
+                    <li>SSL/TLS kullanın</li>
+                </ul>
+                
+                <h6>Yahoo için:</h6>
+                <ul class="small">
+                    <li>SMTP Sunucu: smtp.mail.yahoo.com</li>
+                    <li>Port: 587 veya 465</li>
+                    <li>Uygulama şifresi gerekli</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if is_admin %}
+<script>
+function changeFirma() {
+    const firmaId = document.getElementById('firma_secimi').value;
+    window.location.href = "{{ url_for('ayarlar_email') }}?firma_id=" + firmaId;
+}
+</script>
+{% endif %}
+{% endblock %}

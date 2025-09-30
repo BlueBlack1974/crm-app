@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Reports') }} - CRM{% endblock %}
+
+{% block extra_css %}
+<style>
+.card { box-shadow: 0 2px 4px rgba(0,0,0,.06); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">{{ _('Reports') }}</h1>
+</div>
+
+<form class="row g-3 mb-3" method="get">
+  <div class="col-auto">
+    <label class="form-label">{{ _('Start Date') }}</label>
+    <input type="date" class="form-control" name="baslangic" value="{{ baslangic }}">
+  </div>
+  <div class="col-auto">
+    <label class="form-label">{{ _('End Date') }}</label>
+    <input type="date" class="form-control" name="bitis" value="{{ bitis }}">
+  </div>
+  <div class="col-auto align-self-end">
+    <button class="btn btn-primary" type="submit">{{ _('Apply') }}</button>
+  </div>
+</form>
+
+<div class="row g-3">
+  <div class="col-md-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="text-muted">{{ _('Total Appointments') }}</div>
+        <div id="toplam" class="display-6">-</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-9">
+    <div class="card">
+      <div class="card-body">
+        <canvas id="saatChart" height="80"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <h6>{{ _('By Status') }}</h6>
+        <canvas id="durumChart" height="120"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <h6>{{ _('By Reference') }}</h6>
+        <canvas id="refChart" height="120"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+async function loadReport() {
+  const params = new URLSearchParams(window.location.search);
+  const res = await fetch('/api/raporlar/ozet?' + params.toString());
+  const data = await res.json();
+  if (!data.success) { alert('{{ _("Report could not be loaded") }}'); return; }
+
+  document.getElementById('toplam').textContent = data.toplam;
+
+  // Saat grafiği
+  new Chart(document.getElementById('saatChart'), {
+    type: 'line',
+    data: { labels: data.saatler.labels, datasets: [{ label: '{{ _('By Hours') }}', data: data.saatler.values, borderColor: '#0d6efd', fill: false }]},
+    options: { scales: { y: { beginAtZero: true }}}
+  });
+
+  // Durum grafiği
+  const durumLabels = Object.keys(data.durumlar);
+  const durumValues = Object.values(data.durumlar);
+  new Chart(document.getElementById('durumChart'), {
+    type: 'doughnut',
+    data: { labels: durumLabels, datasets: [{ data: durumValues, backgroundColor: ['#ffc107','#198754','#dc3545','#0dcaf0','#6c757d'] }]}
+  });
+
+  // Referans grafiği
+  const refLabels = Object.keys(data.referanslar);
+  const refValues = Object.values(data.referanslar);
+  new Chart(document.getElementById('refChart'), {
+    type: 'bar',
+    data: { labels: refLabels, datasets: [{ label: '{{ _('Count') }}', data: refValues, backgroundColor: '#20c997' }]},
+    options: { scales: { y: { beginAtZero: true }}}
+  });
+}
+loadReport();
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+

@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+
+{% block title %}Randevu Defteri Ayarları - CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Randevu Defteri Ayarları</h1>
+    <a href="{{ url_for('ayarlar') }}" class="btn btn-outline-secondary"><i class="fas fa-gear me-1"></i>Ayarlar</a>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header">Yeni / Düzenle</div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="ayar_id" id="ayar_id">
+                    <div class="mb-3">
+                        <label class="form-label">Defter Adı</label>
+                        <input type="text" name="defter_adi" class="form-control" value="Varsayilan Defter">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Firma *</label>
+                        <select name="firma_id" class="form-select" required>
+                            <option value="">Seçiniz</option>
+                            {% for f in firmalar %}
+                            <option value="{{ f.FirmaID }}">{{ f.FirmaAdi }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Çalışma Günleri</label>
+                        <div class="row g-2">
+                            {% set gunler = [
+                                ('1','Pazartesi'),('2','Salı'),('3','Çarşamba'),('4','Perşembe'),('5','Cuma'),('6','Cumartesi'),('7','Pazar')
+                            ] %}
+                            {% for val, ad in gunler %}
+                            <div class="col-6 col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="{{ val }}" name="calisma_gunleri" id="g{{ val }}" {% if val in ['1','2','3','4','5'] %}checked{% endif %}>
+                                    <label class="form-check-label" for="g{{ val }}">{{ ad }}</label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Başlangıç Saati</label>
+                                <input type="time" name="baslangic" class="form-control" value="09:00">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Bitiş Saati</label>
+                                <input type="time" name="bitis" class="form-control" value="18:00">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Slot (dk)</label>
+                                <input type="number" min="5" step="5" name="slot" class="form-control" value="30">
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Saat Kapatma (Blok) - Kaydet ile birlikte gönderilir -->
+                    <hr class="my-4">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">Saat Kapatma (Blok)</h6>
+                            <small class="text-muted" id="blokInfoHelp">Bu alanı doldurursanız blok, Kaydet ile birlikte eklenir.</small>
+                        </div>
+                        <div class="row g-2" id="inlineBlokForm">
+                            <input type="hidden" name="blok_defter_id" id="blok_defter_id_hidden">
+                            <div class="col-md-4">
+                                <label class="form-label">Başlangıç Tarihi</label>
+                                <input type="date" name="blok_tarih1" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Bitiş Tarihi</label>
+                                <input type="date" name="blok_tarih2" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Saat Başlangıç</label>
+                                <input type="time" name="blok_saat1" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Saat Bitiş</label>
+                                <input type="time" name="blok_saat2" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Açıklama</label>
+                                <input type="text" name="blok_aciklama" class="form-control" placeholder="Örn. öğle arası, etkinlik vb.">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-end mt-3">
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Kaydet</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header">Kayıtlı Ayarlar</div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Defter</th>
+                                <th>Firma</th>
+                                <th>Günler</th>
+                                <th>Saat</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for a in ayarlar_list %}
+                            <tr>
+                                <td>{{ a.DefterAdi }}</td>
+                                <td>{{ a.firma.FirmaAdi }}</td>
+                                <td>{{ a.CalismaGunleri }}</td>
+                                <td>{{ a.BaslangicSaati }} - {{ a.BitisSaati }}</td>
+                                <td class="text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-primary"
+                                        data-defter-id="{{ a.AyarID }}"
+                                        data-defter-adi="{{ a.DefterAdi }}"
+                                        data-defter-gunler="{{ a.CalismaGunleri }}"
+                                        data-defter-bas="{{ a.BaslangicSaati }}"
+                                        data-defter-bit="{{ a.BitisSaati }}"
+                                        data-defter-slot="{{ a.SlotDakika }}"
+                                        data-defter-firma="{{ a.FirmaID }}"
+                                        onclick="editDefterFromEl(this)">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <form method="POST" action="{{ url_for('ayarlar_defter_pasiflestir', ayar_id=a.AyarID) }}" style="display:inline">
+                                        <button type="submit" class="btn btn-sm {{ 'btn-outline-secondary' if a.Aktif else 'btn-outline-success' }}">
+                                            {% if a.Aktif %}<i class="fas fa-ban"></i>{% else %}<i class="fas fa-rotate"></i>{% endif %}
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% if bloklar %}
+        <div class="card shadow mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Mevcut Bloklar</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Defter</th>
+                                <th>Tarih</th>
+                                <th>Saat</th>
+                                <th>Açıklama</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in bloklar %}
+                            <tr>
+                                <td>{{ b.defter.DefterAdi if b.DefterID else 'Tümü' }}</td>
+                                <td>{{ b.BaslangicTarih }}{% if b.BitisTarih %} - {{ b.BitisTarih }}{% endif %}</td>
+                                <td>{% if b.SaatBaslangic and b.SaatBitis %}{{ b.SaatBaslangic }} - {{ b.SaatBitis }}{% else %}Tüm Gün{% endif %}</td>
+                                <td>{{ b.Aciklama or '-' }}</td>
+                                <td class="text-end">
+                                    <form method="POST" action="{{ url_for('ayarlar_defter_blok_sil', blok_id=b.BlokID) }}" style="display:inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Müşteri Kategorileri Yönetimi -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Müşteri Kategorileri</h5>
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#kategoriModal">
+                    <i class="fas fa-plus me-1"></i>Yeni Kategori
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Kategori Adı</th>
+                                <th>Renk</th>
+                                <th>Açıklama</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for kategori in kategoriler %}
+                            <tr>
+                                <td>{{ kategori.KategoriAdi }}</td>
+                                <td>
+                                    <span class="badge" style="background-color: {{ kategori.Renk }}; color: white">
+                                        {{ kategori.Renk }}
+                                    </span>
+                                </td>
+                                <td>{{ kategori.Aciklama or '-' }}</td>
+                                <td>
+                                    {% if kategori.Aktif %}
+                                        <span class="badge bg-success">Aktif</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Pasif</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-primary"
+                                        data-kat-id="{{ kategori.KategoriID }}"
+                                        data-kat-adi="{{ kategori.KategoriAdi }}"
+                                        data-kat-renk="{{ kategori.Renk }}"
+                                        data-kat-aciklama="{{ kategori.Aciklama or '' }}"
+                                        data-kat-aktif="{{ 1 if kategori.Aktif else 0 }}"
+                                        onclick="editKategoriFromEl(this)">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteKategori({{ kategori.KategoriID }})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Kategori Modal -->
+<div class="modal fade" id="kategoriModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="kategoriModalTitle">Yeni Kategori</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="kategoriForm" method="POST" action="{{ url_for('ayarlar_kategori_ekle') }}">
+                <div class="modal-body">
+                    <input type="hidden" id="kategori_id" name="kategori_id">
+                    <div class="mb-3">
+                        <label for="kategori_adi" class="form-label">Kategori Adı *</label>
+                        <input type="text" class="form-control" id="kategori_adi" name="kategori_adi" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="kategori_renk" class="form-label">Renk</label>
+                        <div class="input-group">
+                            <input type="color" class="form-control form-control-color" id="kategori_renk" name="kategori_renk" value="#007bff">
+                            <input type="text" class="form-control" id="kategori_renk_text" name="kategori_renk_text" value="#007bff" readonly>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="kategori_aciklama" class="form-label">Açıklama</label>
+                        <textarea class="form-control" id="kategori_aciklama" name="kategori_aciklama" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="kategori_aktif" name="kategori_aktif" checked>
+                            <label class="form-check-label" for="kategori_aktif">
+                                Aktif
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function editDefterFromEl(el){
+    const obj = {
+        AyarID: el.getAttribute('data-defter-id'),
+        DefterAdi: el.getAttribute('data-defter-adi'),
+        CalismaGunleri: el.getAttribute('data-defter-gunler'),
+        BaslangicSaati: el.getAttribute('data-defter-bas'),
+        BitisSaati: el.getAttribute('data-defter-bit'),
+        SlotDakika: el.getAttribute('data-defter-slot'),
+        FirmaID: el.getAttribute('data-defter-firma'),
+    };
+    return editDefter(obj);
+}
+function editDefter(obj){
+    document.getElementById('ayar_id').value = obj.AyarID;
+    document.querySelector('input[name="defter_adi"]').value = obj.DefterAdi;
+    document.querySelector('select[name="firma_id"]').value = obj.FirmaID;
+    // günler checkbox
+    const vals = (obj.CalismaGunleri||'').split(',');
+    ['1','2','3','4','5','6','7'].forEach(v=>{
+        const el = document.getElementById('g'+v);
+        if (el) el.checked = vals.includes(v);
+    });
+    document.querySelector('input[name="baslangic"]').value = obj.BaslangicSaati;
+    document.querySelector('input[name="bitis"]').value = obj.BitisSaati;
+    document.querySelector('input[name="slot"]').value = obj.SlotDakika;
+    window.scrollTo({top:0, behavior:'smooth'});
+}
+// Blok alanı: Kaydet ile birlikte gönderilecek; gizli defter id senkronizasyonu
+document.addEventListener('DOMContentLoaded', function() {
+    const ayarIdInput = document.getElementById('ayar_id');
+    const blokHidden = document.getElementById('blok_defter_id_hidden');
+    const help = document.getElementById('blokInfoHelp');
+    function syncBlokDefter() {
+        const curId = ayarIdInput.value;
+        if (curId) {
+            if (blokHidden) blokHidden.value = curId;
+            if (help) help.textContent = 'Bu alanı doldurursanız blok, Kaydet ile birlikte eklenir.';
+        } else {
+            if (blokHidden) blokHidden.value = '';
+            if (help) help.textContent = 'Önce defteri kaydedin, sonra blok alanını doldurun.';
+        }
+    }
+    syncBlokDefter();
+    ayarIdInput.addEventListener('change', syncBlokDefter);
+});
+// Renk seçici ile text input'u senkronize et
+document.getElementById('kategori_renk').addEventListener('input', function() {
+    document.getElementById('kategori_renk_text').value = this.value;
+});
+
+// Kategori düzenleme
+function editKategoriFromEl(el){
+    const obj = {
+        KategoriID: el.getAttribute('data-kat-id'),
+        KategoriAdi: el.getAttribute('data-kat-adi'),
+        Renk: el.getAttribute('data-kat-renk'),
+        Aciklama: el.getAttribute('data-kat-aciklama'),
+        Aktif: el.getAttribute('data-kat-aktif') === '1',
+    };
+    return editKategori(obj);
+}
+function editKategori(obj) {
+    document.getElementById('kategoriModalTitle').textContent = 'Kategori Düzenle';
+    document.getElementById('kategori_id').value = obj.KategoriID;
+    document.getElementById('kategori_adi').value = obj.KategoriAdi;
+    document.getElementById('kategori_renk').value = obj.Renk;
+    document.getElementById('kategori_renk_text').value = obj.Renk;
+    document.getElementById('kategori_aciklama').value = obj.Aciklama;
+    document.getElementById('kategori_aktif').checked = !!obj.Aktif;
+    document.getElementById('kategoriForm').action = "{{ url_for('ayarlar_kategori_guncelle') }}";
+    var modal = new bootstrap.Modal(document.getElementById('kategoriModal'));
+    modal.show();
+}
+
+// Kategori silme
+function deleteKategori(id) {
+    if (confirm('Bu kategoriyi silmek istediğinizden emin misiniz?')) {
+        window.location.href = "{{ url_for('ayarlar_kategori_sil') }}?id=" + id;
+    }
+}
+
+// Modal açıldığında formu temizle
+document.getElementById('kategoriModal').addEventListener('show.bs.modal', function() {
+    if (!document.getElementById('kategori_id').value) {
+        document.getElementById('kategoriModalTitle').textContent = 'Yeni Kategori';
+        document.getElementById('kategoriForm').reset();
+        document.getElementById('kategori_renk').value = '#007bff';
+        document.getElementById('kategori_renk_text').value = '#007bff';
+        document.getElementById('kategori_aktif').checked = true;
+        document.getElementById('kategoriForm').action = "{{ url_for('ayarlar_kategori_ekle') }}";
+    }
+});
+</script>
+{% endblock %}
+
+
+
+
+
+

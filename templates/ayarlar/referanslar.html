@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Randevu Referansları - CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Randevu Referansları</h1>
+    <a href="{{ url_for('ayarlar') }}" class="btn btn-outline-secondary"><i class="fas fa-gear me-1"></i>Ayarlar</a>
+</div>
+
+<div class="row">
+    <div class="col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header">Yeni Referans Ekle</div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Firma *</label>
+                        <select name="firma_id" class="form-select" required>
+                            <option value="">Seçiniz</option>
+                            {% for f in firmalar %}
+                            <option value="{{ f.FirmaID }}">{{ f.FirmaAdi }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Referans Adı *</label>
+                        <input type="text" name="ad" class="form-control" required>
+                    </div>
+                    <div class="text-end">
+                        <button class="btn btn-primary"><i class="fas fa-save me-1"></i>Kaydet</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header">Kayıtlı Referanslar</div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Firma</th>
+                                <th>Ad</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for r in referanslar %}
+                            <tr>
+                                <td>{{ r.ReferansID }}</td>
+                                <td>{{ r.firma.FirmaAdi }}</td>
+                                <td>{{ r.Ad }}</td>
+                                <td>
+                                    <form action="{{ url_for('ayarlar_referans_sil', ref_id=r.ReferansID) }}" method="POST" onsubmit="return confirm('Silmek istediğinize emin misiniz?')">
+                                        <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

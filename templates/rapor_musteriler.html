@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Customer Report') }} - CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ _('Customer Report') }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('rapor_musteriler', baslangic=filtreler.baslangic, bitis=filtreler.bitis, kategori_id=filtreler.kategori_id, aktif=filtreler.aktif, iletisim_var=filtreler.iletisim_var, format='csv') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-file-csv me-1"></i> {{ _('Export CSV') }}
+        </a>
+    </div>
+    
+    
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="text-muted">{{ _('Total Customers') }}</div>
+                <div class="h4 mb-0">{{ toplam_musteri }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="text-muted">{{ _('Active Customers') }}</div>
+                <div class="h4 mb-0">{{ aktif_musteri }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="text-muted">{{ _('New Customers') }}</div>
+                <div class="h4 mb-0">{{ yeni_musteri }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">{{ _('Filters') }}</h6>
+    </div>
+    <div class="card-body">
+        <form class="row g-3" method="GET">
+            <div class="col-md-3">
+                <label class="form-label">{{ _('Start Date') }}</label>
+                <input type="date" class="form-control" name="baslangic" value="{{ filtreler.baslangic }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">{{ _('End Date') }}</label>
+                <input type="date" class="form-control" name="bitis" value="{{ filtreler.bitis }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">{{ _('Category') }}</label>
+                <select class="form-select" name="kategori_id">
+                    <option value="">{{ _('All Categories') }}</option>
+                    {% for k in kategoriler %}
+                    <option value="{{ k.KategoriID }}" {% if filtreler.kategori_id == k.KategoriID %}selected{% endif %}>{{ k.KategoriAdi }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">{{ _('Status') }}</label>
+                <select class="form-select" name="aktif">
+                    <option value="">{{ _('All') }}</option>
+                    <option value="1" {% if filtreler.aktif == '1' %}selected{% endif %}>{{ _('Active') }}</option>
+                    <option value="0" {% if filtreler.aktif == '0' %}selected{% endif %}>{{ _('Inactive') }}</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">{{ _('Contact Information') }}</label>
+                <select class="form-select" name="iletisim_var">
+                    <option value="">{{ _('Doesn\'t Matter') }}</option>
+                    <option value="telefon" {% if filtreler.iletisim_var == 'telefon' %}selected{% endif %}>{{ _('Has Phone') }}</option>
+                    <option value="email" {% if filtreler.iletisim_var == 'email' %}selected{% endif %}>{{ _('Has Email') }}</option>
+                    <option value="herikisi" {% if filtreler.iletisim_var == 'herikisi' %}selected{% endif %}>{{ _('Has Both') }}</option>
+                </select>
+            </div>
+            <div class="col-md-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter me-1"></i> {{ _('Apply') }}
+                </button>
+                <a href="{{ url_for('rapor_musteriler') }}" class="btn btn-outline-secondary ms-2">
+                    {{ _('Clear') }}
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Customer List') }}</h6>
+            </div>
+            <div class="card-body">
+                {% if rows %}
+                <div class="table-responsive">
+                    <table class="table table-bordered" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>{{ _('ID') }}</th>
+                                <th>{{ _('Full Name') }}</th>
+                                <th>{{ _('Phone') }}</th>
+                                <th>{{ _('Email') }}</th>
+                                <th>{{ _('Category') }}</th>
+                                <th>{{ _('Appointment Count') }}</th>
+                                <th>{{ _('Created') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in rows %}
+                            <tr>
+                                <td>{{ r.id }}</td>
+                                <td>{{ r.tam_ad }}</td>
+                                <td>{{ r.telefon or '-' }}</td>
+                                <td>{{ r.email or '-' }}</td>
+                                <td>{{ r.kategori or '-' }}</td>
+                                <td><span class="badge bg-info">{{ r.randevu_sayisi }}</span></td>
+                                <td>{{ r.olusturma.strftime('%d.%m.%Y %H:%M') if r.olusturma else '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-muted">{{ _('No records found.') }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Top 10 Customers with Most Appointments') }}</h6>
+            </div>
+            <div class="card-body">
+                {% if top_musteriler %}
+                <ol class="mb-0">
+                    {% for m, adet in top_musteriler %}
+                    <li class="mb-2 d-flex justify-content-between align-items-center">
+                        <span>{{ m.tam_adi }}</span>
+                        <span class="badge bg-primary">{{ adet }}</span>
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% else %}
+                <div class="text-muted">{{ _('No data found.') }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+ 
+{% endblock %}
+

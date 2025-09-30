@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Appointments') }} - CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ _('Appointments') }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <form class="d-flex gap-2" method="GET" id="filterForm">
+            <select class="form-select form-select-sm" name="referans_id" id="referansFilter">
+                <option value="">{{ _('All References') }}</option>
+                {% for ref in referanslar %}
+                <option value="{{ ref.ReferansID }}" {% if selected_referans_id == ref.ReferansID %}selected{% endif %}>{{ ref.Ad }}</option>
+                {% endfor %}
+            </select>
+            <select class="form-select form-select-sm" name="defter_id" id="defterFilter">
+                <option value="">{{ _('All Books') }}</option>
+                {% for defter in defterler %}
+                <option value="{{ defter.AyarID }}" {% if selected_defter_id == defter.AyarID %}selected{% endif %}>{{ defter.DefterAdi }}</option>
+                {% endfor %}
+            </select>
+            <a href="{{ url_for('randevu_ekle') }}" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus me-1"></i>
+                {{ _('New Appointment') }}
+            </a>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">{{ _('Appointment List') }}</h6>
+    </div>
+    <div class="card-body">
+        {% if selected_referans_id or selected_defter_id %}
+        <div class="alert alert-info mb-3">
+            <i class="fas fa-filter me-2"></i>
+            <strong>Filtreleme Aktif:</strong>
+            {% if selected_referans_id %}
+                {% for ref in referanslar %}
+                    {% if ref.ReferansID == selected_referans_id %}
+                        Referans: <span class="badge bg-primary">{{ ref.Ad }}</span>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+            {% if selected_defter_id %}
+                {% for defter in defterler %}
+                    {% if defter.AyarID == selected_defter_id %}
+                        Defter: <span class="badge bg-info">{{ defter.DefterAdi }}</span>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+            <a href="{{ url_for('randevular') }}" class="btn btn-sm btn-outline-secondary ms-2">
+                <i class="fas fa-times me-1"></i>
+                {{ _('Clear Filters') }}
+            </a>
+        </div>
+        {% endif %}
+        {% if randevular %}
+        <div class="table-responsive">
+            <table class="table table-bordered" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>{{ _('Reference') }}</th>
+                        <th>{{ _('Customer') }}</th>
+                        <th>{{ _('Phone') }}</th>
+                        <th>{{ _('Date') }}</th>
+                        <th>{{ _('Duration') }}</th>
+                        <th>{{ _('Book') }}</th>
+                        <th>{{ _('Status') }}</th>
+                        <th>{{ _('Created By') }}</th>
+                        <th>{{ _('Actions') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for randevu in randevular %}
+                    <tr>
+                        <td>{{ randevu.RandevuBaslik }}</td>
+                        <td>
+                            {% if randevu.musteri %}
+                                {{ randevu.musteri.tam_adi }}
+                            {% else %}
+                                {{ randevu.MusteriAdi or _('No Customer') }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if randevu.musteri %}
+                                {{ randevu.musteri.Telefon or '-' }}
+                            {% else %}
+                                {{ randevu.MusteriTelefon or '-' }}
+                            {% endif %}
+                        </td>
+                        <td>{{ randevu.RandevuTarihi.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td>{{ randevu.RandevuSuresi }} dk</td>
+                        <td>
+                            {% if randevu.defter %}
+                                <span class="badge bg-info">{{ randevu.defter.DefterAdi }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                {% if randevu.Durum == 'Beklemede' %}
+                                    <span class="badge bg-warning">{{ _('Pending') }}</span>
+                                {% elif randevu.Durum == 'Onaylandi' %}
+                                    <span class="badge bg-success">{{ _('Confirmed') }}</span>
+                                {% elif randevu.Durum == 'Iptal' %}
+                                    <span class="badge bg-danger">{{ _('Cancelled') }}</span>
+                                {% elif randevu.Durum == 'Tamamlandi' %}
+                                    <span class="badge bg-info">{{ _('Completed') }}</span>
+                                {% endif %}
+                                <form action="{{ url_for('randevu_durum', randevu_id=randevu.RandevuID) }}" method="POST" class="m-0">
+                                    <select name="durum" class="form-select form-select-sm" onchange="this.form.submit()">
+                                        <option value="Beklemede" {% if randevu.Durum == 'Beklemede' %}selected{% endif %}>{{ _('Pending') }}</option>
+                                        <option value="Onaylandi" {% if randevu.Durum == 'Onaylandi' %}selected{% endif %}>{{ _('Confirmed') }}</option>
+                                        <option value="Iptal" {% if randevu.Durum == 'Iptal' %}selected{% endif %}>{{ _('Cancelled') }}</option>
+                                        <option value="Tamamlandi" {% if randevu.Durum == 'Tamamlandi' %}selected{% endif %}>{{ _('Completed') }}</option>
+                                    </select>
+                                </form>
+                            </div>
+                        </td>
+                        <td>{{ randevu.olusturan_kullanici.Ad }} {{ randevu.olusturan_kullanici.Soyad }}</td>
+                        <td>
+                            <a href="{{ url_for('randevu_detay', randevu_id=randevu.RandevuID) }}" class="btn btn-sm btn-primary" title="{{ _('View') }}">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if session.is_admin or randevu.OlusturanKullaniciID == session.user_id %}
+                            <a href="{{ url_for('randevu_duzenle', randevu_id=randevu.RandevuID) }}" class="btn btn-sm btn-warning" title="{{ _('Edit') }}">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form action="{{ url_for('randevu_sil', randevu_id=randevu.RandevuID) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ _('Are you sure you want to delete this appointment?') }}')">
+                                <button class="btn btn-sm btn-danger" title="{{ _('Delete') }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">{{ _('No appointments found') }}</h5>
+            <p class="text-muted">{{ _('Use the button above to create your first appointment.') }}</p>
+            <a href="{{ url_for('randevu_ekle') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>
+                {{ _('Create New Appointment') }}
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const referansFilter = document.getElementById('referansFilter');
+    const defterFilter = document.getElementById('defterFilter');
+    const filterForm = document.getElementById('filterForm');
+    
+    // Filtre değişikliklerinde formu otomatik submit et
+    if (referansFilter) {
+        referansFilter.addEventListener('change', function() {
+            filterForm.submit();
+        });
+    }
+    
+    if (defterFilter) {
+        defterFilter.addEventListener('change', function() {
+            filterForm.submit();
+        });
+    }
+});
+</script>
+{% endblock %}
+
+
+
+

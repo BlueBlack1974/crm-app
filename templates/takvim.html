@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Calendar') }} - CRM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .calendar-container {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .calendar-header {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1px;
+        background: #dee2e6;
+    }
+    
+    .calendar-day {
+        background: white;
+        min-height: 120px;
+        padding: 8px;
+        position: relative;
+    }
+    
+    .calendar-day.other-month {
+        background: #f8f9fa;
+        color: #6c757d;
+    }
+    
+    .calendar-day.today {
+        background: #e3f2fd;
+    }
+    
+    .calendar-day-header {
+        background: #343a40;
+        color: white;
+        padding: 0.5rem;
+        text-align: center;
+        font-weight: bold;
+    }
+    
+    .appointment-item {
+        background: #007bff;
+        color: white;
+        padding: 2px 6px;
+        margin: 1px 0;
+        border-radius: 3px;
+        font-size: 0.75rem;
+        cursor: move;
+        position: relative;
+    }
+    
+    .appointment-item.dragging {
+        opacity: 0.5;
+    }
+    
+    .appointment-item.beklemede { background: #ffc107; color: #000; }
+    .appointment-item.onaylandi { background: #28a745; }
+    .appointment-item.iptal { background: #dc3545; }
+    .appointment-item.tamamlandi { background: #17a2b8; }
+    
+    .week-view {
+        display: grid;
+        grid-template-columns: 80px repeat(7, 1fr);
+        gap: 1px;
+        background: #dee2e6;
+        overflow-x: auto;
+    }
+    
+    .time-slot {
+        background: white;
+        padding: 8px;
+        text-align: center;
+        font-size: 0.8rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .week-day {
+        background: white;
+        min-height: 600px;
+        position: relative;
+    }
+    
+    .week-day-header {
+        background: #343a40;
+        color: white;
+        padding: 0.5rem;
+        text-align: center;
+        font-weight: bold;
+    }
+    
+    .appointment-block {
+        position: absolute;
+        left: 2px;
+        right: 2px;
+        border-radius: 3px;
+        padding: 2px 4px;
+        font-size: 0.7rem;
+        cursor: move;
+        border: 1px solid rgba(255,255,255,0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ _('Calendar') }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('randevu_ekle') }}" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus me-1"></i>
+                {{ _('New Appointment') }}
+            </a>
+        </div>
+        <div class="btn-group me-2">
+            <a href="{{ url_for('takvim', view='month', year=year, month=month) }}" 
+               class="btn btn-sm {% if view_type == 'month' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                {{ _('Monthly') }}
+            </a>
+            <a href="{{ url_for('takvim', view='week', year=year, month=month) }}" 
+               class="btn btn-sm {% if view_type == 'week' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                {{ _('Weekly') }}
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="calendar-container">
+    <div class="calendar-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-0">
+                    {% if view_type == 'month' %}
+                        {{ ['', _('January'), _('February'), _('March'), _('April'), _('May'), _('June'), 
+                            _('July'), _('August'), _('September'), _('October'), _('November'), _('December')][month] }} {{ year }}
+                    {% else %}
+                        {{ _('Weekly View') }}
+                    {% endif %}
+                </h4>
+            </div>
+            <div class="btn-group">
+                <a href="{{ url_for('takvim', view=view_type, year=year-1 if view_type == 'month' else year, month=month) }}" 
+                   class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                <a href="{{ url_for('takvim', view=view_type, year=year-1 if view_type == 'month' else year, month=month-1 if view_type == 'month' else month) }}" 
+                   class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                <a href="{{ url_for('takvim', view=view_type) }}" class="btn btn-outline-secondary btn-sm">
+                    {{ _('Today') }}
+                </a>
+                <a href="{{ url_for('takvim', view=view_type, year=year+1 if view_type == 'month' else year, month=month+1 if view_type == 'month' else month) }}" 
+                   class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+                <a href="{{ url_for('takvim', view=view_type, year=year+1 if view_type == 'month' else year, month=month) }}" 
+                   class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if view_type == 'month' %}
+    <!-- Aylık Görünüm -->
+    <div class="calendar-grid">
+        <div class="calendar-day-header">{{ _('Mon') }}</div>
+        <div class="calendar-day-header">{{ _('Tue') }}</div>
+        <div class="calendar-day-header">{{ _('Wed') }}</div>
+        <div class="calendar-day-header">{{ _('Thu') }}</div>
+        <div class="calendar-day-header">{{ _('Fri') }}</div>
+        <div class="calendar-day-header">{{ _('Sat') }}</div>
+        <div class="calendar-day-header">{{ _('Sun') }}</div>
+        
+        {% set month_start = start_date %}
+        {% set month_end = end_date %}
+        {% set first_day = month_start.weekday() %}
+        {% set days_in_month = (month_end - month_start).days %}
+        
+        {% for i in range(first_day) %}
+            <div class="calendar-day other-month">
+                {{ (month_start - timedelta(days=first_day-i)).day }}
+            </div>
+        {% endfor %}
+        
+        {% for day in range(1, days_in_month + 1) %}
+            {% set current_date = datetime(year, month, day) %}
+            {% set is_today = current_date.date() == datetime.now().date() %}
+            <div class="calendar-day {% if is_today %}today{% endif %}" data-date="{{ current_date.strftime('%Y-%m-%d') }}">
+                <div class="fw-bold mb-1">{{ day }}</div>
+                {% for randevu in randevular %}
+                    {% if randevu.RandevuTarihi.date() == current_date.date() %}
+                        <div class="appointment-item {{ randevu.Durum.lower() }}" 
+                             draggable="true"
+                             data-randevu-id="{{ randevu.RandevuID }}"
+                             data-start-time="{{ randevu.RandevuTarihi.strftime('%H:%M') }}"
+                             data-randevu-suresi="{{ randevu.RandevuSuresi or 60 }}"
+                             title="{{ randevu.RandevuBaslik }} - {{ randevu.MusteriAdi }} ({{ _('Drag to move') }})"
+                             style="cursor: move;">
+                            {{ randevu.RandevuTarihi.strftime('%H:%M') }} {{ randevu.RandevuBaslik }}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+    
+    {% else %}
+    <!-- Haftalık Görünüm -->
+    <div class="week-view">
+        <div></div>
+        <div class="week-day-header">{{ _('Mon') }}</div>
+        <div class="week-day-header">{{ _('Tue') }}</div>
+        <div class="week-day-header">{{ _('Wed') }}</div>
+        <div class="week-day-header">{{ _('Thu') }}</div>
+        <div class="week-day-header">{{ _('Fri') }}</div>
+        <div class="week-day-header">{{ _('Sat') }}</div>
+        <div class="week-day-header">{{ _('Sun') }}</div>
+        
+        {% for hour in range(8, 20) %}
+            <div class="time-slot">{{ hour }}:00</div>
+            {% for day_offset in range(7) %}
+                {% set current_date = start_date + timedelta(days=day_offset) %}
+                <div class="week-day" data-date="{{ current_date.strftime('%Y-%m-%d') }}">
+                    {% for randevu in randevular %}
+                        {% if randevu.RandevuTarihi.date() == current_date.date() and randevu.RandevuTarihi.hour == hour %}
+                            {% set top_position = (randevu.RandevuTarihi.minute / 60) * 100 %}
+                            {% set height = ((randevu.RandevuSuresi or 60) / 60) * 100 %}
+                            <div class="appointment-block {{ randevu.Durum.lower() }}" 
+                                 draggable="true"
+                                 data-randevu-id="{{ randevu.RandevuID }}"
+                                 data-start-time="{{ randevu.RandevuTarihi.strftime('%H:%M') }}"
+                                 data-randevu-suresi="{{ randevu.RandevuSuresi or 60 }}"
+                                 style="top: {{ top_position }}%; height: {{ height }}%; cursor: move;"
+                                 title="{{ randevu.RandevuBaslik }} - {{ randevu.MusteriAdi }} ({{ _('Drag to move') }})">
+                                {{ randevu.RandevuTarihi.strftime('%H:%M') }} {{ randevu.RandevuBaslik }}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Durum Açıklaması -->
+<div class="mt-3">
+    <div class="d-flex gap-3">
+        <span><span class="badge bg-warning me-1">{{ _('Pending') }}</span> {{ _('New appointments') }}</span>
+        <span><span class="badge bg-success me-1">{{ _('Confirmed') }}</span> {{ _('Confirmed appointments') }}</span>
+        <span><span class="badge bg-danger me-1">{{ _('Cancelled') }}</span> {{ _('Cancelled appointments') }}</span>
+        <span><span class="badge bg-info me-1">{{ _('Completed') }}</span> {{ _('Completed appointments') }}</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let draggedElement = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Drag & Drop olayları
+    const appointmentItems = document.querySelectorAll('.appointment-item, .appointment-block');
+    
+    appointmentItems.forEach(item => {
+        item.addEventListener('dragstart', function(e) {
+            draggedElement = this;
+            this.style.opacity = '0.5';
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.outerHTML);
+        });
+        
+        item.addEventListener('dragend', function(e) {
+            this.style.opacity = '1';
+            draggedElement = null;
+        });
+    });
+    
+    // Drop alanları
+    const dropZones = document.querySelectorAll('.calendar-day, .week-day');
+    
+    dropZones.forEach(zone => {
+        zone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            this.style.backgroundColor = '#e3f2fd';
+        });
+        
+        zone.addEventListener('dragleave', function(e) {
+            this.style.backgroundColor = '';
+        });
+        
+        zone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.style.backgroundColor = '';
+            
+            if (!draggedElement) return;
+            
+            const randevuId = draggedElement.dataset.randevuId;
+            const targetDate = this.dataset.date;
+            const startTime = draggedElement.dataset.startTime;
+            
+            if (!randevuId || !targetDate) {
+                alert('{{ _("Invalid operation") }}');
+                return;
+            }
+            
+            // Yeni tarih oluştur
+            const newDateTime = targetDate + ' ' + startTime;
+            
+            // Onay iste
+            if (!confirm('{{ _("Are you sure you want to move the appointment to") }} ' + targetDate + '?')) {
+                return;
+            }
+            
+            // API'ye gönder
+            fetch('/api/randevu/tasi', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    randevu_id: parseInt(randevuId),
+                    yeni_tarih: newDateTime
+                })
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                if (data.success) {
+                    alert('{{ _("Appointment moved successfully!") }}');
+                    location.reload();
+                } else {
+                    alert('{{ _("Error") }}: ' + (data.message || '{{ _("Unknown error") }}'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('{{ _("An error occurred while moving the appointment") }}: ' + error.message);
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

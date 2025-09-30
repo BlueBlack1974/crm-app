@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Ayarlar - CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Ayarlar</h1>
+</div>
+
+<div class="row">
+    {% if session.is_admin %}
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-building me-2"></i>Firma Ayarları</h5>
+                <p class="card-text">Firmaları listeleyin, yeni firma ekleyin veya silin.</p>
+                <a href="{{ url_for('ayarlar_firmalar') }}" class="btn btn-primary">Firmalar</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-users me-2"></i>Kullanıcı Ayarları</h5>
+                <p class="card-text">Kullanıcıları yönetin, yeni kullanıcı ekleyin veya silin.</p>
+                <a href="{{ url_for('ayarlar_kullanicilar') }}" class="btn btn-primary">Kullanıcılar</a>
+            </div>
+        </div>
+    </div>
+    {% if session.is_admin %}
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-calendar-alt me-2"></i>Randevu Defteri</h5>
+                <p class="card-text">Çalışma günleri, saatleri ve slotları ayarlayın.</p>
+                <a href="{{ url_for('ayarlar_defter') }}" class="btn btn-primary">Defter Ayarları</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-tags me-2"></i>Randevu Referansları</h5>
+                <p class="card-text">Randevu başlığı yerine kullanılacak referansları yönetin.</p>
+                <a href="{{ url_for('ayarlar_referanslar') }}" class="btn btn-primary">Referanslar</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-cogs me-2"></i>Randevu İşlemleri</h5>
+                <p class="card-text">Randevularda kullanılacak işlemleri yönetin.</p>
+                <a href="{{ url_for('ayarlar_islemler') }}" class="btn btn-primary">İşlemler</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-envelope me-2"></i>E-posta Ayarları</h5>
+                <p class="card-text">SMTP ayarlarını yapılandırın ve e-posta gönderimini ayarlayın.</p>
+                <a href="{{ url_for('ayarlar_email') }}" class="btn btn-primary">E-posta Ayarları</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-sms me-2"></i>SMS Ayarları</h5>
+                <p class="card-text">SMS gönderim ayarlarını yapılandırın ve SMS firması seçin.</p>
+                <a href="{{ url_for('ayarlar_sms') }}" class="btn btn-primary">SMS Ayarları</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+

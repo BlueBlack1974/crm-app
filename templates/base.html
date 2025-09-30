@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CRM - Randevu Defteri{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background-color: #343a40;
+        }
+        .sidebar .nav-link {
+            color: #adb5bd;
+        }
+        .sidebar .nav-link:hover {
+            color: #fff;
+        }
+        .sidebar .nav-link.active {
+            color: #fff;
+            background-color: #495057;
+        }
+        .main-content {
+            margin-left: 0;
+        }
+        @media (min-width: 768px) {
+            .main-content {
+                margin-left: 250px;
+            }
+        }
+        /* Mobil iyilestirmeler */
+        @media (max-width: 767.98px) {
+            .container-fluid, .container { padding-left: 12px; padding-right: 12px; }
+            .calendar-grid { grid-template-columns: repeat(7, minmax(90px, 1fr)); overflow-x: auto; }
+            .week-view { overflow-x: auto; }
+            .calendar-day { min-width: 120px; }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if session.user_id %}
+    <!-- Mobil üst bar -->
+    <nav class="navbar navbar-dark bg-dark d-md-none">
+        <div class="container-fluid">
+            <button class="btn btn-outline-light" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileMenu" aria-controls="mobileMenu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <span class="navbar-brand mb-0 h1">CRM</span>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <nav class="sidebar d-none d-md-flex position-fixed flex-column p-3" style="width: 250px;">
+        <a href="{{ url_for('dashboard') }}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+            <i class="fas fa-calendar-alt me-2"></i>
+            <span class="fs-4">CRM</span>
+        </a>
+        <hr>
+        <ul class="nav nav-pills flex-column mb-auto">
+            <li class="nav-item">
+                <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <i class="fas fa-tachometer-alt me-2"></i>
+                    {{ _('Dashboard') }}
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('randevular') }}" class="nav-link {% if request.endpoint == 'randevular' %}active{% endif %}">
+                    <i class="fas fa-calendar me-2"></i>
+                    {{ _('Appointments') }}
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('randevu_ekle') }}" class="nav-link {% if request.endpoint == 'randevu_ekle' %}active{% endif %}">
+                    <i class="fas fa-plus me-2"></i>
+                    {{ _('New Appointment') }}
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('takvim') }}" class="nav-link {% if request.endpoint == 'takvim' %}active{% endif %}">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    {{ _('Calendar') }}
+                </a>
+            </li>
+            {% if session.raporlar_modulu %}
+            <li>
+                <a href="#raporlarMenu" data-bs-toggle="collapse" class="nav-link d-flex align-items-center {% if request.endpoint in ['raporlar','rapor_musteriler'] %}active{% endif %}">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    {{ _('Reports') }}
+                    <i class="fas fa-chevron-down ms-auto small"></i>
+                </a>
+                <div class="collapse {% if request.endpoint in ['raporlar','rapor_musteriler'] %}show{% endif %}" id="raporlarMenu">
+                    <ul class="nav flex-column ms-4 my-1">
+                        <li class="nav-item">
+                            <a href="{{ url_for('raporlar') }}" class="nav-link py-1 small {% if request.endpoint == 'raporlar' %}active{% endif %}">• {{ _('Appointment Report') }}</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ url_for('rapor_musteriler') }}" class="nav-link py-1 small {% if request.endpoint == 'rapor_musteriler' %}active{% endif %}">• {{ _('Customer Report') }}</a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            {% endif %}
+            {% if session.is_admin or session.ayarlar_modulu %}
+            <li>
+                <a href="{{ url_for('ayarlar') }}" class="nav-link {% if request.endpoint in ['ayarlar','ayarlar_firmalar','ayarlar_kullanicilar','ayarlar_defter'] %}active{% endif %}">
+                    <i class="fas fa-gear me-2"></i>
+                    {{ _('Settings') }}
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+        <hr>
+        
+        <!-- Dil Seçici - Kullanıcı adının üstünde -->
+        <div class="mb-3">
+            <div class="dropdown">
+                <a href="#" class="text-white text-decoration-none dropdown-toggle d-flex align-items-center" id="languageDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-globe me-2"></i>
+                    <span id="currentLanguage">{{ _('Language') }}</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="languageDropdown">
+                    <li><a class="dropdown-item" href="{{ url_for('set_language', language='tr') }}">🇹🇷 {{ _('Turkish') }}</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('set_language', language='en') }}">🇺🇸 {{ _('English') }}</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Kullanıcı bilgileri ve bildirimler -->
+        <div class="d-flex align-items-center justify-content-between">
+            <div class="dropstart me-3">
+                <a href="#" class="text-white text-decoration-none position-relative" id="notifBell" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-bell"></i>
+                    <span id="notifCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none;">0</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark text-small shadow p-0" aria-labelledby="notifBell" style="min-width: 320px; max-height: 400px; overflow:auto;">
+                    <li class="px-3 py-2 border-bottom"><strong>{{ _('Notifications') }}</strong></li>
+                    <div id="notifList"></div>
+                    <li class="text-center py-2"><a href="#" id="markAllRead" class="small text-muted">{{ _('Mark all as read') }}</a></li>
+                </ul>
+            </div>
+            <div class="dropdown">
+                <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-user-circle me-2"></i>
+                    <strong>{{ session.user_name }}</strong>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
+                    <li><a class="dropdown-item" href="#">{{ _('Profile') }}</a></li>
+                    <li><a class="dropdown-item" href="#">{{ _('Settings') }}</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{{ url_for('logout') }}">{{ _('Logout') }}</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Offcanvas Mobil Menü -->
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="mobileMenuLabel">Menü</h5>
+        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body p-0">
+        <div class="p-3 bg-dark text-white">
+            <i class="fas fa-user-circle me-2"></i>{{ session.user_name }}
+        </div>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item"><a class="text-decoration-none" href="{{ url_for('dashboard') }}">{{ _('Dashboard') }}</a></li>
+            <li class="list-group-item"><a class="text-decoration-none" href="{{ url_for('randevular') }}">{{ _('Appointments') }}</a></li>
+            <li class="list-group-item"><a class="text-decoration-none" href="{{ url_for('randevu_ekle') }}">{{ _('New Appointment') }}</a></li>
+            <li class="list-group-item"><a class="text-decoration-none" href="{{ url_for('takvim') }}">{{ _('Calendar') }}</a></li>
+            {% if session.raporlar_modulu %}
+            <li class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center">
+                    <a class="text-decoration-none" href="{{ url_for('raporlar') }}">{{ _('Reports') }}</a>
+                </div>
+                <div class="mt-2 ms-2 small">
+                    <div><a class="text-decoration-none" href="{{ url_for('raporlar') }}">• {{ _('Appointment Report') }}</a></div>
+                    <div><a class="text-decoration-none" href="{{ url_for('rapor_musteriler') }}">• {{ _('Customer Report') }}</a></div>
+                </div>
+            </li>
+            {% endif %}
+            {% if session.is_admin or session.ayarlar_modulu %}
+            <li class="list-group-item"><a class="text-decoration-none" href="{{ url_for('ayarlar') }}">{{ _('Settings') }}</a></li>
+            {% endif %}
+            <li class="list-group-item"><a class="text-decoration-none" href="{{ url_for('logout') }}">{{ _('Logout') }}</a></li>
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Main content -->
+    <main class="main-content">
+        {% if session.user_id %}
+        <div class="container-fluid py-4">
+        {% else %}
+        <div class="container py-4">
+        {% endif %}
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+    // Basit bildirim polling'i
+    async function fetchNotifications() {
+        try {
+            const res = await fetch('/api/bildirimler');
+            if (!res.ok) return;
+            const data = await res.json();
+            const list = document.getElementById('notifList');
+            const count = document.getElementById('notifCount');
+            if (!list || !count) return;
+            list.innerHTML = '';
+            data.items.forEach(b => {
+                const li = document.createElement('li');
+                li.className = 'px-3 py-2 border-bottom' + (b.okundu ? '' : ' bg-secondary bg-opacity-10');
+                li.innerHTML = `<div class="small text-muted">${b.tarih}</div><div>${b.metin}</div>`;
+                list.appendChild(li);
+            });
+            count.textContent = data.unread;
+            count.style.display = data.unread > 0 ? 'inline-block' : 'none';
+
+            // Tümünü okundu işaretle
+            const mark = document.getElementById('markAllRead');
+            if (mark) {
+                mark.onclick = async (e) => {
+                    e.preventDefault();
+                    const ids = data.items.filter(x => !x.okundu).map(x => x.id);
+                    if (ids.length === 0) return;
+                    await fetch('/api/bildirimler/okundu', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ids})});
+                    fetchNotifications();
+                };
+            }
+        } catch (e) {
+            console.warn('Bildirim alınamadı');
+        }
+    }
+    if ({{ 'true' if session.user_id else 'false' }}) {
+        fetchNotifications();
+        setInterval(fetchNotifications, 15000);
+    }
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+
+
