@@ -1532,7 +1532,7 @@ def logout():
         db.session.rollback()
     session.clear()
     flash('Başarıyla çıkış yaptınız!', 'success')
-    return redirect(url_for('login'))
+    return redirect(url_for('index'))
 
 @app.route('/dashboard')
 @login_required
