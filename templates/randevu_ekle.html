@@ -179,7 +179,7 @@
                                     islemSelect.innerHTML = '';
                                     const opt = document.createElement('option');
                                     opt.value = '';
-                                    opt.textContent = '{{ _('Select Operation') }}';
+                                    opt.textContent = gettext('Select Operation');
                                     islemSelect.appendChild(opt);
                                     if (!defterId) return;
                                     try {
@@ -594,7 +594,7 @@
             })
             .catch(err => {
                 console.error('Slot load error:', err);
-                container.innerHTML = '<div class="alert alert-danger mb-0">{{ _('Failed to load slots') }}</div>';
+                container.innerHTML = '<div class="alert alert-danger mb-0">' + gettext('Failed to load slots') + '</div>';
             });
     }
 

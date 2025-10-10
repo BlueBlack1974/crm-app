@@ -253,7 +253,7 @@
                                         onclick="editKategoriFromEl(this)">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteKategori({{ kategori.KategoriID }})">
+                                    <button type="button" class="btn btn-sm btn-outline-danger" data-kategori-id="{{ kategori.KategoriID }}" onclick="deleteKategori(this.dataset.kategoriId)">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </td>
