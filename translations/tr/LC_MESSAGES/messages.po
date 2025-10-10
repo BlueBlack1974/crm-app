@@ -54,6 +54,14 @@ msgid "User Settings"
 msgstr "Kullanıcı Ayarları"
 
 #: templates/ayarlar/kullanicilar.html
+msgid "Choose file..."
+msgstr "Dosya seçin..."
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Browse"
+msgstr "Gözat"
+
+#: templates/ayarlar/kullanicilar.html
 msgid "Add New User"
 msgstr "Yeni Kullanıcı Ekle"
 

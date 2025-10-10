@@ -49,6 +49,14 @@ msgid "User Settings"
 msgstr "User Settings"
 
 #: templates/ayarlar/kullanicilar.html
+msgid "Choose file..."
+msgstr "Choose file..."
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Browse"
+msgstr "Browse"
+
+#: templates/ayarlar/kullanicilar.html
 msgid "Add New User"
 msgstr "Add New User"
 

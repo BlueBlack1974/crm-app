@@ -46,7 +46,11 @@
                     <!-- Password field removed; default 123 assigned -->
                     <div class="mb-3">
                         <label class="form-label">{{ _('User Photo (optional)') }}</label>
-                        <input type="file" name="foto" id="foto" class="form-control" accept="image/*">
+                        <div class="input-group">
+                            <input type="file" name="foto" id="foto" class="form-control" accept="image/*" style="display: none;">
+                            <input type="text" class="form-control" id="foto_display" placeholder="{{ _('Choose file...') }}" readonly>
+                            <button class="btn btn-outline-secondary" type="button" id="foto_btn">{{ _('Browse') }}</button>
+                        </div>
                         <input type="hidden" name="foto_cropped" id="foto_cropped">
                         <small class="text-muted">{{ _('Max. 512KB, will be cropped to square and resized.') }}</small>
                         <div class="mt-2 d-flex align-items-center">
@@ -158,6 +162,8 @@
 
 <script>
 const fotoInput = document.getElementById('foto');
+const fotoDisplay = document.getElementById('foto_display');
+const fotoBtn = document.getElementById('foto_btn');
 const previewImg = document.getElementById('fotoPreview');
 const openCropBtn = document.getElementById('openCrop');
 const avatarModalEl = document.getElementById('avatarModal');
@@ -168,14 +174,31 @@ let minScale = 1;
 let posX = 0, posY = 0;
 let isDragging = false; let startX = 0, startY = 0;
 let sourceURL = null;
+
+// Browse button click handler
+if (fotoBtn) {
+  fotoBtn.addEventListener('click', function() {
+    fotoInput.click();
+  });
+}
+
 if (fotoInput) {
   fotoInput.addEventListener('change', function() {
     const file = this.files && this.files[0];
-    if (!file) return;
+    if (!file) {
+      fotoDisplay.value = '';
+      return;
+    }
+    
+    // Update display input with filename
+    fotoDisplay.value = file.name;
+    
     if (file.size > 512 * 1024) {
       alert('{{ _("File size exceeds 512KB. Please select a smaller image.") }}');
       this.value = '';
+      fotoDisplay.value = '';
       previewImg.style.display = 'none';
+      openCropBtn.style.display = 'none';
       return;
     }
     const reader = new FileReader();
