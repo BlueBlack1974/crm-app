@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}E-posta Ayarları - CRM{% endblock %}
+{% block title %}{{ _('Email Settings') }} - CRM{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
-        <h1 class="h2">E-posta Ayarları</h1>
+        <h1 class="h2">{{ _('Email Settings') }}</h1>
         {% if is_admin %}
         <div class="mt-2">
-            <label for="firma_secimi" class="form-label">Firma Seçin:</label>
+            <label for="firma_secimi" class="form-label">{{ _('Select Company:') }}</label>
             <select id="firma_secimi" class="form-select" style="width: auto; display: inline-block;" onchange="changeFirma()">
                 {% for f in tum_firmalar %}
                 <option value="{{ f.FirmaID }}" {{ 'selected' if f.FirmaID == selected_firma_id else '' }}>
@@ -25,28 +25,18 @@
     </div>
     <div class="btn-toolbar mb-2 mb-md-0">
         <a href="{{ url_for('ayarlar') }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left me-1"></i>Geri
+            <i class="fas fa-arrow-left me-1"></i>{{ _('Back') }}
         </a>
     </div>
 </div>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        {% for category, message in messages %}
-            <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
-{% endwith %}
 
 <div class="row">
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
                 <h5 class="card-title mb-0">
-                    <i class="fas fa-envelope me-2"></i>SMTP Ayarları
+                    <i class="fas fa-envelope me-2"></i>{{ _('SMTP Settings') }}
                 </h5>
             </div>
             <div class="card-body">
@@ -58,14 +48,14 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="smtp_sunucu" class="form-label">SMTP Sunucu</label>
+                                    <label for="smtp_sunucu" class="form-label">{{ _('SMTP Server') }}</label>
                                     <input type="text" class="form-control" id="smtp_sunucu" name="smtp_sunucu" 
                                            value="{{ email_ayar.SMTP_Sunucu }}" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="smtp_port" class="form-label">SMTP Port</label>
+                                    <label for="smtp_port" class="form-label">{{ _('SMTP Port') }}</label>
                                     <input type="number" class="form-control" id="smtp_port" name="smtp_port" 
                                            value="{{ email_ayar.SMTP_Port }}" required>
                                 </div>
@@ -74,14 +64,14 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="kullanici_adi" class="form-label">Kullanıcı Adı</label>
+                                    <label for="kullanici_adi" class="form-label">{{ _('Username') }}</label>
                                     <input type="text" class="form-control" id="kullanici_adi" name="kullanici_adi" 
                                            value="{{ email_ayar.KullaniciAdi }}" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="sifre" class="form-label">Şifre</label>
+                                    <label for="sifre" class="form-label">{{ _('Password') }}</label>
                                     <input type="password" class="form-control" id="sifre" name="sifre" 
                                            value="{{ email_ayar.Sifre }}" required>
                                 </div>
@@ -90,25 +80,34 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="gonderen_adi" class="form-label">Varsayılan Gönderen Adı</label>
+                                    <label for="gonderen_adi" class="form-label">{{ _('Default Sender Name') }}</label>
                                     <input type="text" class="form-control" id="gonderen_adi" name="gonderen_adi" 
                                            value="{{ email_ayar.VarsayilanGonderenAdi or '' }}">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="gonderen_email" class="form-label">Varsayılan Gönderen E-posta</label>
+                                    <label for="gonderen_email" class="form-label">{{ _('Default Sender Email') }}</label>
                                     <input type="email" class="form-control" id="gonderen_email" name="gonderen_email" 
                                            value="{{ email_ayar.VarsayilanGonderenEmail or '' }}">
                                 </div>
                             </div>
                         </div>
                         <div class="mb-3">
+                            <label for="varsayilan_email_konu" class="form-label">{{ _('Default Subject') }}</label>
+                            <input type="text" class="form-control" id="varsayilan_email_konu" name="varsayilan_email_konu" value="{{ email_ayar.VarsayilanEmailKonu or '' }}" placeholder="{{ _('Appointment Reminder') }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="varsayilan_email_metni" class="form-label">{{ _('Default Email Text') }}</label>
+                            <textarea class="form-control" id="varsayilan_email_metni" name="varsayilan_email_metni" rows="4" placeholder="{{ _('Hello {CUSTOMER_NAME}, we remind you of your appointment on {APPOINTMENT_DATE}.') }}">{{ email_ayar.VarsayilanEmailMetni or '' }}</textarea>
+                            <div class="form-text">{{ _('Variables: {CUSTOMER_NAME}, {APPOINTMENT_DATE}, {BOOK_NAME}') }}</div>
+                        </div>
+                        <div class="mb-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="ssl_kullan" name="ssl_kullan" 
                                        {{ 'checked' if email_ayar.SSL_Kullan else '' }}>
                                 <label class="form-check-label" for="ssl_kullan">
-                                    SSL/TLS Kullan
+                                    {{ _('Use SSL/TLS') }}
                                 </label>
                             </div>
                         </div>
@@ -117,18 +116,17 @@
                                 <input class="form-check-input" type="checkbox" id="aktif" name="aktif" 
                                        {{ 'checked' if email_ayar.Aktif else '' }}>
                                 <label class="form-check-label" for="aktif">
-                                    Aktif
+                                    {{ _('Active') }}
                                 </label>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-1"></i>Güncelle
+                            <i class="fas fa-save me-1"></i>{{ _('Update') }}
                         </button>
-                        <a href="{{ url_for('ayarlar_email_sil', ayar_id=email_ayar.EmailAyarID) }}" 
-                           class="btn btn-danger ms-2" 
-                           onclick="return confirm('E-posta ayarlarını silmek istediğinizden emin misiniz?')">
-                            <i class="fas fa-trash me-1"></i>Sil
-                        </a>
+                        <button type="button" class="btn btn-danger ms-2" 
+                                onclick="silEmailAyar({{ email_ayar.EmailAyarID }})">
+                            <i class="fas fa-trash me-1"></i>{{ _('Delete') }}
+                        </button>
                     </form>
                 {% else %}
                     <form method="POST" action="{{ url_for('ayarlar_email_ekle') }}">
@@ -138,14 +136,14 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="smtp_sunucu" class="form-label">SMTP Sunucu</label>
+                                    <label for="smtp_sunucu" class="form-label">{{ _('SMTP Server') }}</label>
                                     <input type="text" class="form-control" id="smtp_sunucu" name="smtp_sunucu" 
                                            placeholder="smtp.gmail.com" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="smtp_port" class="form-label">SMTP Port</label>
+                                    <label for="smtp_port" class="form-label">{{ _('SMTP Port') }}</label>
                                     <input type="number" class="form-control" id="smtp_port" name="smtp_port" 
                                            placeholder="587" value="587" required>
                                 </div>
@@ -154,40 +152,49 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="kullanici_adi" class="form-label">Kullanıcı Adı</label>
+                                    <label for="kullanici_adi" class="form-label">{{ _('Username') }}</label>
                                     <input type="text" class="form-control" id="kullanici_adi" name="kullanici_adi" 
-                                           placeholder="ornek@gmail.com" required>
+                                           placeholder="example@gmail.com" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="sifre" class="form-label">Şifre</label>
+                                    <label for="sifre" class="form-label">{{ _('Password') }}</label>
                                     <input type="password" class="form-control" id="sifre" name="sifre" 
-                                           placeholder="Uygulama şifresi" required>
+                                           placeholder="{{ _('Application password') }}" required>
                                 </div>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="gonderen_adi" class="form-label">Varsayılan Gönderen Adı</label>
+                                    <label for="gonderen_adi" class="form-label">{{ _('Default Sender Name') }}</label>
                                     <input type="text" class="form-control" id="gonderen_adi" name="gonderen_adi" 
-                                           placeholder="Firma Adı">
+                                           placeholder="{{ _('Company Name') }}">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="gonderen_email" class="form-label">Varsayılan Gönderen E-posta</label>
+                                    <label for="gonderen_email" class="form-label">{{ _('Default Sender Email') }}</label>
                                     <input type="email" class="form-control" id="gonderen_email" name="gonderen_email" 
-                                           placeholder="noreply@firma.com">
+                                           placeholder="noreply@company.com">
                                 </div>
                             </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="varsayilan_email_konu" class="form-label">{{ _('Default Subject') }}</label>
+                            <input type="text" class="form-control" id="varsayilan_email_konu" name="varsayilan_email_konu" placeholder="{{ _('Appointment Reminder') }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="varsayilan_email_metni" class="form-label">{{ _('Default Email Text') }}</label>
+                            <textarea class="form-control" id="varsayilan_email_metni" name="varsayilan_email_metni" rows="4" placeholder="{{ _('Hello {CUSTOMER_NAME}, we remind you of your appointment on {APPOINTMENT_DATE}.') }}"></textarea>
+                            <div class="form-text">{{ _('Variables: {CUSTOMER_NAME}, {APPOINTMENT_DATE}, {BOOK_NAME}') }}</div>
                         </div>
                         <div class="mb-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="ssl_kullan" name="ssl_kullan" checked>
                                 <label class="form-check-label" for="ssl_kullan">
-                                    SSL/TLS Kullan
+                                    {{ _('Use SSL/TLS') }}
                                 </label>
                             </div>
                         </div>
@@ -195,12 +202,12 @@
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="aktif" name="aktif" checked>
                                 <label class="form-check-label" for="aktif">
-                                    Aktif
+                                    {{ _('Active') }}
                                 </label>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-success">
-                            <i class="fas fa-plus me-1"></i>E-posta Ayarı Ekle
+                            <i class="fas fa-plus me-1"></i>{{ _('Add Email Setting') }}
                         </button>
                     </form>
                 {% endif %}
@@ -211,42 +218,61 @@
         <div class="card">
             <div class="card-header">
                 <h5 class="card-title mb-0">
-                    <i class="fas fa-info-circle me-2"></i>Yardım
+                    <i class="fas fa-info-circle me-2"></i>{{ _('Help') }}
                 </h5>
             </div>
             <div class="card-body">
-                <h6>Gmail için:</h6>
+                <h6>{{ _('For Gmail:') }}</h6>
                 <ul class="small">
-                    <li>SMTP Sunucu: smtp.gmail.com</li>
-                    <li>Port: 587 (TLS) veya 465 (SSL)</li>
-                    <li>2 faktörlü doğrulama aktif olmalı</li>
-                    <li>Uygulama şifresi kullanın</li>
+                    <li>{{ _('SMTP Server: smtp.gmail.com') }}</li>
+                    <li>{{ _('Port: 587 (TLS) or 465 (SSL)') }}</li>
+                    <li>{{ _('2-factor authentication must be active') }}</li>
+                    <li>{{ _('Use application password') }}</li>
                 </ul>
                 
-                <h6>Outlook için:</h6>
+                <h6>{{ _('For Outlook:') }}</h6>
                 <ul class="small">
-                    <li>SMTP Sunucu: smtp-mail.outlook.com</li>
-                    <li>Port: 587</li>
-                    <li>SSL/TLS kullanın</li>
+                    <li>{{ _('SMTP Server: smtp-mail.outlook.com') }}</li>
+                    <li>{{ _('Port: 587') }}</li>
+                    <li>{{ _('Use SSL/TLS') }}</li>
                 </ul>
                 
-                <h6>Yahoo için:</h6>
+                <h6>{{ _('For Yahoo:') }}</h6>
                 <ul class="small">
-                    <li>SMTP Sunucu: smtp.mail.yahoo.com</li>
-                    <li>Port: 587 veya 465</li>
-                    <li>Uygulama şifresi gerekli</li>
+                    <li>{{ _('SMTP Server: smtp.mail.yahoo.com') }}</li>
+                    <li>{{ _('Port: 587 or 465') }}</li>
+                    <li>{{ _('Application password required') }}</li>
                 </ul>
             </div>
         </div>
     </div>
 </div>
 
-{% if is_admin %}
 <script>
+function silEmailAyar(ayarId) {
+    // POST isteği gönder
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = "{{ url_for('ayarlar_email_sil', ayar_id=0) }}".replace('0', ayarId);
+    
+    {% if is_admin %}
+    // Admin ise firma_id parametresini ekle
+    const firmaIdInput = document.createElement('input');
+    firmaIdInput.type = 'hidden';
+    firmaIdInput.name = 'firma_id';
+    firmaIdInput.value = document.getElementById('firma_secimi').value;
+    form.appendChild(firmaIdInput);
+    {% endif %}
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+{% if is_admin %}
 function changeFirma() {
     const firmaId = document.getElementById('firma_secimi').value;
     window.location.href = "{{ url_for('ayarlar_email') }}?firma_id=" + firmaId;
 }
-</script>
 {% endif %}
+</script>
 {% endblock %}

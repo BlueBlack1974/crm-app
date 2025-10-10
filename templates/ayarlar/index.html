@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}Ayarlar - CRM{% endblock %}
+{% block title %}{{ _('Settings') }} - CRM{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Ayarlar</h1>
+    <h1 class="h2">{{ _('Settings') }}</h1>
 </div>
 
 <div class="row">
@@ -12,9 +12,9 @@
     <div class="col-md-4">
         <div class="card shadow-sm mb-3">
             <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-building me-2"></i>Firma Ayarları</h5>
-                <p class="card-text">Firmaları listeleyin, yeni firma ekleyin veya silin.</p>
-                <a href="{{ url_for('ayarlar_firmalar') }}" class="btn btn-primary">Firmalar</a>
+                <h5 class="card-title"><i class="fas fa-building me-2"></i>{{ _('Company Settings') }}</h5>
+                <p class="card-text">{{ _('List companies, add new companies or delete them.') }}</p>
+                <a href="{{ url_for('ayarlar_firmalar') }}" class="btn btn-primary">{{ _('Companies') }}</a>
             </div>
         </div>
     </div>
@@ -22,9 +22,9 @@
     <div class="col-md-4">
         <div class="card shadow-sm mb-3">
             <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-users me-2"></i>Kullanıcı Ayarları</h5>
-                <p class="card-text">Kullanıcıları yönetin, yeni kullanıcı ekleyin veya silin.</p>
-                <a href="{{ url_for('ayarlar_kullanicilar') }}" class="btn btn-primary">Kullanıcılar</a>
+                <h5 class="card-title"><i class="fas fa-users me-2"></i>{{ _('User Settings') }}</h5>
+                <p class="card-text">{{ _('Manage users, add new users or delete them.') }}</p>
+                <a href="{{ url_for('ayarlar_kullanicilar') }}" class="btn btn-primary">{{ _('Users') }}</a>
             </div>
         </div>
     </div>
@@ -32,9 +32,9 @@
     <div class="col-md-4">
         <div class="card shadow-sm mb-3">
             <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-calendar-alt me-2"></i>Randevu Defteri</h5>
-                <p class="card-text">Çalışma günleri, saatleri ve slotları ayarlayın.</p>
-                <a href="{{ url_for('ayarlar_defter') }}" class="btn btn-primary">Defter Ayarları</a>
+                <h5 class="card-title"><i class="fas fa-calendar-alt me-2"></i>{{ _('Appointment Book') }}</h5>
+                <p class="card-text">{{ _('Set working days, hours and slots.') }}</p>
+                <a href="{{ url_for('ayarlar_defter') }}" class="btn btn-primary">{{ _('Book Settings') }}</a>
             </div>
         </div>
     </div>
@@ -42,36 +42,45 @@
     <div class="col-md-4">
         <div class="card shadow-sm mb-3">
             <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-tags me-2"></i>Randevu Referansları</h5>
-                <p class="card-text">Randevu başlığı yerine kullanılacak referansları yönetin.</p>
-                <a href="{{ url_for('ayarlar_referanslar') }}" class="btn btn-primary">Referanslar</a>
+                <h5 class="card-title"><i class="fas fa-tags me-2"></i>{{ _('Appointment References') }}</h5>
+                <p class="card-text">{{ _('Manage references to be used instead of appointment titles.') }}</p>
+                <a href="{{ url_for('ayarlar_referanslar') }}" class="btn btn-primary">{{ _('References') }}</a>
             </div>
         </div>
     </div>
     <div class="col-md-4">
         <div class="card shadow-sm mb-3">
             <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-cogs me-2"></i>Randevu İşlemleri</h5>
-                <p class="card-text">Randevularda kullanılacak işlemleri yönetin.</p>
-                <a href="{{ url_for('ayarlar_islemler') }}" class="btn btn-primary">İşlemler</a>
+                <h5 class="card-title"><i class="fas fa-cogs me-2"></i>{{ _('Appointment Operations') }}</h5>
+                <p class="card-text">{{ _('Manage operations to be used in appointments.') }}</p>
+                <a href="{{ url_for('ayarlar_islemler') }}" class="btn btn-primary">{{ _('Operations') }}</a>
             </div>
         </div>
     </div>
     <div class="col-md-4">
         <div class="card shadow-sm mb-3">
             <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-envelope me-2"></i>E-posta Ayarları</h5>
-                <p class="card-text">SMTP ayarlarını yapılandırın ve e-posta gönderimini ayarlayın.</p>
-                <a href="{{ url_for('ayarlar_email') }}" class="btn btn-primary">E-posta Ayarları</a>
+                <h5 class="card-title"><i class="fas fa-envelope me-2"></i>{{ _('Email Settings') }}</h5>
+                <p class="card-text">{{ _('Configure SMTP settings and set up email sending.') }}</p>
+                <a href="{{ url_for('ayarlar_email') }}" class="btn btn-primary">{{ _('Email Settings') }}</a>
             </div>
         </div>
     </div>
     <div class="col-md-4">
         <div class="card shadow-sm mb-3">
             <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-sms me-2"></i>SMS Ayarları</h5>
-                <p class="card-text">SMS gönderim ayarlarını yapılandırın ve SMS firması seçin.</p>
-                <a href="{{ url_for('ayarlar_sms') }}" class="btn btn-primary">SMS Ayarları</a>
+                <h5 class="card-title"><i class="fas fa-sms me-2"></i>{{ _('SMS Settings') }}</h5>
+                <p class="card-text">{{ _('Configure SMS sending settings and select SMS provider.') }}</p>
+                <a href="{{ url_for('ayarlar_sms') }}" class="btn btn-primary">{{ _('SMS Settings') }}</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fab fa-whatsapp me-2"></i>{{ _('WhatsApp Settings') }}</h5>
+                <p class="card-text">{{ _('Configure WhatsApp Business API settings and create message templates.') }}</p>
+                <a href="{{ url_for('ayarlar_whatsapp') }}" class="btn btn-primary">{{ _('WhatsApp Settings') }}</a>
             </div>
         </div>
     </div>

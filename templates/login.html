@@ -38,6 +38,24 @@
                     </div>
                 </form>
                 
+                {% if show_force_logout %}
+                <div class="mt-4 p-3 bg-warning bg-opacity-10 border border-warning rounded">
+                    <div class="text-center">
+                        <i class="fas fa-exclamation-triangle text-warning mb-2"></i>
+                        <p class="mb-3">{{ _('This user is already logged in. Do you want to close the existing session and login again?') }}</p>
+                        <form method="POST" action="{{ url_for('force_logout') }}" class="d-inline">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-sign-out-alt me-2"></i>
+                                {{ _('Close Session and Login') }}
+                            </button>
+                        </form>
+                        <a href="{{ url_for('login') }}" class="btn btn-secondary ms-2">
+                            {{ _('Cancel') }}
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+                
                 <div class="text-center mt-4">
                     <small class="text-muted">
                         {{ _('Default Admin') }}: <strong>admin</strong> / <strong>admin123</strong>

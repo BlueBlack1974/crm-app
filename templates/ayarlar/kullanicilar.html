@@ -1,40 +1,40 @@
 {% extends "base.html" %}
 
-{% block title %}Kullanıcı Ayarları - CRM{% endblock %}
+{% block title %}{{ _('User Settings') }} - CRM{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Kullanıcı Ayarları</h1>
-    <a href="{{ url_for('ayarlar') }}" class="btn btn-outline-secondary"><i class="fas fa-gear me-1"></i>Ayarlar</a>
+    <h1 class="h2">{{ _('User Settings') }}</h1>
+    <a href="{{ url_for('ayarlar') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>{{ _('Back') }}</a>
 </div>
 
 <div class="row">
     <div class="col-lg-6">
         <div class="card shadow mb-4">
-            <div class="card-header">Yeni Kullanıcı Ekle</div>
+            <div class="card-header">{{ _('Add New User') }}</div>
             <div class="card-body">
-                <form method="POST">
+                <form method="POST" enctype="multipart/form-data" id="newUserForm">
                     <div class="mb-3">
-                        <label class="form-label">Kullanıcı Adı *</label>
+                        <label class="form-label">{{ _('Username') }} *</label>
                         <input type="text" name="kullanici_adi" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Ad *</label>
+                        <label class="form-label">{{ _('First Name') }} *</label>
                         <input type="text" name="ad" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Soyad *</label>
+                        <label class="form-label">{{ _('Last Name') }} *</label>
                         <input type="text" name="soyad" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">E-posta *</label>
+                        <label class="form-label">{{ _('Email') }} *</label>
                         <input type="email" name="email" class="form-control" required>
                     </div>
                     {% if session.is_admin %}
                     <div class="mb-3">
-                        <label class="form-label">Firma *</label>
+                        <label class="form-label">{{ _('Company') }} *</label>
                         <select name="firma_id" class="form-select" required>
-                            <option value="">Seçiniz</option>
+                            <option value="">{{ _('Select') }}</option>
                             {% for f in firmalar %}
                             <option value="{{ f.FirmaID }}">{{ f.FirmaAdi }}</option>
                             {% endfor %}
@@ -43,27 +43,34 @@
                     {% else %}
                     <input type="hidden" name="firma_id" value="{{ session.firma_id }}">
                     {% endif %}
+                    <!-- Password field removed; default 123 assigned -->
                     <div class="mb-3">
-                        <label class="form-label">Şifre *</label>
-                        <input type="text" name="sifre" class="form-control" required>
+                        <label class="form-label">{{ _('User Photo (optional)') }}</label>
+                        <input type="file" name="foto" id="foto" class="form-control" accept="image/*">
+                        <input type="hidden" name="foto_cropped" id="foto_cropped">
+                        <small class="text-muted">{{ _('Max. 512KB, will be cropped to square and resized.') }}</small>
+                        <div class="mt-2 d-flex align-items-center">
+                            <img id="fotoPreview" src="#" alt="{{ _('Preview') }}" class="img-thumbnail rounded-circle" style="display:none; width: 120px; height: 120px; object-fit: cover;">
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-2" id="openCrop" style="display:none;">{{ _('Adjust') }}</button>
+                        </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Modül İzinleri</label>
+                        <label class="form-label">{{ _('Module Permissions') }}</label>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="raporlar_modulu" id="raporlar_modulu" checked>
                             <label class="form-check-label" for="raporlar_modulu">
-                                Raporlar Modülü
+                                {{ _('Reports Module') }}
                             </label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="ayarlar_modulu" id="ayarlar_modulu">
                             <label class="form-check-label" for="ayarlar_modulu">
-                                Ayarlar Modülü
+                                {{ _('Settings Module') }}
                             </label>
                         </div>
                     </div>
                     <div class="text-end">
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Kaydet</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>{{ _('Save') }}</button>
                     </div>
                 </form>
             </div>
@@ -71,17 +78,17 @@
     </div>
     <div class="col-lg-6">
         <div class="card shadow mb-4">
-            <div class="card-header">Kullanıcılar</div>
+            <div class="card-header">{{ _('Users') }}</div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-bordered">
                         <thead>
                             <tr>
-                                <th>Kullanıcı Adı</th>
-                                <th>Ad Soyad</th>
-                                <th>Firma</th>
-                                <th>Modül İzinleri</th>
-                                <th>İşlemler</th>
+                                <th>{{ _('Username') }}</th>
+                                <th>{{ _('Full Name') }}</th>
+                                <th>{{ _('Company') }}</th>
+                                <th>{{ _('Module Permissions') }}</th>
+                                <th>{{ _('Actions') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -92,13 +99,13 @@
                                 <td>{{ u.firma.FirmaAdi }}</td>
                                 <td>
                                     {% if u.RaporlarModulu %}
-                                        <span class="badge bg-success me-1">Raporlar</span>
+                                        <span class="badge bg-success me-1">{{ _('Reports') }}</span>
                                     {% endif %}
                                     {% if u.AyarlarModulu %}
-                                        <span class="badge bg-primary">Ayarlar</span>
+                                        <span class="badge bg-primary">{{ _('Settings') }}</span>
                                     {% endif %}
                                     {% if not u.RaporlarModulu and not u.AyarlarModulu %}
-                                        <span class="text-muted">Yok</span>
+                                        <span class="text-muted">{{ _('None') }}</span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -106,7 +113,7 @@
                                         <a href="{{ url_for('ayarlar_kullanici_duzenle', kullanici_id=u.KullaniciID) }}" class="btn btn-sm btn-primary">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <form action="{{ url_for('ayarlar_kullanici_sil', kullanici_id=u.KullaniciID) }}" method="POST" onsubmit="return confirm('Silmek istediğinize emin misiniz?')" style="display: inline;">
+                                        <form action="{{ url_for('ayarlar_kullanici_sil', kullanici_id=u.KullaniciID) }}" method="POST" onsubmit="return confirm('{{ _('Are you sure you want to delete?') }}')" style="display: inline;">
                                             <button class="btn btn-sm btn-danger" {% if u.KullaniciID == session.user_id %}disabled{% endif %}>
                                                 <i class="fas fa-trash"></i>
                                             </button>
@@ -122,6 +129,123 @@
         </div>
     </div>
 </div>
+<!-- Avatar Düzenleyici Modal (Yuvarlak çerçeve, sürükle + zoom) -->
+<style>
+.avatar-frame { width: 320px; height: 320px; border-radius: 50%; overflow: hidden; margin: 0 auto; position: relative; background: #f8f9fa; border: 2px dashed #dee2e6; }
+.avatar-frame img { position: absolute; top: 0; left: 0; user-select: none; -webkit-user-drag: none; cursor: grab; transform-origin: 0 0; }
+.avatar-helper { text-align: center; font-size: .9rem; color: #6c757d; }
+</style>
+<div class="modal fade" id="avatarModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ _('Adjust Photo') }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="avatar-frame" id="avatarFrame">
+          <img id="avatarImg" src="#" alt="Avatar">
+        </div>
+        <div class="avatar-helper mt-2">{{ _('Drag to position, use wheel to zoom.') }}</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+        <button type="button" class="btn btn-primary" id="applyAvatar">{{ _('Apply') }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const fotoInput = document.getElementById('foto');
+const previewImg = document.getElementById('fotoPreview');
+const openCropBtn = document.getElementById('openCrop');
+const avatarModalEl = document.getElementById('avatarModal');
+const avatarImg = document.getElementById('avatarImg');
+const avatarFrame = document.getElementById('avatarFrame');
+let imgScale = 1;
+let minScale = 1;
+let posX = 0, posY = 0;
+let isDragging = false; let startX = 0, startY = 0;
+let sourceURL = null;
+if (fotoInput) {
+  fotoInput.addEventListener('change', function() {
+    const file = this.files && this.files[0];
+    if (!file) return;
+    if (file.size > 512 * 1024) {
+      alert('{{ _("File size exceeds 512KB. Please select a smaller image.") }}');
+      this.value = '';
+      previewImg.style.display = 'none';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      previewImg.src = e.target.result;
+      previewImg.style.display = 'inline-block';
+      openCropBtn.style.display = 'inline-block';
+      sourceURL = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+if (openCropBtn) {
+  openCropBtn.addEventListener('click', function(){
+    if (!sourceURL && !previewImg.src) return;
+    avatarImg.src = sourceURL || previewImg.src;
+    imgScale = 1; minScale = 1; posX = 0; posY = 0;
+    avatarImg.onload = function(){
+      const frameW = 320, frameH = 320;
+      const iw = avatarImg.naturalWidth || avatarImg.width;
+      const ih = avatarImg.naturalHeight || avatarImg.height;
+      avatarImg.style.width = iw + 'px';
+      avatarImg.style.height = ih + 'px';
+      minScale = Math.max(frameW / iw, frameH / ih);
+      imgScale = minScale;
+      posX = (frameW - iw * imgScale) / 2;
+      posY = (frameH - ih * imgScale) / 2;
+      avatarImg.style.transform = `translate(${posX}px, ${posY}px) scale(${imgScale})`;
+    };
+    const modal = new bootstrap.Modal(avatarModalEl);
+    modal.show();
+  });
+}
+
+// Drag to move
+avatarFrame?.addEventListener('mousedown', (e)=>{ isDragging = true; startX = e.clientX - posX; startY = e.clientY - posY; avatarImg.style.cursor='grabbing'; });
+document.addEventListener('mouseup', ()=>{ isDragging = false; avatarImg && (avatarImg.style.cursor='grab'); });
+document.addEventListener('mousemove', (e)=>{ if(!isDragging) return; posX = e.clientX - startX; posY = e.clientY - startY; avatarImg.style.transform = `translate(${posX}px, ${posY}px) scale(${imgScale})`; });
+// Touch support
+avatarFrame?.addEventListener('touchstart', (e)=>{ const t=e.touches[0]; isDragging=true; startX=t.clientX - posX; startY=t.clientY - posY; }, {passive:true});
+avatarFrame?.addEventListener('touchmove', (e)=>{ if(!isDragging) return; const t=e.touches[0]; posX=t.clientX - startX; posY=t.clientY - startY; avatarImg.style.transform=`translate(${posX}px, ${posY}px) scale(${imgScale})`; }, {passive:true});
+document.addEventListener('touchend', ()=>{ isDragging=false; });
+// Wheel to zoom
+avatarFrame?.addEventListener('wheel', (e)=>{ e.preventDefault(); const delta = e.deltaY < 0 ? 0.05 : -0.05; imgScale = Math.min(3, Math.max(minScale, imgScale + delta)); avatarImg.style.transform = `translate(${posX}px, ${posY}px) scale(${imgScale})`; }, { passive: false });
+
+document.getElementById('applyAvatar')?.addEventListener('click', function(){
+  const size = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  // Circle mask
+  ctx.beginPath(); ctx.arc(size/2, size/2, size/2, 0, Math.PI*2); ctx.closePath(); ctx.clip();
+  // Draw image with current transform
+  const img = new Image();
+  img.onload = ()=>{
+    const frameSize = 320; const scaleRatio = size / frameSize;
+    const drawX = posX * scaleRatio;
+    const drawY = posY * scaleRatio;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, drawX, drawY, img.width * imgScale * scaleRatio, img.height * imgScale * scaleRatio);
+    const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+    document.getElementById('foto_cropped').value = dataURL;
+    previewImg.src = dataURL;
+    const modalInstance = bootstrap.Modal.getInstance(avatarModalEl);
+    modalInstance?.hide();
+  };
+  img.src = avatarImg.src;
+});
+</script>
 {% endblock %}
 
 

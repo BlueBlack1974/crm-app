@@ -49,6 +49,19 @@
 .validation-error {
     color: #dc3545;
 }
+
+/* Defter seçilene kadar takvimi pasif göster */
+.calendar-disabled {
+    opacity: 0.4;
+    pointer-events: none;
+    filter: grayscale(60%);
+}
+/* Tarih alanı her zaman aktif kalsın */
+.calendar-disabled #tarih_gun {
+    opacity: 1;
+    pointer-events: auto;
+    filter: none;
+}
 </style>
 {% endblock %}
 
@@ -77,7 +90,7 @@
                     <label for="defter_id" class="form-label">{{ _('Appointment Book') }} *</label>
                     {% if defter_ayarlar %}
                         <select class="form-select" id="defter_id" name="defter_id" required>
-                            <option value="" selected>Defter seçin...</option>
+                            <option value="" selected>{{ _('Select appointment book...') }}</option>
                             {% for defter in defter_ayarlar %}
                                 <option value="{{ defter.AyarID }}" 
                                         data-slot-dakika="{{ defter.SlotDakika }}">
@@ -99,7 +112,7 @@
             </div>
         </div>
 
-        <div class="card shadow mb-4" id="step2" style="display:none">
+        <div class="card shadow mb-4 calendar-disabled" id="step2" style="display:none">
             <div class="card-header py-3">
                 <h6 class="m-0 font-weight-bold text-primary">2) {{ _('Date and Time Selection') }}</h6>
             </div>
@@ -115,7 +128,7 @@
                     </div>
                 </div>
                 <div class="mt-3" id="slotContainer">
-                    <div class="text-muted small">Uygun saatler yükleniyor...</div>
+                    <div class="text-muted small">{{ _('Loading available time slots...') }}</div>
                 </div>
                 <input type="hidden" id="saat" name="saat" required>
                 <div class="mt-2"><span class="badge bg-info" id="selectedInfo" style="display:none"></span></div>
@@ -328,7 +341,7 @@
                         </div>
 
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="mb-3">
                                     <label for="musteri_cinsiyet" class="form-label">{{ _('Gender') }}</label>
                                     <select class="form-select" id="musteri_cinsiyet" name="musteri_cinsiyet">
@@ -338,7 +351,15 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="musteri_dogum_tarihi" class="form-label">{{ _('Birth Date') }}</label>
+                                    <input type="date" class="form-control" id="musteri_dogum_tarihi" name="musteri_dogum_tarihi">
+                                    <input type="hidden" id="musteri_yas" name="musteri_yas">
+                                    <small class="form-text text-muted" id="yas-gosterge">{{ _('Age will be calculated automatically') }}</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
                                 <div class="mb-3">
                                     <label for="musteri_kategori" class="form-label">{{ _('Category') }}</label>
                                     <div class="kategori-secim-container">
@@ -435,6 +456,16 @@
                 </ul>
             </div>
         </div>
+        
+        <!-- Takvim Widget -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Calendar') }}</h6>
+            </div>
+            <div class="card-body">
+                <div id="mini-calendar"></div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -466,6 +497,9 @@
             clearSelection();
             loadSlots();
         });
+        
+        // Mini takvim başlat
+        initializeMiniCalendar();
     });
 
     function shiftDay(delta) {
@@ -506,7 +540,7 @@
                     container.innerHTML = `
                         <div class="alert alert-warning mb-0">
                             <i class="fas fa-exclamation-triangle"></i>
-                            Bu tarih için uygun saat bulunmuyor. Lütfen başka bir tarih seçin.
+                            {{ _('No available time slots for this date. Please choose another date.') }}
                         </div>
                     `;
                     // Saat bulunmayan tarihlerde Step3'ü gizle
@@ -524,7 +558,10 @@
                 // Açıklama/legend
                 const legend = document.createElement('div');
                 legend.className = 'w-100 small text-muted mb-1';
-                legend.innerHTML = '<span class="badge bg-primary me-2">Seçilebilir</span><span class="badge bg-secondary">Kapalı/Dolu</span>';
+                const currentLang = document.documentElement.lang || 'tr';
+                const selectableText = currentLang === 'en' ? 'Selectable' : 'Seçilebilir';
+                const closedText = currentLang === 'en' ? 'Closed/Full' : 'Kapalı/Dolu';
+                legend.innerHTML = `<span class="badge bg-primary me-2">${selectableText}</span><span class="badge bg-secondary">${closedText}</span>`;
                 wrap.appendChild(legend);
                 
                 data.slots.forEach(s => {
@@ -535,7 +572,9 @@
                     btn.disabled = !s.available;
                     btn.style.margin = '2px';
                     if (!s.available) {
-                        btn.title = 'Kapalı/Dolu';
+                        const currentLang = document.documentElement.lang || 'tr';
+                        const closedText = currentLang === 'en' ? 'Closed/Full' : 'Kapalı/Dolu';
+                        btn.title = closedText;
                         btn.style.cursor = 'not-allowed';
                         btn.style.opacity = '0.35';
                         btn.style.filter = 'grayscale(100%)';
@@ -554,18 +593,39 @@
                 container.appendChild(wrap);
             })
             .catch(err => {
-                console.error('Slot yükleme hatası:', err);
-                container.innerHTML = '<div class="alert alert-danger mb-0">Slotlar yüklenemedi</div>';
+                console.error('Slot load error:', err);
+                container.innerHTML = '<div class="alert alert-danger mb-0">{{ _('Failed to load slots') }}</div>';
             });
     }
 
     // Not: Blok yönetimi bu sayfadan kaldırıldı
 
     function selectSlot(time) {
-        document.getElementById('saat').value = time;
         const date = document.getElementById('tarih_gun').value;
+        
+        // Geçmiş saat kontrolü
+        const selectedDateTime = new Date(`${date}T${time}:00`);
+        const now = new Date();
+        
+        // Bugün ise ve seçilen saat geçmişte ise uyarı ver
+        if (selectedDateTime <= now) {
+            const currentLang = document.documentElement.lang || 'tr';
+            const warningMessage = currentLang === 'en' 
+                ? 'You cannot make an appointment for a past time. Please select a future time.'
+                : 'Geçmiş bir saate randevu alamazsınız. Lütfen gelecek bir saat seçin.';
+            
+            alert(warningMessage);
+            return; // Fonksiyondan çık, randevu formunu açma
+        }
+        
+        document.getElementById('saat').value = time;
         const info = document.getElementById('selectedInfo');
-        info.textContent = `Seçili: ${date} ${time}`;
+        
+        // Tarihi Türkiye formatına çevir (YYYY-MM-DD -> DD.MM.YYYY)
+        const [year, month, day] = date.split('-');
+        const turkishDate = `${day}.${month}.${year}`;
+        
+        info.textContent = `${turkishDate} ${time}`;
         info.style.display = 'inline-block';
         
         // Saat seçildiğinde step3'ü göster
@@ -663,23 +723,56 @@
             defterSelect.addEventListener('change', function() {
                 if (this.value) {
                     updateSureSecenekleri();
-                    document.getElementById('step2').style.display = 'block';
+                    const step2 = document.getElementById('step2');
+                    step2.style.display = 'block';
+                    step2.classList.remove('calendar-disabled');
                     
-                    // Bugünün tarihini varsayılan olarak ayarla
-                    const today = new Date().toISOString().split('T')[0];
-                    document.getElementById('tarih_gun').value = today;
+                    // Tarih zaten seçilmişse onu koru; boşsa bugünü ata
+                    const tarihInput = document.getElementById('tarih_gun');
+                    const existingDate = tarihInput.value;
+                    if (!existingDate) {
+                        const today = new Date().toISOString().split('T')[0];
+                        tarihInput.value = today;
+                    }
                     
-                    // Bugün için slotları yükle
+                    // Seçili (veya varsayılan) tarihe göre slotları yükle
                     loadSlots();
                     if (typeof loadBlocks === 'function') { loadBlocks(); }
                     
                     // Scroll to step2
                     document.getElementById('step2').scrollIntoView({ behavior: 'smooth', block: 'start' });
                 } else {
-                    document.getElementById('step2').style.display = 'none';
+                    const step2 = document.getElementById('step2');
+                    step2.style.display = 'none';
+                    step2.classList.add('calendar-disabled');
                     document.getElementById('step3').style.display = 'none';
                 }
             });
+
+            // Defter seçilmemiş olsa bile tarih seçimi randevu tarihi olarak işlensin
+            const tarihInput = document.getElementById('tarih_gun');
+            if (tarihInput) {
+                tarihInput.addEventListener('change', function() {
+                    // Bilgi rozeti güncelle
+                    const info = document.getElementById('selectedInfo');
+                    if (info) {
+                        info.style.display = 'inline-block';
+                        // Tarihi Türkiye formatına çevir (YYYY-MM-DD -> DD.MM.YYYY)
+                        const [year, month, day] = this.value.split('-');
+                        const turkishDate = `${day}.${month}.${year}`;
+                        const currentLang = document.documentElement.lang || 'tr';
+                        const selectedDateText = currentLang === 'en' ? 'Selected date' : 'Seçilen tarih';
+                        info.textContent = `${selectedDateText}: ${turkishDate}`;
+                    }
+                    // Defter seçilmemişse sadece tarihi set et, slot yükleme yapma
+                    const defterVal = defterSelect.value;
+                    if (defterVal) {
+                        // Defter seçiliyse slotları güncelle
+                        loadSlots();
+                        if (typeof loadBlocks === 'function') { loadBlocks(); }
+                    }
+                });
+            }
         } else {
             console.log('Defter seçimi bulunamadı - muhtemelen defter yok');
         }
@@ -727,7 +820,10 @@
         });
         
         // Bilgi mesajını güncelle
-        sureBilgi.innerHTML = `<i class="fas fa-info-circle"></i> {{ _("Duration must be multiples of") }} ${slotDakika} {{ _("minutes") }} (${slotDakika}, ${slotDakika * 2}, ${slotDakika * 3}, ...)`;
+        const currentLang = document.documentElement.lang || 'tr';
+        const durationText = currentLang === 'en' ? 'Duration must be multiples of' : 'Süre';
+        const minutesText = currentLang === 'en' ? 'minutes' : 'dakikanın katları olmalıdır';
+        sureBilgi.innerHTML = `<i class="fas fa-info-circle"></i> ${durationText} ${slotDakika} ${minutesText} (${slotDakika}, ${slotDakika * 2}, ${slotDakika * 3}, ...)`;
     }
 
     function musteriAra(query) {
@@ -863,15 +959,69 @@
             }
         }
         
-        const musteriForm = document.getElementById('musteriForm');
-        musteriForm.querySelectorAll('input, select, textarea').forEach(field => {
-            // Disabled alanlar form submit edilirken gönderilmez, bu yüzden readonly yapalım
-            if (field.type !== 'hidden') {
-                field.readOnly = true;
-                field.disabled = false;
-                field.classList.add('readonly-field');
+        // Cinsiyet doldur
+        if (musteri.cinsiyet) {
+            document.getElementById('musteri_cinsiyet').value = musteri.cinsiyet;
+        }
+        
+        // Adres bilgilerini doldur
+        if (musteri.ulke) {
+            document.getElementById('musteri_ulke').value = musteri.ulke;
+            // Ülke değiştiğinde eyaletleri yükle
+            if (musteri.ulke === 'TR') {
+                loadStates('TR');
             }
-        });
+        }
+        
+        if (musteri.sehir) {
+            // Eyaletler yüklendikten sonra şehri seç
+            setTimeout(() => {
+                document.getElementById('musteri_sehir').value = musteri.sehir;
+                // Şehir değiştiğinde ilçeleri yükle
+                if (musteri.ulke && musteri.sehir) {
+                    loadCities(musteri.ulke, musteri.sehir)
+                        .then(() => {
+                            // İlçeler yüklendikten sonra ilçeyi seç
+                            if (musteri.ilce) {
+                                document.getElementById('musteri_ilce').value = musteri.ilce;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('İlçe yükleme hatası:', error);
+                        });
+                }
+            }, 500);
+        }
+        
+        if (musteri.adres) {
+            document.getElementById('musteri_adres').value = musteri.adres;
+        }
+        
+        if (musteri.dogum_tarihi) {
+            document.getElementById('musteri_dogum_tarihi').value = musteri.dogum_tarihi;
+            // Yaşı hesapla ve göster
+            const yas = yasHesapla(musteri.dogum_tarihi);
+            if (yas !== null && yas >= 0) {
+                document.getElementById('musteri_yas').value = yas;
+                document.getElementById('yas-gosterge').textContent = `Yaş: ${yas}`;
+            }
+        }
+        
+        // Notlar doldur
+        if (musteri.notlar) {
+            document.getElementById('musteri_notlar').value = musteri.notlar;
+        }
+        
+        // Alanları düzenlenebilir bırak - kullanıcı isterse değiştirebilsin
+        // const musteriForm = document.getElementById('musteriForm');
+        // musteriForm.querySelectorAll('input, select, textarea').forEach(field => {
+        //     // Disabled alanlar form submit edilirken gönderilmez, bu yüzden readonly yapalım
+        //     if (field.type !== 'hidden') {
+        //         field.readOnly = true;
+        //         field.disabled = false;
+        //         field.classList.add('readonly-field');
+        //     }
+        // });
     }
 
     function musteriSeciminiTemizle() {
@@ -879,13 +1029,7 @@
         document.getElementById('secilen_musteri').style.display = 'none';
         document.getElementById('secilen_musteri_id').value = '';
         
-        const musteriForm = document.getElementById('musteriForm');
-        musteriForm.querySelectorAll('input, select, textarea').forEach(field => {
-            field.disabled = false;
-            field.readOnly = false;
-            field.classList.remove('readonly-field');
-        });
-        
+        // Alanlar zaten düzenlenebilir durumda, sadece temizle
         clearMusteriForm();
     }
 
@@ -898,11 +1042,20 @@
         document.getElementById('musteri_email').value = '';
         document.getElementById('musteri_cinsiyet').value = '';
         document.getElementById('musteri_kategori').value = '';
+        document.getElementById('musteri_ulke').value = 'TR';
+        document.getElementById('musteri_sehir').value = '';
+        document.getElementById('musteri_ilce').value = '';
         document.getElementById('musteri_adres').value = '';
         document.getElementById('musteri_notlar').value = '';
         
         // Telefon ülke kodunu varsayılan yap
         document.getElementById('telefon_ulke_kodu').value = '+90';
+        
+        // Kategori rengini temizle
+        const renkGostergesi = document.getElementById('kategori-renk-gostergesi');
+        if (renkGostergesi) {
+            renkGostergesi.style.backgroundColor = '#007bff';
+        }
         
         // Validation durumlarını temizle
         clearValidation('musteri_telefon');
@@ -1133,7 +1286,7 @@
     function loadCities(countryIso2, stateIso2) {
         const citySelect = document.getElementById('musteri_ilce');
         
-        fetch(`/api/cities/${countryIso2}/${stateIso2}`)
+        return fetch(`/api/cities/${countryIso2}/${stateIso2}`)
             .then(response => response.json())
             .then(data => {
                 citySelect.innerHTML = '<option value="">{{ _("Select District") }}</option>';
@@ -1144,12 +1297,52 @@
                     option.textContent = city.name;
                     citySelect.appendChild(option);
                 });
+                
+                return data; // Promise'i resolve et
             })
             .catch(error => {
                 console.error('İlçe yükleme hatası:', error);
                 citySelect.innerHTML = '<option value="">{{ _("Select District") }}</option>';
+                throw error; // Promise'i reject et
             });
     }
+
+    // Yaş hesaplama fonksiyonu
+    function yasHesapla(dogumTarihi) {
+        if (!dogumTarihi) return null;
+        
+        const bugun = new Date();
+        const dogum = new Date(dogumTarihi);
+        
+        let yas = bugun.getFullYear() - dogum.getFullYear();
+        const ayFarki = bugun.getMonth() - dogum.getMonth();
+        
+        if (ayFarki < 0 || (ayFarki === 0 && bugun.getDate() < dogum.getDate())) {
+            yas--;
+        }
+        
+        return yas;
+    }
+
+    // Doğum tarihi değiştiğinde yaş hesapla
+    document.addEventListener('DOMContentLoaded', function() {
+        const dogumTarihiInput = document.getElementById('musteri_dogum_tarihi');
+        const yasInput = document.getElementById('musteri_yas');
+        const yasGosterge = document.getElementById('yas-gosterge');
+        
+        if (dogumTarihiInput) {
+            dogumTarihiInput.addEventListener('change', function() {
+                const yas = yasHesapla(this.value);
+                if (yas !== null && yas >= 0) {
+                    yasInput.value = yas;
+                    yasGosterge.textContent = `Yaş: ${yas}`;
+                } else {
+                    yasInput.value = '';
+                    yasGosterge.textContent = 'Yaş hesaplanamadı';
+                }
+            });
+        }
+    });
 
     // Form submit event listener
     document.addEventListener('DOMContentLoaded', function() {
@@ -1164,6 +1357,202 @@
             });
         }
     });
+
+    // Mini takvim fonksiyonu
+    function initializeMiniCalendar() {
+        const calendarEl = document.getElementById('mini-calendar');
+        if (!calendarEl) return;
+        
+        const today = new Date();
+        let currentMonth = today.getMonth();
+        let currentYear = today.getFullYear();
+        
+        // Takvim HTML oluştur
+        function createCalendar(year, month) {
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startingDayOfWeek = firstDay.getDay();
+            
+            let calendarHTML = `
+                <div class="mini-calendar-header d-flex justify-content-between align-items-center mb-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changeMonth(-1)">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <h6 class="mb-0">${getMonthName(month)} ${year}</h6>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changeMonth(1)">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                <div class="mini-calendar-grid">
+                    <div class="mini-calendar-weekdays">
+                        ${getWeekdayHeaders()}
+                    </div>
+                    <div class="mini-calendar-days">
+            `;
+            
+            // Boş günler (Pazartesi'den başlayacak şekilde ayarla)
+            const adjustedStartingDay = startingDayOfWeek === 0 ? 6 : startingDayOfWeek - 1;
+            for (let i = 0; i < adjustedStartingDay; i++) {
+                calendarHTML += '<div class="mini-calendar-day empty"></div>';
+            }
+            
+            // Ayın günleri
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const isToday = date.toDateString() === today.toDateString();
+                
+                // Seçili tarih kontrolü - tarih_gun input'undan değer al
+                const selectedDateValue = document.getElementById('tarih_gun').value;
+                let isSelected = false;
+                if (selectedDateValue) {
+                    // Tarih string'ini parse et
+                    const [selectedYear, selectedMonth, selectedDay] = selectedDateValue.split('-').map(Number);
+                    isSelected = (year === selectedYear && month === selectedMonth - 1 && day === selectedDay);
+                }
+                
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6; // Pazar=0, Cumartesi=6
+                
+                calendarHTML += `
+                    <div class="mini-calendar-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${isWeekend ? 'weekend' : ''}" 
+                         onclick="selectDate(${year}, ${month + 1}, ${day})">
+                        ${day}
+                    </div>
+                `;
+            }
+            
+            calendarHTML += '</div></div>';
+            return calendarHTML;
+        }
+        
+        // Takvim güncelle
+        function updateCalendar() {
+            calendarEl.innerHTML = createCalendar(currentYear, currentMonth);
+        }
+        
+        // Ay değiştir
+        window.changeMonth = function(delta) {
+            currentMonth += delta;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            } else if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            updateCalendar();
+        };
+        
+        // Tarih seç
+        window.selectDate = function(year, month, day) {
+            // Tarih string'ini manuel olarak oluştur
+            const yearStr = year.toString();
+            const monthStr = (month < 10 ? '0' : '') + month;
+            const dayStr = (day < 10 ? '0' : '') + day;
+            const dateString = `${yearStr}-${monthStr}-${dayStr}`;
+            
+            console.log('Seçilen tarih:', dateString); // Debug için
+            
+            // Tarih input'unu güncelle
+            document.getElementById('tarih_gun').value = dateString;
+            
+            // Change event'ini tetikle
+            document.getElementById('tarih_gun').dispatchEvent(new Event('change'));
+            
+            // Takvimi güncelle
+            updateCalendar();
+        };
+        
+        // Ay adı
+        function getMonthName(month) {
+            const lang = (document.documentElement.lang || '{{ (session.language or "tr")[:2] }}').toLowerCase();
+            const monthsTR = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+            const monthsEN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const months = lang === 'en' ? monthsEN : monthsTR;
+            return months[month];
+        }
+        
+        // Gün kısaltmaları
+        function getWeekdayHeaders() {
+            const lang = (document.documentElement.lang || '{{ (session.language or "tr")[:2] }}').toLowerCase();
+            const weekdaysTR = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+            const weekdaysEN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            const weekdays = lang === 'en' ? weekdaysEN : weekdaysTR;
+            
+            return weekdays.map(day => `<div class="mini-calendar-day-header">${day}</div>`).join('');
+        }
+        
+        // CSS stilleri
+        const style = document.createElement('style');
+        style.textContent = `
+            .mini-calendar-grid {
+                font-size: 0.9rem;
+            }
+            .mini-calendar-weekdays {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                gap: 1px;
+                margin-bottom: 4px;
+            }
+            .mini-calendar-day-header {
+                text-align: center;
+                font-weight: 600;
+                color: #6c757d;
+                padding: 4px;
+                font-size: 0.8rem;
+            }
+            .mini-calendar-days {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                gap: 1px;
+            }
+            .mini-calendar-day {
+                aspect-ratio: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                border-radius: 4px;
+                transition: all 0.2s;
+                font-size: 0.85rem;
+            }
+            .mini-calendar-day:hover {
+                background-color: #e9ecef;
+            }
+            .mini-calendar-day.today {
+                background-color: #007bff;
+                color: white;
+                font-weight: 600;
+            }
+            .mini-calendar-day.selected {
+                background-color: #28a745;
+                color: white;
+                font-weight: 600;
+            }
+            .mini-calendar-day.empty {
+                cursor: default;
+            }
+            .mini-calendar-day.empty:hover {
+                background-color: transparent;
+            }
+            .mini-calendar-day.weekend {
+                color: #dc3545;
+                font-weight: 600;
+            }
+            .mini-calendar-day.weekend.today {
+                background-color: #dc3545;
+                color: white;
+            }
+            .mini-calendar-day.weekend.selected {
+                background-color: #28a745;
+                color: white;
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // İlk yükleme
+        updateCalendar();
+    }
 </script>
 {% endblock %}
 

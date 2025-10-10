@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Profile') }} - CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ _('Profile') }}</h1>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>{{ _('Back') }}
+    </a>
+ </div>
+
+<div class="row">
+  <div class="col-lg-8">
+    <div class="card shadow mb-4">
+      <div class="card-body">
+        <div class="d-flex align-items-center mb-4">
+          <img src="{{ url_for('static', filename='uploads/users/user_' ~ kullanici.KullaniciID ~ '.jpg') }}" onerror="this.onerror=null; this.src='{{ url_for('static', filename='img/avatar-default.svg') }}'" alt="Avatar" class="rounded-circle me-3" style="width:96px;height:96px;object-fit:cover;">
+          <div>
+            <h4 class="mb-0">{{ kullanici.Ad }} {{ kullanici.Soyad }}</h4>
+            <small class="text-muted">{{ kullanici.firma.FirmaAdi }}</small>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label text-muted">{{ _('Username') }}</label>
+            <div class="form-control-plaintext">{{ kullanici.KullaniciAdi }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label text-muted">{{ _('Email') }}</label>
+            <div class="form-control-plaintext">{{ kullanici.Email }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label text-muted">{{ _('Phone') }}</label>
+            <div class="form-control-plaintext">{{ kullanici.Telefon or '-' }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label text-muted">{{ _('Status') }}</label>
+            <div>
+              {% if kullanici.Aktif %}<span class="badge bg-success">{{ _('Active') }}</span>{% else %}<span class="badge bg-danger">{{ _('Inactive') }}</span>{% endif %}
+            </div>
+          </div>
+        </div>
+
+        <hr>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label text-muted">{{ _('Created') }}</label>
+            <div class="form-control-plaintext">{{ kullanici.OlusturmaTarihi.strftime('%d.%m.%Y %H:%M') }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label text-muted">{{ _('Last Updated') }}</label>
+            <div class="form-control-plaintext">{{ kullanici.GuncellemeTarihi.strftime('%d.%m.%Y %H:%M') }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card shadow mb-4">
+      <div class="card-header"><h6 class="m-0">{{ _('Quick Actions') }}</h6></div>
+      <div class="card-body d-grid gap-2">
+        <a href="{{ url_for('ayarlar_kullanici_duzenle', kullanici_id=kullanici.KullaniciID) }}" class="btn btn-primary"><i class="fas fa-user-edit me-1"></i>{{ _('Edit Profile') }}</a>
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger"><i class="fas fa-sign-out-alt me-1"></i>{{ _('Logout') }}</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+
+
+
+

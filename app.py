@@ -16,8 +16,20 @@ import ssl
 from email.mime.text import MIMEText
 import threading
 from collections import Counter, defaultdict
-from io import BytesIO
+from io import BytesIO, StringIO
 import csv
+from sqlalchemy import or_
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 
 load_dotenv()
 app = Flask(__name__)
@@ -57,6 +69,29 @@ def get_locale():
 
 # Babel'i yeniden başlat
 babel = Babel(app, locale_selector=get_locale)
+
+# Parola karmaşıklık kontrolü
+import re
+def is_password_strong(password: str) -> bool:
+    if not password or len(password) < 8:
+        return False
+    if not re.search(r"[A-Z]", password):
+        return False
+    if not re.search(r"[a-z]", password):
+        return False
+    if not re.search(r"\d", password):
+        return False
+    if not re.search(r"[^A-Za-z0-9]", password):
+        return False
+    return True
+
+@app.before_request
+def enforce_password_change():
+    # Zorunlu parola değişimi: giriş yapılmışsa ve bayrak açıksa, sadece izinli endpointlere erişsin
+    if 'user_id' in session and session.get('must_change_password'):
+        allowed = set(['sifre_degistir', 'logout', 'set_language', 'static'])
+        if request.endpoint not in allowed:
+            return redirect(url_for('sifre_degistir'))
 
 # Login gerekli decorator
 def login_required(f):
@@ -132,6 +167,23 @@ class Kullanici(db.Model):
     def __repr__(self):
         return f'<Kullanici {self.KullaniciAdi}>'
 
+
+class AktifOturum(db.Model):
+    __tablename__ = 'AktifOturumlar'
+
+    AktifOturumID = db.Column(db.Integer, primary_key=True)
+    KullaniciID = db.Column(db.Integer, db.ForeignKey('Kullanicilar.KullaniciID'), nullable=False, unique=True)
+    SessionToken = db.Column(db.String(64), nullable=False)
+    GirisZamani = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    SonGorulmeZamani = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    ClientIP = db.Column(db.String(64))
+    UserAgent = db.Column(db.String(255))
+
+    kullanici = db.relationship('Kullanici', backref='aktif_oturum', uselist=False)
+
+    def __repr__(self):
+        return f'<AktifOturum {self.KullaniciID}>'
+
 class YetkiTipi(db.Model):
     __tablename__ = 'YetkiTipleri'
     
@@ -171,6 +223,7 @@ class Randevu(db.Model):
     RandevuSuresi = db.Column(db.Integer, default=60)
     MusteriID = db.Column(db.Integer, db.ForeignKey('Musteriler.MusteriID'), nullable=True)
     MusteriAdi = db.Column(db.NVARCHAR(100))
+    MusteriSoyadi = db.Column(db.NVARCHAR(100))
     MusteriTelefon = db.Column(db.NVARCHAR(20))
     MusteriEmail = db.Column(db.NVARCHAR(100))
     Durum = db.Column(db.NVARCHAR(20), default='Beklemede')
@@ -320,6 +373,24 @@ class RandevuHatirlatma(db.Model):
     def __repr__(self):
         return f'<RandevuHatirlatma {self.HatirlatmaID} randevu={self.RandevuID}>'
 
+# Randevu SMS Hatirlatma
+class RandevuSMSHatirlatma(db.Model):
+    __tablename__ = 'RandevuSMSHatirlatmalar'
+
+    HatirlatmaID = db.Column(db.Integer, primary_key=True)
+    RandevuID = db.Column(db.Integer, db.ForeignKey('Randevular.RandevuID'), nullable=False)
+    FirmaID = db.Column(db.Integer, db.ForeignKey('Firmalar.FirmaID'), nullable=False)
+    RecipientPhone = db.Column(db.NVARCHAR(20))
+    MinutesBefore = db.Column(db.Integer, default=1440)
+    Gonderildi = db.Column(db.Boolean, default=False)
+    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    GonderimTarihi = db.Column(db.DateTime)
+
+    randevu = db.relationship('Randevu')
+
+    def __repr__(self):
+        return f'<RandevuSMSHatirlatma {self.HatirlatmaID} randevu={self.RandevuID}>'
+
 # E-posta Ayarları
 class FirmaEmailAyar(db.Model):
     __tablename__ = 'FirmaEmailAyarlari'
@@ -333,6 +404,9 @@ class FirmaEmailAyar(db.Model):
     SSL_Kullan = db.Column(db.Boolean, default=True)
     VarsayilanGonderenAdi = db.Column(db.NVARCHAR(200))
     VarsayilanGonderenEmail = db.Column(db.NVARCHAR(200))
+    # Varsayılan e-posta içerik ayarları
+    VarsayilanEmailKonu = db.Column(db.NVARCHAR(200))
+    VarsayilanEmailMetni = db.Column(db.NVARCHAR(max))
     Aktif = db.Column(db.Boolean, default=True)
     OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -354,6 +428,11 @@ class FirmaSMSAyar(db.Model):
     Sifre = db.Column(db.NVARCHAR(200))
     GondericiAdi = db.Column(db.NVARCHAR(20))
     API_URL = db.Column(db.NVARCHAR(500))
+    # Varsayılan SMS metni
+    VarsayilanSMSMetni = db.Column(db.NVARCHAR(1000))
+    # Zamanlama seçenekleri
+    SMSGonderOnCreate = db.Column(db.Boolean, default=False)
+    SMSGonder24SaatOnce = db.Column(db.Boolean, default=False)
     Aktif = db.Column(db.Boolean, default=True)
     OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -361,6 +440,33 @@ class FirmaSMSAyar(db.Model):
     
     def __repr__(self):
         return f'<FirmaSMSAyar {self.SMSAyarID} firma={self.FirmaID}>'
+
+# WhatsApp Ayarları
+class FirmaWhatsAppAyar(db.Model):
+    __tablename__ = 'FirmaWhatsAppAyarlari'
+    
+    WhatsAppAyarID = db.Column(db.Integer, primary_key=True)
+    FirmaID = db.Column(db.Integer, db.ForeignKey('Firmalar.FirmaID'), nullable=False)
+    AccessToken = db.Column(db.Text, nullable=True)
+    PhoneNumberID = db.Column(db.String(50), nullable=True)
+    BusinessAccountID = db.Column(db.String(50), nullable=True)
+    WebhookVerifyToken = db.Column(db.String(100), nullable=True)
+    # Varsayılan mesaj şablonları
+    RandevuOlusturmaMesaji = db.Column(db.Text, nullable=True)
+    RandevuHatirlatmaMesaji = db.Column(db.Text, nullable=True)
+    RandevuIptalMesaji = db.Column(db.Text, nullable=True)
+    # Zamanlama seçenekleri
+    MesajGonderOnCreate = db.Column(db.Boolean, default=False)
+    MesajGonder24SaatOnce = db.Column(db.Boolean, default=False)
+    MesajGonder1SaatOnce = db.Column(db.Boolean, default=False)
+    Aktif = db.Column(db.Boolean, default=True)
+    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    GuncellemeTarihi = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    firma = db.relationship('Firma', backref='whatsapp_ayarlar')
+    
+    def __repr__(self):
+        return f'<FirmaWhatsAppAyar {self.WhatsAppAyarID} firma={self.FirmaID}>'
 
 # Müşteri Kategorileri
 class MusteriKategori(db.Model):
@@ -395,16 +501,19 @@ class Musteri(db.Model):
     Ilce = db.Column(db.NVARCHAR(100))
     Adres = db.Column(db.NVARCHAR(500))
     DogumTarihi = db.Column(db.Date)
+    Yas = db.Column(db.Integer)  # Yaş alanı
     Cinsiyet = db.Column(db.NVARCHAR(10))  # 'Erkek', 'Kadın'
     KategoriID = db.Column(db.Integer, db.ForeignKey('MusteriKategorileri.KategoriID'))
     Notlar = db.Column(db.NVARCHAR(1000))
     ProfilFotografi = db.Column(db.NVARCHAR(500))
     Aktif = db.Column(db.Boolean, default=True)
+    OlusturanKullaniciID = db.Column(db.Integer, db.ForeignKey('Kullanicilar.KullaniciID'))
     OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
     GuncellemeTarihi = db.Column(db.DateTime, default=datetime.utcnow)
 
     firma = db.relationship('Firma', backref='musteriler')
     kategori = db.relationship('MusteriKategori', backref='musteriler')
+    olusturan_kullanici = db.relationship('Kullanici', backref='olusturulan_musteriler', foreign_keys=[OlusturanKullaniciID])
 
     @property
     def tam_adi(self):
@@ -503,7 +612,9 @@ def send_sms_with_firma_settings(firma_id: int, phone_number: str, message: str)
             print(f"Firma {firma_id} için aktif SMS ayarı bulunamadı")
             return False
         
-        # Telefon numarasını temizle (sadece rakamlar)
+        # Telefon numarası normalizasyonu: çoğu sağlayıcı için 90XXXXXXXXXX
+        # Corvass için esnek format gerekir; orijinali ayrıca iletelim
+        original_phone_input = phone_number
         phone_number = ''.join(filter(str.isdigit, phone_number))
         if not phone_number.startswith('90'):
             phone_number = '90' + phone_number
@@ -515,6 +626,8 @@ def send_sms_with_firma_settings(firma_id: int, phone_number: str, message: str)
             return send_sms_iletimerkezi(sms_ayar, phone_number, message)
         elif sms_ayar.SMSFirmasi == 'mesajnet':
             return send_sms_mesajnet(sms_ayar, phone_number, message)
+        elif sms_ayar.SMSFirmasi == 'corvass':
+            return send_sms_corvass(sms_ayar, original_phone_input, message)
         elif sms_ayar.SMSFirmasi == 'custom':
             return send_sms_custom(sms_ayar, phone_number, message)
         else:
@@ -652,6 +765,63 @@ def send_sms_custom(sms_ayar, phone_number: str, message: str) -> bool:
             
     except Exception as e:
         print(f"Özel API SMS gönderim hatası: {e}")
+        return False
+
+def send_sms_corvass(sms_ayar, phone_number: str, message: str) -> bool:
+    """Corvass API ile SMS gönder
+
+    Not: API entegrasyonu sağlayıcı dökümantasyonuna göre değişebilir. Burada
+    genel bir REST POST akışı uygulanmıştır. `API_URL` tanımlıysa o kullanılır,
+    yoksa varsayılan bir uç noktaya istek gönderilir.
+    """
+    try:
+        import requests
+
+        api_url = (sms_ayar.API_URL or '').strip() or 'https://api.corvass.com/sms/send'
+
+        # Corvass beklenen şema
+        payload = {
+            'Authentication': {
+                'apikey': sms_ayar.API_Key or '',
+                'apisecret': sms_ayar.API_Secret or ''
+            },
+            'message': message,
+            'msisdnArray': [phone_number],
+            'originator': sms_ayar.GondericiAdi or 'Corvass.NET',
+            # İsteğe bağlı alanlar: gönderilmemişse sağlayıcı defaults kullanır
+            # 'senddate': 'YYYY-MM-DD HH:mm:ss',
+            # 'tags': [],
+            # 'description': '',
+            # 'messageType': 'B',
+            # 'recipientType': 'TACIR'
+        }
+
+        headers = { 'Content-Type': 'application/json' }
+
+        response = requests.post(api_url, json=payload, headers=headers, timeout=30)
+
+        # Yanıtı ayrıntılı logla
+        try:
+            resp_json = response.json()
+        except Exception:
+            resp_json = {'raw': response.text}
+
+        if 200 <= response.status_code < 300:
+            # Corvass tarafı 200 içinde de hata kodu döndürebilir
+            status_val = str(resp_json.get('status') or resp_json.get('result') or '').lower()
+            success = 'success' in status_val or resp_json.get('success') is True
+            if success:
+                print(f"Corvass SMS OK: tel={phone_number} resp={resp_json}")
+                return True
+            else:
+                print(f"Corvass SMS 200 ama başarısız: resp={resp_json}")
+                return False
+        else:
+            print(f"Corvass SMS HTTP hata: {response.status_code} resp={resp_json}")
+            return False
+
+    except Exception as e:
+        print(f"Corvass SMS gönderim hatası: {e}")
         return False
 
 # Country State City API entegrasyonu
@@ -997,8 +1167,17 @@ def reminder_worker():
                     Randevu.RandevuTarihi <= future_limit  # 24 saat içindeki randevular
                 ).all()
 
-                # Eğer gönderilecek hatırlatma yoksa, sessizce bekle
-                if not pending:
+                # SMS hatirlatmalarini da kontrol et
+                pending_sms = db.session.query(RandevuSMSHatirlatma).join(Randevu).filter(
+                    RandevuSMSHatirlatma.Gonderildi == False,
+                    RandevuSMSHatirlatma.RecipientPhone != None,
+                    RandevuSMSHatirlatma.RecipientPhone != '',
+                    Randevu.RandevuTarihi >= now,
+                    Randevu.RandevuTarihi <= future_limit
+                ).all()
+
+                # Eğer gönderilecek hiçbir hatırlatma yoksa, bekle
+                if not pending and not pending_sms:
                     import time
                     time.sleep(60)
                     continue
@@ -1027,6 +1206,40 @@ def reminder_worker():
                         if ok:
                             h.Gonderildi = True
                             h.GonderimTarihi = datetime.utcnow()
+                            db.session.commit()
+
+                # SMS hatirlatmalarini isleme
+                for s in pending_sms:
+                    r = s.randevu
+                    if not r:
+                        continue
+                    target_send_time = r.RandevuTarihi - timedelta(minutes=s.MinutesBefore)
+                    if target_send_time <= now and not s.Gonderildi:
+                        # Firma SMS ayar metnini kullan
+                        sms_ayar = FirmaSMSAyar.query.filter_by(FirmaID=s.FirmaID, Aktif=True).first()
+                        sms_text = (sms_ayar.VarsayilanSMSMetni if sms_ayar and sms_ayar.VarsayilanSMSMetni else
+                                    "Merhaba {MUSTERI_ADI}, {RANDEVU_TARIH} tarihindeki randevunuzu hatırlatırız.")
+                        try:
+                            defter_adi = r.defter.DefterAdi if r.defter else ''
+                        except Exception:
+                            defter_adi = ''
+                        # Ad + Soyad birlestir
+                        try:
+                            if r.musteri and r.musteri.MusteriSoyadi:
+                                full_name = f"{r.musteri.MusteriAdi} {r.musteri.MusteriSoyadi}".strip()
+                            else:
+                                full_name = (r.MusteriAdi or '').strip()
+                        except Exception:
+                            full_name = (r.MusteriAdi or '').strip()
+
+                        sms_text = sms_text.replace('{MUSTERI_ADI}', full_name or '-')\
+                                           .replace('{RANDEVU_TARIH}', r.RandevuTarihi.strftime('%d.%m.%Y %H:%M'))\
+                                           .replace('{DEFTER_ADI}', defter_adi)
+
+                        ok = send_sms_with_firma_settings(s.FirmaID, s.RecipientPhone, sms_text)
+                        if ok:
+                            s.Gonderildi = True
+                            s.GonderimTarihi = datetime.utcnow()
                             db.session.commit()
             except Exception as e:
                 print(f"Hatirlatma isci hatasi: {e}")
@@ -1071,7 +1284,11 @@ def api_cities(country_iso2, state_iso2=None):
 @app.route('/api/bildirimler')
 @login_required
 def api_bildirimler():
-    items = Bildirim.query.filter_by(KullaniciID=session['user_id']).order_by(Bildirim.OlusturmaTarihi.desc()).limit(50).all()
+    # Only return unread notifications
+    unread_q = Bildirim.query.filter_by(KullaniciID=session['user_id'], Okundu=False)
+    unread = unread_q.count()
+    items = unread_q.order_by(Bildirim.OlusturmaTarihi.desc()).limit(50).all()
+
     data = [
         {
             'id': b.BildirimID,
@@ -1083,7 +1300,6 @@ def api_bildirimler():
         }
         for b in items
     ]
-    unread = sum(1 for b in items if not b.Okundu)
     return jsonify({'success': True, 'items': data, 'unread': unread})
 
 @app.route('/api/bildirimler/okundu', methods=['POST'])
@@ -1095,6 +1311,36 @@ def api_bildirim_okundu():
     Bildirim.query.filter(Bildirim.KullaniciID==session['user_id'], Bildirim.BildirimID.in_(ids)).update({'Okundu': True}, synchronize_session=False)
     db.session.commit()
     return jsonify({'success': True})
+
+@app.route('/api/clear-session', methods=['POST'])
+def api_clear_session():
+    """Tarayıcı kapanma durumunda oturumu temizle"""
+    try:
+        if 'user_id' in session:
+            user_id = session.get('user_id')
+            token = session.get('session_token')
+            kayit = AktifOturum.query.filter_by(KullaniciID=user_id).first()
+            if kayit and (not token or kayit.SessionToken == token):
+                db.session.delete(kayit)
+                db.session.commit()
+    except Exception:
+        db.session.rollback()
+    return '', 204  # No content response
+
+@app.route('/api/update-last-seen', methods=['POST'])
+def api_update_last_seen():
+    """Son görülme zamanını güncelle"""
+    try:
+        if 'user_id' in session:
+            user_id = session.get('user_id')
+            token = session.get('session_token')
+            kayit = AktifOturum.query.filter_by(KullaniciID=user_id).first()
+            if kayit and (not token or kayit.SessionToken == token):
+                kayit.SonGorulmeZamani = datetime.utcnow()
+                db.session.commit()
+    except Exception:
+        db.session.rollback()
+    return '', 204  # No content response
 
 # Yardimci: Kullanici ve randevu ayni firmada mi?
 def _assert_same_firm_for_permission(kullanici_id: int, randevu_id: int) -> bool:
@@ -1117,7 +1363,7 @@ def set_language(language=None):
 def index():
     if 'user_id' in session:
         return redirect(url_for('dashboard'))
-    return redirect(url_for('login'))
+    return render_template('home.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -1129,14 +1375,63 @@ def login():
         user = Kullanici.query.filter_by(KullaniciAdi=username, Aktif=True).first()
         
         if user and user.Sifre == password:  # Geçici olarak düz metin karşılaştırma
+            # Eski oturumları temizle (24 saatten eski)
+            eski_oturumlar = AktifOturum.query.filter(
+                AktifOturum.SonGorulmeZamani < datetime.utcnow() - timedelta(hours=24)
+            ).all()
+            for oturum in eski_oturumlar:
+                db.session.delete(oturum)
+            db.session.commit()
+            
+            # Tek-oturum kontrolü
+            mevcut = AktifOturum.query.filter_by(KullaniciID=user.KullaniciID).first()
+            if mevcut:
+                # Mevcut oturum varsa, kullanıcıya seçenek sun
+                session['pending_user_id'] = user.KullaniciID
+                session['pending_username'] = user.KullaniciAdi
+                session['pending_user_name'] = f"{user.Ad} {user.Soyad}"
+                session['pending_firma_id'] = user.FirmaID
+                session['pending_is_admin'] = user.Admin
+                session['pending_raporlar_modulu'] = user.RaporlarModulu
+                session['pending_ayarlar_modulu'] = user.AyarlarModulu
+                
+                # Firma bilgisini al
+                firma = Firma.query.filter_by(FirmaID=user.FirmaID).first()
+                session['pending_firma_adi'] = firma.FirmaAdi if firma else 'Bilinmeyen Firma'
+                
+                flash('Bu kullanıcı zaten giriş yapmış. Mevcut oturumu kapatıp yeni giriş yapmak istiyor musunuz?', 'warning')
+                return render_template('login.html', show_force_logout=True)
+
+            # Firma bilgisini al
+            firma = Firma.query.filter_by(FirmaID=user.FirmaID).first()
+            
             session['user_id'] = user.KullaniciID
             session['username'] = user.KullaniciAdi
             session['user_name'] = f"{user.Ad} {user.Soyad}"
             session['firma_id'] = user.FirmaID
+            session['firma_adi'] = firma.FirmaAdi if firma else 'Bilinmeyen Firma'
             session['is_admin'] = user.Admin
             session['raporlar_modulu'] = user.RaporlarModulu
             session['ayarlar_modulu'] = user.AyarlarModulu
+
+            # Oturum kaydı oluştur
+            import secrets
+            token = secrets.token_hex(16)
+            session['session_token'] = token
+            kayit = AktifOturum(
+                KullaniciID=user.KullaniciID,
+                SessionToken=token,
+                ClientIP=request.remote_addr,
+                UserAgent=request.headers.get('User-Agent', '')
+            )
+            db.session.add(kayit)
+            db.session.commit()
             
+            # Zorunlu parola değişimi: 123 ise yönlendir
+            if user.Sifre == '123':
+                session['must_change_password'] = True
+                flash('Lütfen güvenlik için şifrenizi değiştirin.', 'warning')
+                return redirect(url_for('sifre_degistir'))
             flash('Başarıyla giriş yaptınız!', 'success')
             return redirect(url_for('dashboard'))
         else:
@@ -1144,8 +1439,97 @@ def login():
     
     return render_template('login.html')
 
+@app.route('/force-logout', methods=['POST'])
+def force_logout():
+    """Mevcut oturumu kapat ve yeni giriş yap"""
+    if 'pending_user_id' not in session:
+        flash('Geçersiz işlem', 'error')
+        return redirect(url_for('login'))
+    
+    # Mevcut oturumu kapat
+    user_id = session['pending_user_id']
+    mevcut = AktifOturum.query.filter_by(KullaniciID=user_id).first()
+    if mevcut:
+        db.session.delete(mevcut)
+        db.session.commit()
+    
+    # Yeni oturum oluştur
+    session['user_id'] = session['pending_user_id']
+    session['username'] = session['pending_username']
+    session['user_name'] = session['pending_user_name']
+    session['firma_id'] = session['pending_firma_id']
+    session['firma_adi'] = session['pending_firma_adi']
+    session['is_admin'] = session['pending_is_admin']
+    session['raporlar_modulu'] = session['pending_raporlar_modulu']
+    session['ayarlar_modulu'] = session['pending_ayarlar_modulu']
+    
+    # Pending session verilerini temizle
+    for key in list(session.keys()):
+        if key.startswith('pending_'):
+            session.pop(key, None)
+    
+    # Oturum kaydı oluştur
+    import secrets
+    token = secrets.token_hex(16)
+    session['session_token'] = token
+    kayit = AktifOturum(
+        KullaniciID=user_id,
+        SessionToken=token,
+        ClientIP=request.remote_addr,
+        UserAgent=request.headers.get('User-Agent', '')
+    )
+    db.session.add(kayit)
+    db.session.commit()
+    
+    # Zorunlu parola değişimi kontrolü
+    user = Kullanici.query.get(user_id)
+    if user and user.Sifre == '123':
+        session['must_change_password'] = True
+        flash('Lütfen güvenlik için şifrenizi değiştirin.', 'warning')
+        return redirect(url_for('sifre_degistir'))
+    
+    flash('Başarıyla giriş yaptınız!', 'success')
+    return redirect(url_for('dashboard'))
+
+@app.route('/sifre-degistir', methods=['GET', 'POST'])
+def sifre_degistir():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        yeni = request.form.get('yeni')
+        yeni2 = request.form.get('yeni2')
+        if not yeni or not yeni2:
+            flash('Lütfen şifre alanlarını doldurun', 'error')
+        elif yeni != yeni2:
+            flash('Şifreler eşleşmiyor', 'error')
+        elif not is_password_strong(yeni):
+            flash('Şifre en az 8 haneli olmalı ve büyük/küçük harf, sayı ve özel karakter içermeli', 'error')
+        else:
+            u = Kullanici.query.get(session['user_id'])
+            if not u:
+                flash('Kullanıcı bulunamadı', 'error')
+                return redirect(url_for('logout'))
+            u.Sifre = yeni
+            db.session.commit()
+            session.pop('must_change_password', None)
+            flash('Şifreniz güncellendi', 'success')
+            return redirect(url_for('dashboard'))
+    return render_template('sifre_degistir.html')
+
 @app.route('/logout')
 def logout():
+    # Aktif oturumu temizle
+    try:
+        if 'user_id' in session:
+            from sqlalchemy import and_
+            u_id = session.get('user_id')
+            token = session.get('session_token')
+            kayit = AktifOturum.query.filter_by(KullaniciID=u_id).first()
+            if kayit and (not token or kayit.SessionToken == token):
+                db.session.delete(kayit)
+                db.session.commit()
+    except Exception:
+        db.session.rollback()
     session.clear()
     flash('Başarıyla çıkış yaptınız!', 'success')
     return redirect(url_for('login'))
@@ -1168,6 +1552,17 @@ def dashboard():
     # Okunmamiş bildirim sayısı
     unread_count = Bildirim.query.filter_by(KullaniciID=session['user_id'], Okundu=False).count()
     return render_template('dashboard.html', randevular=randevular, unread_count=unread_count)
+
+
+@app.route('/profil')
+@login_required
+def profil():
+    u = Kullanici.query.get(session['user_id'])
+    if not u:
+        flash('Kullanıcı bulunamadı', 'error')
+        return redirect(url_for('logout'))
+    unread_count = Bildirim.query.filter_by(KullaniciID=session['user_id'], Okundu=False).count()
+    return render_template('profil.html', kullanici=u, unread_count=unread_count)
 
 # Ayarlar Ana Sayfa
 @app.route('/ayarlar')
@@ -1268,7 +1663,7 @@ def ayarlar_kullanicilar():
         kullanici_adi = request.form.get('kullanici_adi')
         email = request.form.get('email')
         firma_id = request.form.get('firma_id', type=int)
-        sifre = request.form.get('sifre')
+        sifre = request.form.get('sifre') or '123'
         ad = request.form.get('ad')
         soyad = request.form.get('soyad')
         
@@ -1276,7 +1671,7 @@ def ayarlar_kullanicilar():
         if not session.get('is_admin', False):
             firma_id = session.get('firma_id')
         
-        if not all([kullanici_adi, email, firma_id, sifre, ad, soyad]):
+        if not all([kullanici_adi, email, firma_id, ad, soyad]):
             flash('Tüm alanlar zorunludur', 'error')
         elif Kullanici.query.filter((Kullanici.KullaniciAdi==kullanici_adi) | (Kullanici.Email==email)).first():
             flash('Kullanıcı adı veya e-posta mevcut', 'error')
@@ -1285,11 +1680,53 @@ def ayarlar_kullanicilar():
             raporlar_modulu = 'raporlar_modulu' in request.form
             ayarlar_modulu = 'ayarlar_modulu' in request.form
             
+            # Varsayılan şifre 123 ve ilk girişte değişim zorunlu olacak
             u = Kullanici(KullaniciAdi=kullanici_adi, Email=email, FirmaID=firma_id,
-                          Sifre=sifre, Ad=ad, Soyad=soyad, Aktif=True,
+                          Sifre=sifre or '123', Ad=ad, Soyad=soyad, Aktif=True,
                           RaporlarModulu=raporlar_modulu, AyarlarModulu=ayarlar_modulu)
             db.session.add(u)
             db.session.commit()
+
+            # Fotoğraf işle (opsiyonel)
+            try:
+                # Öncelik: kırpılmış Base64 data
+                cropped_b64 = request.form.get('foto_cropped')
+                if cropped_b64 and cropped_b64.startswith('data:image'):
+                    import base64
+                    header, b64data = cropped_b64.split(',', 1)
+                    raw = base64.b64decode(b64data)
+                    from PIL import Image
+                    import io
+                    img = Image.open(io.BytesIO(raw)).convert('RGB')
+                    os.makedirs(os.path.join('static', 'uploads', 'users'), exist_ok=True)
+                    out_path = os.path.join('static', 'uploads', 'users', f'user_{u.KullaniciID}.jpg')
+                    img.save(out_path, format='JPEG', quality=85, optimize=True)
+                else:
+                    foto = request.files.get('foto')
+                    if foto and foto.filename:
+                        from PIL import Image
+                        import io
+                        # Boyut kontrolü (sunucu tarafı)
+                        foto.seek(0, io.SEEK_END)
+                        size = foto.tell()
+                        foto.seek(0)
+                        if size <= 512 * 1024:
+                            img = Image.open(foto.stream).convert('RGB')
+                            # Kare kırp ve küçült (maks 256x256)
+                            w, h = img.size
+                            side = min(w, h)
+                            left = (w - side) // 2
+                            top = (h - side) // 2
+                            img = img.crop((left, top, left + side, top + side))
+                            img.thumbnail((256, 256))
+                            # Kaydet
+                            os.makedirs(os.path.join('static', 'uploads', 'users'), exist_ok=True)
+                            out_path = os.path.join('static', 'uploads', 'users', f'user_{u.KullaniciID}.jpg')
+                            img.save(out_path, format='JPEG', quality=85, optimize=True)
+                        else:
+                            flash('Fotoğraf 512KB üzeri olduğu için yüklenmedi.', 'warning')
+            except Exception:
+                flash('Fotoğraf işlenemedi.', 'warning')
             flash('Kullanıcı eklendi', 'success')
         return redirect(url_for('ayarlar_kullanicilar'))
 
@@ -1319,6 +1756,7 @@ def ayarlar_kullanici_duzenle(kullanici_id):
         email = request.form.get('email')
         firma_id = request.form.get('firma_id', type=int)
         sifre = request.form.get('sifre')
+        sifre2 = request.form.get('sifre2')
         ad = request.form.get('ad')
         soyad = request.form.get('soyad')
         aktif = 'aktif' in request.form
@@ -1351,11 +1789,54 @@ def ayarlar_kullanici_duzenle(kullanici_id):
                 kullanici.RaporlarModulu = raporlar_modulu
                 kullanici.AyarlarModulu = ayarlar_modulu
                 
-                # Şifre güncelleme (sadece girilmişse)
-                if sifre:
+                # Şifre güncelleme (sadece girilmişse) + doğrulama ve karmaşıklık
+                if sifre or sifre2:
+                    if sifre != sifre2:
+                        flash('Şifreler eşleşmiyor', 'error')
+                        return redirect(url_for('ayarlar_kullanici_duzenle', kullanici_id=kullanici_id))
+                    if not is_password_strong(sifre):
+                        flash('Şifre en az 8 haneli olmalı ve büyük/küçük harf, sayı ve özel karakter içermeli', 'error')
+                        return redirect(url_for('ayarlar_kullanici_duzenle', kullanici_id=kullanici_id))
                     kullanici.Sifre = sifre
                 
                 db.session.commit()
+
+                # Fotoğraf güncelle (opsiyonel)
+                try:
+                    cropped_b64 = request.form.get('foto_cropped')
+                    if cropped_b64 and cropped_b64.startswith('data:image'):
+                        import base64
+                        header, b64data = cropped_b64.split(',', 1)
+                        raw = base64.b64decode(b64data)
+                        from PIL import Image
+                        import io
+                        img = Image.open(io.BytesIO(raw)).convert('RGB')
+                        os.makedirs(os.path.join('static', 'uploads', 'users'), exist_ok=True)
+                        out_path = os.path.join('static', 'uploads', 'users', f'user_{kullanici.KullaniciID}.jpg')
+                        img.save(out_path, format='JPEG', quality=85, optimize=True)
+                    else:
+                        foto = request.files.get('foto')
+                        if foto and foto.filename:
+                            from PIL import Image
+                            import io
+                            foto.seek(0, io.SEEK_END)
+                            size = foto.tell()
+                            foto.seek(0)
+                            if size <= 512 * 1024:
+                                img = Image.open(foto.stream).convert('RGB')
+                                w, h = img.size
+                                side = min(w, h)
+                                left = (w - side) // 2
+                                top = (h - side) // 2
+                                img = img.crop((left, top, left + side, top + side))
+                                img.thumbnail((256, 256))
+                                os.makedirs(os.path.join('static', 'uploads', 'users'), exist_ok=True)
+                                out_path = os.path.join('static', 'uploads', 'users', f'user_{kullanici.KullaniciID}.jpg')
+                                img.save(out_path, format='JPEG', quality=85, optimize=True)
+                            else:
+                                flash('Fotoğraf 512KB üzeri olduğu için yüklenmedi.', 'warning')
+                except Exception:
+                    flash('Fotoğraf işlenemedi.', 'warning')
                 flash('Kullanıcı güncellendi', 'success')
                 return redirect(url_for('ayarlar_kullanicilar'))
     
@@ -1386,6 +1867,21 @@ def ayarlar_kullanici_sil(kullanici_id):
     db.session.commit()
     flash('Kullanıcı silindi', 'success')
     return redirect(url_for('ayarlar_kullanicilar'))
+
+# Kullanıcı şifre sıfırla (123)
+@app.route('/ayarlar/kullanicilar/sifre-sifirla/<int:kullanici_id>', methods=['POST'])
+@login_required
+@admin_required
+def ayarlar_kullanici_sifre_sifirla(kullanici_id):
+    kullanici = Kullanici.query.get_or_404(kullanici_id)
+    # Admin değilse sadece kendi firmasının kullanıcılarını sıfırlayabilir
+    if not session.get('is_admin', False) and kullanici.FirmaID != session.get('firma_id'):
+        flash('Bu kullanıcı için işlem yetkiniz yok', 'error')
+        return redirect(url_for('ayarlar_kullanicilar'))
+    kullanici.Sifre = '123'
+    db.session.commit()
+    flash('Şifre 123 olarak sıfırlandı. İlk girişte değişiklik istenecek.', 'success')
+    return redirect(url_for('ayarlar_kullanici_duzenle', kullanici_id=kullanici_id))
 
 # Randevu Defteri Ayarlari
 @app.route('/ayarlar/defter', methods=['GET', 'POST'])
@@ -1469,7 +1965,7 @@ def ayarlar_defter():
     # Mevcut firmanın kategorilerini getir
     kategoriler = MusteriKategori.query.filter_by(
         FirmaID=session['firma_id']
-    ).filter(MusteriKategori.Aktif == 1).order_by(MusteriKategori.KategoriAdi).all()
+    ).filter(MusteriKategori.Aktif == 1).order_by(MusteriKategori.KategoriID.asc()).all()
     
     return render_template('ayarlar/defter.html', firmalar=firmalar, ayarlar_list=ayarlar_list, kategoriler=kategoriler, bloklar=bloklar)
 
@@ -1546,7 +2042,7 @@ def ayarlar_kategori_ekle():
     kategori_aktif = request.form.get('kategori_aktif') == 'on'
     
     if not kategori_adi:
-        flash('Kategori adı zorunludur', 'error')
+        flash(gettext('Category name is required'), 'error')
         return redirect(url_for('ayarlar_defter'))
     
     # Aynı isimde kategori var mı kontrol et
@@ -1556,7 +2052,7 @@ def ayarlar_kategori_ekle():
     ).first()
     
     if existing:
-        flash('Bu isimde bir kategori zaten mevcut', 'error')
+        flash(gettext('A category with this name already exists'), 'error')
         return redirect(url_for('ayarlar_defter'))
     
     kategori = MusteriKategori(
@@ -1570,7 +2066,7 @@ def ayarlar_kategori_ekle():
     db.session.add(kategori)
     db.session.commit()
     
-    flash('Kategori başarıyla eklendi', 'success')
+    flash(gettext('Category added successfully'), 'success')
     return redirect(url_for('ayarlar_defter'))
 
 @app.route('/ayarlar/kategori/guncelle', methods=['POST'])
@@ -1604,7 +2100,7 @@ def ayarlar_kategori_guncelle():
     ).first()
     
     if existing:
-        flash('Bu isimde bir kategori zaten mevcut', 'error')
+        flash(gettext('A category with this name already exists'), 'error')
         return redirect(url_for('ayarlar_defter'))
     
     kategori.KategoriAdi = kategori_adi
@@ -1614,7 +2110,7 @@ def ayarlar_kategori_guncelle():
     
     db.session.commit()
     
-    flash('Kategori başarıyla güncellendi', 'success')
+    flash(gettext('Category updated successfully'), 'success')
     return redirect(url_for('ayarlar_defter'))
 
 @app.route('/ayarlar/kategori/sil')
@@ -1646,7 +2142,7 @@ def ayarlar_kategori_sil():
     db.session.delete(kategori)
     db.session.commit()
     
-    flash('Kategori başarıyla silindi', 'success')
+    flash(gettext('Category deleted successfully'), 'success')
     return redirect(url_for('ayarlar_defter'))
 
 # Randevu Referans Ayarlari
@@ -1863,6 +2359,8 @@ def ayarlar_email_ekle():
             SSL_Kullan='ssl_kullan' in request.form,
             VarsayilanGonderenAdi=request.form.get('gonderen_adi', ''),
             VarsayilanGonderenEmail=request.form.get('gonderen_email', ''),
+            VarsayilanEmailKonu=request.form.get('varsayilan_email_konu', ''),
+            VarsayilanEmailMetni=request.form.get('varsayilan_email_metni', ''),
             Aktif='aktif' in request.form
         )
         db.session.add(email_ayar)
@@ -1895,6 +2393,8 @@ def ayarlar_email_guncelle(ayar_id):
         email_ayar.SSL_Kullan = 'ssl_kullan' in request.form
         email_ayar.VarsayilanGonderenAdi = request.form.get('gonderen_adi', '')
         email_ayar.VarsayilanGonderenEmail = request.form.get('gonderen_email', '')
+        email_ayar.VarsayilanEmailKonu = request.form.get('varsayilan_email_konu', '')
+        email_ayar.VarsayilanEmailMetni = request.form.get('varsayilan_email_metni', '')
         email_ayar.Aktif = 'aktif' in request.form
         db.session.commit()
         flash('E-posta ayarları güncellendi', 'success')
@@ -1912,13 +2412,22 @@ def ayarlar_email_guncelle(ayar_id):
 @admin_required
 def ayarlar_email_sil(ayar_id):
     try:
-        email_ayar = FirmaEmailAyar.query.filter_by(EmailAyarID=ayar_id, FirmaID=session['firma_id']).first_or_404()
+        # Admin ise herhangi bir firmanın ayarını silebilir
+        if session.get('is_admin', False):
+            email_ayar = FirmaEmailAyar.query.get_or_404(ayar_id)
+        else:
+            email_ayar = FirmaEmailAyar.query.filter_by(EmailAyarID=ayar_id, FirmaID=session['firma_id']).first_or_404()
+        
         db.session.delete(email_ayar)
         db.session.commit()
         flash('E-posta ayarları silindi', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'E-posta ayarları silinirken hata: {str(e)}', 'error')
+    
+    # Admin ise seçilen firmaya yönlendir
+    if session.get('is_admin', False) and request.form.get('firma_id'):
+        return redirect(url_for('ayarlar_email', firma_id=request.form.get('firma_id')))
     return redirect(url_for('ayarlar_email'))
 
 # SMS Ayarları
@@ -1969,8 +2478,16 @@ def ayarlar_sms():
 @admin_required
 def ayarlar_sms_ekle():
     try:
+        # Admin ise formdan gelen firma_id'yi kullan
+        hedef_firma_id = session['firma_id']
+        try:
+            if session.get('is_admin', False) and request.form.get('firma_id'):
+                hedef_firma_id = int(request.form.get('firma_id'))
+        except Exception:
+            pass
+
         sms_ayar = FirmaSMSAyar(
-            FirmaID=session['firma_id'],
+            FirmaID=hedef_firma_id,
             SMSFirmasi=request.form['sms_firmasi'],
             API_Key=request.form.get('api_key', ''),
             API_Secret=request.form.get('api_secret', ''),
@@ -1978,6 +2495,9 @@ def ayarlar_sms_ekle():
             Sifre=request.form.get('sifre', ''),
             GondericiAdi=request.form.get('gonderici_adi', ''),
             API_URL=request.form.get('api_url', ''),
+            VarsayilanSMSMetni=request.form.get('varsayilan_sms_metni', ''),
+            SMSGonderOnCreate=('sms_on_create' in request.form),
+            SMSGonder24SaatOnce=('sms_24h' in request.form),
             Aktif='aktif' in request.form
         )
         db.session.add(sms_ayar)
@@ -1986,6 +2506,9 @@ def ayarlar_sms_ekle():
     except Exception as e:
         db.session.rollback()
         flash(f'SMS ayarları eklenirken hata: {str(e)}', 'error')
+    # Admin ise seçilen firmaya yönlendir
+    if session.get('is_admin', False) and request.form.get('firma_id'):
+        return redirect(url_for('ayarlar_sms', firma_id=request.form.get('firma_id')))
     return redirect(url_for('ayarlar_sms'))
 
 @app.route('/ayarlar/sms/guncelle/<int:ayar_id>', methods=['POST'])
@@ -1993,7 +2516,15 @@ def ayarlar_sms_ekle():
 @admin_required
 def ayarlar_sms_guncelle(ayar_id):
     try:
-        sms_ayar = FirmaSMSAyar.query.filter_by(SMSAyarID=ayar_id, FirmaID=session['firma_id']).first_or_404()
+        # Admin kullanıcı başka firma için işlem yapıyorsa firma_id formdan gelebilir
+        firma_id = session['firma_id']
+        try:
+            if session.get('is_admin', False) and request.form.get('firma_id'):
+                firma_id = int(request.form.get('firma_id'))
+        except Exception:
+            pass
+
+        sms_ayar = FirmaSMSAyar.query.filter_by(SMSAyarID=ayar_id, FirmaID=firma_id).first_or_404()
         sms_ayar.SMSFirmasi = request.form['sms_firmasi']
         sms_ayar.API_Key = request.form.get('api_key', '')
         sms_ayar.API_Secret = request.form.get('api_secret', '')
@@ -2001,44 +2532,342 @@ def ayarlar_sms_guncelle(ayar_id):
         sms_ayar.Sifre = request.form.get('sifre', '')
         sms_ayar.GondericiAdi = request.form.get('gonderici_adi', '')
         sms_ayar.API_URL = request.form.get('api_url', '')
+        sms_ayar.VarsayilanSMSMetni = request.form.get('varsayilan_sms_metni', '')
+        sms_ayar.SMSGonderOnCreate = ('sms_on_create' in request.form)
+        sms_ayar.SMSGonder24SaatOnce = ('sms_24h' in request.form)
         sms_ayar.Aktif = 'aktif' in request.form
         db.session.commit()
         flash('SMS ayarları güncellendi', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'SMS ayarları güncellenirken hata: {str(e)}', 'error')
+    # Admin ise seçilen firmaya yönlendir
+    if session.get('is_admin', False) and request.form.get('firma_id'):
+        return redirect(url_for('ayarlar_sms', firma_id=request.form.get('firma_id')))
     return redirect(url_for('ayarlar_sms'))
 
-@app.route('/ayarlar/sms/sil/<int:ayar_id>', methods=['POST'])
+@app.route('/ayarlar/sms/sil/<int:ayar_id>', methods=['POST', 'GET'])
 @login_required
 @admin_required
 def ayarlar_sms_sil(ayar_id):
     try:
-        sms_ayar = FirmaSMSAyar.query.filter_by(SMSAyarID=ayar_id, FirmaID=session['firma_id']).first_or_404()
+        # Admin kullanıcı başka firma için işlem yapıyorsa firma_id formdan gelebilir
+        firma_id = session['firma_id']
+        try:
+            if session.get('is_admin', False):
+                if request.method == 'POST' and request.form.get('firma_id'):
+                    firma_id = int(request.form.get('firma_id'))
+                elif request.method == 'GET' and request.args.get('firma_id'):
+                    firma_id = int(request.args.get('firma_id'))
+        except Exception:
+            pass
+
+        sms_ayar = FirmaSMSAyar.query.filter_by(SMSAyarID=ayar_id, FirmaID=firma_id).first_or_404()
         db.session.delete(sms_ayar)
         db.session.commit()
         flash('SMS ayarları silindi', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'SMS ayarları silinirken hata: {str(e)}', 'error')
+    # Admin ise seçilen firmaya yönlendir
+    if session.get('is_admin', False):
+        hedef_firma_id = None
+        if request.method == 'POST':
+            hedef_firma_id = request.form.get('firma_id')
+        else:
+            hedef_firma_id = request.args.get('firma_id')
+        if hedef_firma_id:
+            return redirect(url_for('ayarlar_sms', firma_id=hedef_firma_id))
     return redirect(url_for('ayarlar_sms'))
+
+# WhatsApp Ayarları
+@app.route('/ayarlar/whatsapp')
+@login_required
+def ayarlar_whatsapp():
+    # Admin ise firma seçimi yapabilir
+    if session.get('is_admin', False):
+        selected_firma_id = request.args.get('firma_id', type=int)
+        if selected_firma_id:
+            firma = Firma.query.get(selected_firma_id)
+            if not firma:
+                flash('Seçilen firma bulunamadı!', 'error')
+                return redirect(url_for('ayarlar'))
+        else:
+            # İlk firma varsayılan olarak seçili
+            firma = Firma.query.first()
+            if not firma:
+                flash('Hiç firma bulunamadı!', 'error')
+                return redirect(url_for('ayarlar'))
+            selected_firma_id = firma.FirmaID
+        
+        whatsapp_ayar = FirmaWhatsAppAyar.query.filter_by(FirmaID=selected_firma_id).first()
+        firmalar = Firma.query.filter_by(Aktif=True).all()
+        return render_template('ayarlar/whatsapp.html', 
+                             whatsapp_ayar=whatsapp_ayar, 
+                             firma=firma,
+                             firmalar=firmalar,
+                             is_admin=True)
+    else:
+        # Normal kullanıcı sadece kendi firmasını görebilir
+        firma = Firma.query.get(session['firma_id'])
+        if not firma:
+            flash('Firma bilgisi bulunamadı!', 'error')
+            return redirect(url_for('ayarlar'))
+        
+        whatsapp_ayar = FirmaWhatsAppAyar.query.filter_by(FirmaID=session['firma_id']).first()
+        return render_template('ayarlar/whatsapp.html', 
+                             whatsapp_ayar=whatsapp_ayar, 
+                             firma=firma,
+                             is_admin=False)
+
+@app.route('/ayarlar/whatsapp/ekle', methods=['POST'])
+@login_required
+def ayarlar_whatsapp_ekle():
+    try:
+        # Admin ise formdan gelen firma_id'yi kullan
+        hedef_firma_id = session['firma_id']
+        try:
+            if session.get('is_admin', False) and request.form.get('firma_id'):
+                hedef_firma_id = int(request.form.get('firma_id'))
+        except (ValueError, TypeError):
+            pass
+        
+        # Mevcut ayar var mı kontrol et
+        mevcut_ayar = FirmaWhatsAppAyar.query.filter_by(FirmaID=hedef_firma_id).first()
+        if mevcut_ayar:
+            flash('Bu firma için WhatsApp ayarı zaten mevcut!', 'error')
+            return redirect(url_for('ayarlar_whatsapp'))
+        
+        # Yeni WhatsApp ayarı oluştur
+        whatsapp_ayar = FirmaWhatsAppAyar(
+            FirmaID=hedef_firma_id,
+            AccessToken=request.form.get('access_token'),
+            PhoneNumberID=request.form.get('phone_number_id'),
+            BusinessAccountID=request.form.get('business_account_id'),
+            WebhookVerifyToken=request.form.get('webhook_verify_token'),
+            RandevuOlusturmaMesaji=request.form.get('randevu_olusturma_mesaji'),
+            RandevuHatirlatmaMesaji=request.form.get('randevu_hatirlatma_mesaji'),
+            RandevuIptalMesaji=request.form.get('randevu_iptal_mesaji'),
+            MesajGonderOnCreate=bool(request.form.get('mesaj_gonder_on_create')),
+            MesajGonder24SaatOnce=bool(request.form.get('mesaj_gonder_24_saat_once')),
+            MesajGonder1SaatOnce=bool(request.form.get('mesaj_gonder_1_saat_once')),
+            Aktif=True
+        )
+        
+        db.session.add(whatsapp_ayar)
+        db.session.commit()
+        
+        flash('WhatsApp ayarları başarıyla eklendi!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'WhatsApp ayarları eklenirken hata oluştu: {str(e)}', 'error')
+    
+    # Admin ise seçilen firmaya yönlendir
+    if session.get('is_admin', False) and request.form.get('firma_id'):
+        return redirect(url_for('ayarlar_whatsapp', firma_id=request.form.get('firma_id')))
+    return redirect(url_for('ayarlar_whatsapp'))
+
+@app.route('/ayarlar/whatsapp/guncelle/<int:ayar_id>', methods=['POST'])
+@login_required
+def ayarlar_whatsapp_guncelle(ayar_id):
+    try:
+        whatsapp_ayar = FirmaWhatsAppAyar.query.get_or_404(ayar_id)
+        
+        # Kullanıcı yetkisi kontrolü
+        if not session.get('is_admin', False) and whatsapp_ayar.FirmaID != session['firma_id']:
+            flash('Bu ayarı düzenleme yetkiniz yok!', 'error')
+            return redirect(url_for('ayarlar_whatsapp'))
+        
+        # Ayarları güncelle
+        whatsapp_ayar.AccessToken = request.form.get('access_token')
+        whatsapp_ayar.PhoneNumberID = request.form.get('phone_number_id')
+        whatsapp_ayar.BusinessAccountID = request.form.get('business_account_id')
+        whatsapp_ayar.WebhookVerifyToken = request.form.get('webhook_verify_token')
+        whatsapp_ayar.RandevuOlusturmaMesaji = request.form.get('randevu_olusturma_mesaji')
+        whatsapp_ayar.RandevuHatirlatmaMesaji = request.form.get('randevu_hatirlatma_mesaji')
+        whatsapp_ayar.RandevuIptalMesaji = request.form.get('randevu_iptal_mesaji')
+        whatsapp_ayar.MesajGonderOnCreate = bool(request.form.get('mesaj_gonder_on_create'))
+        whatsapp_ayar.MesajGonder24SaatOnce = bool(request.form.get('mesaj_gonder_24_saat_once'))
+        whatsapp_ayar.MesajGonder1SaatOnce = bool(request.form.get('mesaj_gonder_1_saat_once'))
+        whatsapp_ayar.GuncellemeTarihi = datetime.utcnow()
+        
+        db.session.commit()
+        flash('WhatsApp ayarları başarıyla güncellendi!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'WhatsApp ayarları güncellenirken hata oluştu: {str(e)}', 'error')
+    
+    # Admin ise seçilen firmaya yönlendir
+    if session.get('is_admin', False) and request.form.get('firma_id'):
+        return redirect(url_for('ayarlar_whatsapp', firma_id=request.form.get('firma_id')))
+    return redirect(url_for('ayarlar_whatsapp'))
+
+@app.route('/ayarlar/whatsapp/sil/<int:ayar_id>', methods=['POST', 'GET'])
+@login_required
+def ayarlar_whatsapp_sil(ayar_id):
+    try:
+        whatsapp_ayar = FirmaWhatsAppAyar.query.get_or_404(ayar_id)
+        
+        # Kullanıcı yetkisi kontrolü
+        if not session.get('is_admin', False) and whatsapp_ayar.FirmaID != session['firma_id']:
+            flash('Bu ayarı silme yetkiniz yok!', 'error')
+            return redirect(url_for('ayarlar_whatsapp'))
+        
+        db.session.delete(whatsapp_ayar)
+        db.session.commit()
+        flash('WhatsApp ayarları başarıyla silindi!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'WhatsApp ayarları silinirken hata oluştu: {str(e)}', 'error')
+    
+    # Admin ise seçilen firmaya yönlendir
+    if session.get('is_admin', False):
+        hedef_firma_id = request.args.get('firma_id')
+        if hedef_firma_id:
+            return redirect(url_for('ayarlar_whatsapp', firma_id=hedef_firma_id))
+    return redirect(url_for('ayarlar_whatsapp'))
+
+# WhatsApp Sohbet Ekranı
+@app.route('/whatsapp')
+@login_required
+def whatsapp_chat():
+    """WhatsApp Business API entegrasyonu ile sohbet ekranı"""
+    # Firma WhatsApp ayarlarını kontrol et
+    whatsapp_ayar = FirmaWhatsAppAyar.query.filter_by(FirmaID=session['firma_id'], Aktif=True).first()
+    
+    if not whatsapp_ayar:
+        flash('WhatsApp ayarları bulunamadı. Lütfen önce WhatsApp ayarlarını yapılandırın.', 'warning')
+        return redirect(url_for('ayarlar_whatsapp'))
+    
+    # Müşteri listesini getir (mesaj gönderme için)
+    from app import Musteri
+    musteriler = Musteri.query.filter_by(FirmaID=session['firma_id']).all()
+    
+    return render_template('whatsapp/chat.html', 
+                         whatsapp_ayar=whatsapp_ayar,
+                         musteriler=musteriler)
+
+# WhatsApp Mesaj Gönderme API
+@app.route('/api/whatsapp/send', methods=['POST'])
+@login_required
+def whatsapp_send_message():
+    """WhatsApp mesajı gönder"""
+    try:
+        data = request.get_json()
+        phone_number = data.get('phone_number')
+        message = data.get('message')
+        
+        if not phone_number or not message:
+            return jsonify({'success': False, 'error': 'Telefon numarası ve mesaj gerekli'}), 400
+        
+        # Telefon numarasını temizle
+        phone_clean = ''.join(filter(str.isdigit, phone_number))
+        if not phone_clean or len(phone_clean) < 10:
+            return jsonify({'success': False, 'error': 'Geçersiz telefon numarası'}), 400
+        
+        # WhatsApp mesajını gönder
+        success, result = send_whatsapp_message(phone_clean, message, session['firma_id'])
+        
+        if success:
+            return jsonify({'success': True, 'message': 'Mesaj başarıyla gönderildi'})
+        else:
+            return jsonify({'success': False, 'error': result}), 500
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# WhatsApp mesaj gönderme fonksiyonu
+def send_whatsapp_message(phone_number, message, firma_id):
+    """WhatsApp mesajı gönder"""
+    try:
+        whatsapp_ayar = FirmaWhatsAppAyar.query.filter_by(FirmaID=firma_id, Aktif=True).first()
+        if not whatsapp_ayar or not whatsapp_ayar.AccessToken or not whatsapp_ayar.PhoneNumberID:
+            return False, "WhatsApp ayarları bulunamadı"
+        
+        import requests
+        
+        url = f"https://graph.facebook.com/v18.0/{whatsapp_ayar.PhoneNumberID}/messages"
+        headers = {
+            "Authorization": f"Bearer {whatsapp_ayar.AccessToken}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "messaging_product": "whatsapp",
+            "to": phone_number,
+            "type": "text",
+            "text": {"body": message}
+        }
+        
+        response = requests.post(url, headers=headers, json=data)
+        
+        if response.status_code == 200:
+            return True, "Mesaj başarıyla gönderildi"
+        else:
+            return False, f"Mesaj gönderilemedi: {response.text}"
+            
+    except Exception as e:
+        return False, f"Hata: {str(e)}"
 
 @app.route('/randevular')
 @login_required
 def randevular():
-    # Randevu listesi + referans ve defter filtresi
+    # Randevu listesi + referans, defter, durum, tarih ve oluşturan filtresi
     referanslar = RandevuReferans.query.filter_by(FirmaID=session['firma_id'], Aktif=True).order_by(RandevuReferans.Ad).all()
     defterler = RandevuDefterAyar.query.filter_by(FirmaID=session['firma_id'], Aktif=True).order_by(RandevuDefterAyar.DefterAdi).all()
+    kullanicilar = Kullanici.query.filter_by(FirmaID=session['firma_id'], Aktif=True).order_by(Kullanici.Ad, Kullanici.Soyad).all()
     
     ref_id = request.args.get('referans_id', type=int)
     defter_id = request.args.get('defter_id', type=int)
+    durum = request.args.get('durum', type=str)
+    olusturan_id = request.args.get('olusturan_id', type=int)
+    baslangic_str = request.args.get('baslangic', type=str)
+    bitis_str = request.args.get('bitis', type=str)
+
+    # Kullanıcının son seçtiği tarih aralığını hatırla
+    if baslangic_str or bitis_str:
+        if baslangic_str:
+            session['randevular_baslangic'] = baslangic_str
+        if bitis_str:
+            session['randevular_bitis'] = bitis_str
+    else:
+        baslangic_str = session.get('randevular_baslangic')
+        bitis_str = session.get('randevular_bitis')
+    
+    # Eğer hâlâ tarih filtresi yoksa bugünü varsayılan olarak ayarla
+    if not baslangic_str and not bitis_str:
+        today = datetime.now().date()
+        baslangic_str = today.strftime('%Y-%m-%d')
+        bitis_str = today.strftime('%Y-%m-%d')
+    
+    # Tarih filtrelerini datetime'a çevir
+    baslangic = None
+    bitis = None
+    if baslangic_str:
+        try:
+            baslangic = datetime.strptime(baslangic_str, '%Y-%m-%d')
+        except ValueError:
+            baslangic = None
+    if bitis_str:
+        try:
+            bitis = datetime.strptime(bitis_str, '%Y-%m-%d')
+            # Bitiş tarihine 1 gün ekle (tarih aralığı dahil olsun)
+            bitis = bitis + timedelta(days=1)
+        except ValueError:
+            bitis = None
     
     ref = None
     defter = None
+    olusturan = None
     if ref_id:
         ref = RandevuReferans.query.filter_by(ReferansID=ref_id, FirmaID=session['firma_id']).first()
     if defter_id:
         defter = RandevuDefterAyar.query.filter_by(AyarID=defter_id, FirmaID=session['firma_id']).first()
+    if olusturan_id:
+        olusturan = Kullanici.query.filter_by(KullaniciID=olusturan_id, FirmaID=session['firma_id']).first()
 
     base_query = Randevu.query if session.get('is_admin', False) else db.session.query(Randevu).join(RandevuYetki).filter(
         RandevuYetki.KullaniciID == session['user_id'],
@@ -2050,15 +2879,613 @@ def randevular():
         q = q.filter(Randevu.RandevuBaslik == ref.Ad)
     if defter is not None:
         q = q.filter(Randevu.DefterID == defter.AyarID)
+    if durum:
+        q = q.filter(Randevu.Durum == durum)
+    if olusturan is not None:
+        q = q.filter(Randevu.OlusturanKullaniciID == olusturan.KullaniciID)
+    if baslangic:
+        q = q.filter(Randevu.RandevuTarihi >= baslangic)
+    if bitis:
+        q = q.filter(Randevu.RandevuTarihi < bitis)
 
     randevular = q.order_by(Randevu.RandevuTarihi.desc()).all()
+    
+    # Bugünün tarihini string olarak hazırla
+    today_str = datetime.now().date().strftime('%Y-%m-%d')
     
     return render_template('randevular.html', 
                          randevular=randevular, 
                          referanslar=referanslar, 
                          defterler=defterler,
+                         kullanicilar=kullanicilar,
                          selected_referans_id=ref_id,
-                         selected_defter_id=defter_id)
+                         selected_defter_id=defter_id,
+                         selected_durum=durum,
+                         selected_olusturan_id=olusturan_id,
+                         selected_baslangic=baslangic_str,
+                         selected_bitis=bitis_str,
+                         today_str=today_str)
+
+@app.route('/api/musteri-arama')
+@login_required
+def musteri_arama():
+    """Müşteri arama API'si"""
+    firma_id = session.get('firma_id')
+    if not firma_id:
+        return jsonify([])
+    
+    query = request.args.get('q', '').strip()
+    if len(query) < 2:
+        return jsonify([])
+    
+    # Müşteri arama sorgusu
+    musteriler = Musteri.query.filter(
+        Musteri.FirmaID == firma_id,
+        or_(
+            Musteri.MusteriAdi.ilike(f'%{query}%'),
+            Musteri.MusteriSoyadi.ilike(f'%{query}%'),
+            Musteri.Telefon.ilike(f'%{query}%'),
+            Musteri.Email.ilike(f'%{query}%')
+        )
+    ).limit(10).all()
+    
+    # Plaka kodlarını şehir isimlerine dönüştür
+    plaka_to_sehir = {
+        '01': 'Adana', '02': 'Adıyaman', '03': 'Afyonkarahisar', '04': 'Ağrı', '05': 'Amasya',
+        '06': 'Ankara', '07': 'Antalya', '08': 'Artvin', '09': 'Aydın', '10': 'Balıkesir',
+        '11': 'Bilecik', '12': 'Bingöl', '13': 'Bitlis', '14': 'Bolu', '15': 'Burdur',
+        '16': 'Bursa', '17': 'Çanakkale', '18': 'Çankırı', '19': 'Çorum', '20': 'Denizli',
+        '21': 'Diyarbakır', '22': 'Edirne', '23': 'Elazığ', '24': 'Erzincan', '25': 'Erzurum',
+        '26': 'Eskişehir', '27': 'Gaziantep', '28': 'Giresun', '29': 'Gümüşhane', '30': 'Hakkari',
+        '31': 'Hatay', '32': 'Isparta', '33': 'Mersin', '34': 'İstanbul', '35': 'İzmir',
+        '36': 'Kars', '37': 'Kastamonu', '38': 'Kayseri', '39': 'Kırklareli', '40': 'Kırşehir',
+        '41': 'Kocaeli', '42': 'Konya', '43': 'Kütahya', '44': 'Malatya', '45': 'Manisa',
+        '46': 'Kahramanmaraş', '47': 'Mardin', '48': 'Muğla', '49': 'Muş', '50': 'Nevşehir',
+        '51': 'Niğde', '52': 'Ordu', '53': 'Rize', '54': 'Sakarya', '55': 'Samsun',
+        '56': 'Siirt', '57': 'Sinop', '58': 'Sivas', '59': 'Tekirdağ', '60': 'Tokat',
+        '61': 'Trabzon', '62': 'Tunceli', '63': 'Şanlıurfa', '64': 'Uşak', '65': 'Van',
+        '66': 'Yozgat', '67': 'Zonguldak', '68': 'Aksaray', '69': 'Bayburt', '70': 'Karaman',
+        '71': 'Kırıkkale', '72': 'Batman', '73': 'Şırnak', '74': 'Bartın', '75': 'Ardahan',
+        '76': 'Iğdır', '77': 'Yalova', '78': 'Karabük', '79': 'Kilis', '80': 'Osmaniye', '81': 'Düzce'
+    }
+    
+    results = []
+    for m in musteriler:
+        sehir_adi = plaka_to_sehir.get(m.Sehir, m.Sehir) if m.Sehir else None
+        results.append({
+            'id': m.MusteriID,
+            'ad': m.MusteriAdi,
+            'soyad': m.MusteriSoyadi,
+            'telefon': m.Telefon,
+            'email': m.Email,
+            'sehir': sehir_adi
+        })
+    
+    return jsonify(results)
+
+@app.route('/rapor/musteri-detay/<int:musteri_id>')
+@login_required
+def musteri_detay_raporu(musteri_id):
+    """Müşteri detay raporu"""
+    firma_id = session.get('firma_id')
+    if not firma_id:
+        return redirect(url_for('login'))
+    
+    # Müşteri bilgilerini getir
+    musteri = Musteri.query.filter_by(MusteriID=musteri_id, FirmaID=firma_id).first()
+    if not musteri:
+        flash('Müşteri bulunamadı.', 'error')
+        return redirect(url_for('rapor_musteriler'))
+    
+    # Plaka kodlarını şehir isimlerine dönüştür
+    plaka_to_sehir = {
+        '01': 'Adana', '02': 'Adıyaman', '03': 'Afyonkarahisar', '04': 'Ağrı', '05': 'Amasya',
+        '06': 'Ankara', '07': 'Antalya', '08': 'Artvin', '09': 'Aydın', '10': 'Balıkesir',
+        '11': 'Bilecik', '12': 'Bingöl', '13': 'Bitlis', '14': 'Bolu', '15': 'Burdur',
+        '16': 'Bursa', '17': 'Çanakkale', '18': 'Çankırı', '19': 'Çorum', '20': 'Denizli',
+        '21': 'Diyarbakır', '22': 'Edirne', '23': 'Elazığ', '24': 'Erzincan', '25': 'Erzurum',
+        '26': 'Eskişehir', '27': 'Gaziantep', '28': 'Giresun', '29': 'Gümüşhane', '30': 'Hakkari',
+        '31': 'Hatay', '32': 'Isparta', '33': 'Mersin', '34': 'İstanbul', '35': 'İzmir',
+        '36': 'Kars', '37': 'Kastamonu', '38': 'Kayseri', '39': 'Kırklareli', '40': 'Kırşehir',
+        '41': 'Kocaeli', '42': 'Konya', '43': 'Kütahya', '44': 'Malatya', '45': 'Manisa',
+        '46': 'Kahramanmaraş', '47': 'Mardin', '48': 'Muğla', '49': 'Muş', '50': 'Nevşehir',
+        '51': 'Niğde', '52': 'Ordu', '53': 'Rize', '54': 'Sakarya', '55': 'Samsun',
+        '56': 'Siirt', '57': 'Sinop', '58': 'Sivas', '59': 'Tekirdağ', '60': 'Tokat',
+        '61': 'Trabzon', '62': 'Tunceli', '63': 'Şanlıurfa', '64': 'Uşak', '65': 'Van',
+        '66': 'Yozgat', '67': 'Zonguldak', '68': 'Aksaray', '69': 'Bayburt', '70': 'Karaman',
+        '71': 'Kırıkkale', '72': 'Batman', '73': 'Şırnak', '74': 'Bartın', '75': 'Ardahan',
+        '76': 'Iğdır', '77': 'Yalova', '78': 'Karabük', '79': 'Kilis', '80': 'Osmaniye', '81': 'Düzce'
+    }
+    
+    # Müşteri randevularını getir
+    randevular = Randevu.query.filter_by(
+        MusteriID=musteri_id,
+        FirmaID=firma_id
+    ).order_by(Randevu.RandevuTarihi.desc()).all()
+    
+    # Randevu istatistikleri
+    toplam_randevu = len(randevular)
+    tamamlanan_randevu = len([r for r in randevular if r.Durum == 'Tamamlandı'])
+    iptal_randevu = len([r for r in randevular if r.Durum == 'İptal'])
+    bekleyen_randevu = len([r for r in randevular if r.Durum == 'Beklemede'])
+    
+    # Son randevu tarihi
+    son_randevu = randevular[0] if randevular else None
+    
+    # Aylık randevu dağılımı (son 12 ay)
+    from collections import defaultdict
+    
+    aylik_randevu = defaultdict(int)
+    for r in randevular:
+        if r.RandevuTarihi:
+            ay_key = r.RandevuTarihi.strftime('%Y-%m')
+            aylik_randevu[ay_key] += 1
+    
+    # Randevu defteri dağılımı
+    defter_dagilimi = defaultdict(int)
+    for r in randevular:
+        if r.DefterID:
+            # DefterID'den defter adını al
+            defter = RandevuDefterAyar.query.filter_by(AyarID=r.DefterID).first()
+            if defter:
+                defter_dagilimi[defter.DefterAdi] += 1
+            else:
+                defter_dagilimi['Bilinmeyen Defter'] += 1
+    
+    # Şehir bilgisini dönüştür
+    sehir_adi = plaka_to_sehir.get(musteri.Sehir, musteri.Sehir) if musteri.Sehir else 'Belirtilmemiş'
+    
+    return render_template('musteri_detay_raporu.html',
+                         musteri=musteri,
+                         randevular=randevular,
+                         toplam_randevu=toplam_randevu,
+                         tamamlanan_randevu=tamamlanan_randevu,
+                         iptal_randevu=iptal_randevu,
+                         bekleyen_randevu=bekleyen_randevu,
+                         son_randevu=son_randevu,
+                         aylik_randevu=dict(aylik_randevu),
+                         defter_dagilimi=dict(defter_dagilimi),
+                         sehir_adi=sehir_adi)
+
+@app.route('/rapor/musteri-detay-modal/<int:musteri_id>')
+@login_required
+def musteri_detay_modal(musteri_id):
+    """Müşteri detay raporu modal içeriği"""
+    firma_id = session.get('firma_id')
+    if not firma_id:
+        return redirect(url_for('login'))
+    
+    # Müşteri bilgilerini getir
+    musteri = Musteri.query.filter_by(MusteriID=musteri_id, FirmaID=firma_id).first()
+    if not musteri:
+        return '<div class="alert alert-danger">Müşteri bulunamadı.</div>'
+    
+    # Plaka kodlarını şehir isimlerine dönüştür
+    plaka_to_sehir = {
+        '01': 'Adana', '02': 'Adıyaman', '03': 'Afyonkarahisar', '04': 'Ağrı', '05': 'Amasya',
+        '06': 'Ankara', '07': 'Antalya', '08': 'Artvin', '09': 'Aydın', '10': 'Balıkesir',
+        '11': 'Bilecik', '12': 'Bingöl', '13': 'Bitlis', '14': 'Bolu', '15': 'Burdur',
+        '16': 'Bursa', '17': 'Çanakkale', '18': 'Çankırı', '19': 'Çorum', '20': 'Denizli',
+        '21': 'Diyarbakır', '22': 'Edirne', '23': 'Elazığ', '24': 'Erzincan', '25': 'Erzurum',
+        '26': 'Eskişehir', '27': 'Gaziantep', '28': 'Giresun', '29': 'Gümüşhane', '30': 'Hakkari',
+        '31': 'Hatay', '32': 'Isparta', '33': 'Mersin', '34': 'İstanbul', '35': 'İzmir',
+        '36': 'Kars', '37': 'Kastamonu', '38': 'Kayseri', '39': 'Kırklareli', '40': 'Kırşehir',
+        '41': 'Kocaeli', '42': 'Konya', '43': 'Kütahya', '44': 'Malatya', '45': 'Manisa',
+        '46': 'Kahramanmaraş', '47': 'Mardin', '48': 'Muğla', '49': 'Muş', '50': 'Nevşehir',
+        '51': 'Niğde', '52': 'Ordu', '53': 'Rize', '54': 'Sakarya', '55': 'Samsun',
+        '56': 'Siirt', '57': 'Sinop', '58': 'Sivas', '59': 'Tekirdağ', '60': 'Tokat',
+        '61': 'Trabzon', '62': 'Tunceli', '63': 'Şanlıurfa', '64': 'Uşak', '65': 'Van',
+        '66': 'Yozgat', '67': 'Zonguldak', '68': 'Aksaray', '69': 'Bayburt', '70': 'Karaman',
+        '71': 'Kırıkkale', '72': 'Batman', '73': 'Şırnak', '74': 'Bartın', '75': 'Ardahan',
+        '76': 'Iğdır', '77': 'Yalova', '78': 'Karabük', '79': 'Kilis', '80': 'Osmaniye', '81': 'Düzce'
+    }
+    
+    # Müşteri randevularını getir
+    randevular = Randevu.query.filter_by(
+        MusteriID=musteri_id,
+        FirmaID=firma_id
+    ).order_by(Randevu.RandevuTarihi.desc()).all()
+    
+    # Randevu istatistikleri
+    toplam_randevu = len(randevular)
+    tamamlanan_randevu = len([r for r in randevular if r.Durum == 'Tamamlandı'])
+    iptal_randevu = len([r for r in randevular if r.Durum == 'İptal'])
+    bekleyen_randevu = len([r for r in randevular if r.Durum == 'Beklemede'])
+    
+    # Aylık randevu dağılımı
+    aylik_randevu = defaultdict(int)
+    for randevu in randevular:
+        if randevu.RandevuTarihi:
+            ay_key = randevu.RandevuTarihi.strftime('%Y-%m')
+            aylik_randevu[ay_key] += 1
+    
+    # Defter dağılımı
+    defter_dagilimi = defaultdict(int)
+    for randevu in randevular:
+        if randevu.DefterID:
+            defter = RandevuDefterAyar.query.filter_by(AyarID=randevu.DefterID).first()
+            if defter:
+                defter_dagilimi[defter.DefterAdi] += 1
+    
+    # Şehir bilgisini dönüştür
+    sehir_adi = plaka_to_sehir.get(musteri.Sehir, musteri.Sehir) if musteri.Sehir else 'Belirtilmemiş'
+    
+    return render_template('musteri_detay_modal.html',
+                         musteri=musteri,
+                         randevular=randevular,
+                         toplam_randevu=toplam_randevu,
+                         tamamlanan_randevu=tamamlanan_randevu,
+                         iptal_randevu=iptal_randevu,
+                         bekleyen_randevu=bekleyen_randevu,
+                         aylik_randevu=dict(aylik_randevu),
+                         defter_dagilimi=dict(defter_dagilimi),
+                         sehir_adi=sehir_adi)
+
+@app.route('/rapor/musteri-detay/<int:musteri_id>/pdf')
+@login_required
+def musteri_detay_pdf(musteri_id):
+    """Müşteri detay raporu PDF"""
+    firma_id = session.get('firma_id')
+    if not firma_id:
+        return redirect(url_for('login'))
+    
+    # Müşteri bilgilerini getir
+    musteri = Musteri.query.filter_by(MusteriID=musteri_id, FirmaID=firma_id).first()
+    if not musteri:
+        flash('Müşteri bulunamadı.', 'error')
+        return redirect(url_for('rapor_musteriler'))
+    
+    # Plaka kodlarını şehir isimlerine dönüştür
+    plaka_to_sehir = {
+        '01': 'Adana', '02': 'Adıyaman', '03': 'Afyonkarahisar', '04': 'Ağrı', '05': 'Amasya',
+        '06': 'Ankara', '07': 'Antalya', '08': 'Artvin', '09': 'Aydın', '10': 'Balıkesir',
+        '11': 'Bilecik', '12': 'Bingöl', '13': 'Bitlis', '14': 'Bolu', '15': 'Burdur',
+        '16': 'Bursa', '17': 'Çanakkale', '18': 'Çankırı', '19': 'Çorum', '20': 'Denizli',
+        '21': 'Diyarbakır', '22': 'Edirne', '23': 'Elazığ', '24': 'Erzincan', '25': 'Erzurum',
+        '26': 'Eskişehir', '27': 'Gaziantep', '28': 'Giresun', '29': 'Gümüşhane', '30': 'Hakkari',
+        '31': 'Hatay', '32': 'Isparta', '33': 'Mersin', '34': 'İstanbul', '35': 'İzmir',
+        '36': 'Kars', '37': 'Kastamonu', '38': 'Kayseri', '39': 'Kırklareli', '40': 'Kırşehir',
+        '41': 'Kocaeli', '42': 'Konya', '43': 'Kütahya', '44': 'Malatya', '45': 'Manisa',
+        '46': 'Kahramanmaraş', '47': 'Mardin', '48': 'Muğla', '49': 'Muş', '50': 'Nevşehir',
+        '51': 'Niğde', '52': 'Ordu', '53': 'Rize', '54': 'Sakarya', '55': 'Samsun',
+        '56': 'Siirt', '57': 'Sinop', '58': 'Sivas', '59': 'Tekirdağ', '60': 'Tokat',
+        '61': 'Trabzon', '62': 'Tunceli', '63': 'Şanlıurfa', '64': 'Uşak', '65': 'Van',
+        '66': 'Yozgat', '67': 'Zonguldak', '68': 'Aksaray', '69': 'Bayburt', '70': 'Karaman',
+        '71': 'Kırıkkale', '72': 'Batman', '73': 'Şırnak', '74': 'Bartın', '75': 'Ardahan',
+        '76': 'Iğdır', '77': 'Yalova', '78': 'Karabük', '79': 'Kilis', '80': 'Osmaniye', '81': 'Düzce'
+    }
+    
+    # Müşteri randevularını getir
+    randevular = Randevu.query.filter_by(
+        MusteriID=musteri_id,
+        FirmaID=firma_id
+    ).order_by(Randevu.RandevuTarihi.desc()).all()
+    
+    # Randevu istatistikleri
+    toplam_randevu = len(randevular)
+    tamamlanan_randevu = len([r for r in randevular if r.Durum == 'Tamamlandı'])
+    iptal_randevu = len([r for r in randevular if r.Durum == 'İptal'])
+    bekleyen_randevu = len([r for r in randevular if r.Durum == 'Beklemede'])
+    
+    # Şehir bilgisini dönüştür
+    sehir_adi = plaka_to_sehir.get(musteri.Sehir, musteri.Sehir) if musteri.Sehir else 'Belirtilmemiş'
+    
+    # PDF oluştur
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+    
+    # Türkçe font desteği için DejaVu Sans fontunu kaydet
+    try:
+        # Windows sistem fontları
+        pdfmetrics.registerFont(TTFont('DejaVuSans', 'C:/Windows/Fonts/dejavu-sans.ttf'))
+        pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'C:/Windows/Fonts/dejavu-sans-bold.ttf'))
+        turkish_font = 'DejaVuSans'
+        turkish_font_bold = 'DejaVuSans-Bold'
+    except:
+        try:
+            # Alternatif font yolları
+            pdfmetrics.registerFont(TTFont('DejaVuSans', 'C:/Windows/Fonts/arial.ttf'))
+            pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'C:/Windows/Fonts/arialbd.ttf'))
+            turkish_font = 'DejaVuSans'
+            turkish_font_bold = 'DejaVuSans-Bold'
+        except:
+            # Varsayılan font
+            turkish_font = 'Helvetica'
+            turkish_font_bold = 'Helvetica-Bold'
+    
+    # Stil tanımları
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=18, spaceAfter=30, alignment=TA_CENTER, fontName=turkish_font_bold)
+    heading_style = ParagraphStyle('CustomHeading', parent=styles['Heading2'], fontSize=14, spaceAfter=12, fontName=turkish_font_bold)
+    normal_style = ParagraphStyle('CustomNormal', parent=styles['Normal'], fontName=turkish_font)
+    
+    # İçerik oluştur
+    story = []
+    
+    # Başlık
+    story.append(Paragraph("Müşteri Detay Raporu", title_style))
+    story.append(Spacer(1, 12))
+    
+    # Müşteri bilgileri
+    story.append(Paragraph("Müşteri Bilgileri", heading_style))
+    
+    musteri_data = [
+        ['Ad Soyad:', f"{musteri.MusteriAdi} {musteri.MusteriSoyadi}"],
+        ['Telefon:', musteri.Telefon or 'Belirtilmemiş'],
+        ['E-posta:', musteri.Email or 'Belirtilmemiş'],
+        ['Yaş:', str(musteri.Yas) if musteri.Yas else 'Belirtilmemiş'],
+        ['Cinsiyet:', musteri.Cinsiyet or 'Belirtilmemiş'],
+        ['Şehir:', sehir_adi],
+        ['İlçe:', musteri.Ilce or 'Belirtilmemiş'],
+        ['Doğum Tarihi:', musteri.DogumTarihi.strftime('%d.%m.%Y') if musteri.DogumTarihi else 'Belirtilmemiş']
+    ]
+    
+    if musteri.Adres:
+        musteri_data.append(['Adres:', musteri.Adres])
+    if musteri.Notlar:
+        musteri_data.append(['Notlar:', musteri.Notlar])
+    
+    musteri_table = Table(musteri_data, colWidths=[2*inch, 4*inch])
+    musteri_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, -1), turkish_font),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('BACKGROUND', (1, 0), (1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    
+    story.append(musteri_table)
+    story.append(Spacer(1, 20))
+    
+    # Randevu istatistikleri
+    story.append(Paragraph("Randevu İstatistikleri", heading_style))
+    
+    stats_data = [
+        ['Toplam Randevu:', str(toplam_randevu)],
+        ['Tamamlanan:', str(tamamlanan_randevu)],
+        ['Beklemede:', str(bekleyen_randevu)],
+        ['İptal:', str(iptal_randevu)]
+    ]
+    
+    stats_table = Table(stats_data, colWidths=[2*inch, 1*inch])
+    stats_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.lightblue),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, -1), turkish_font),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('BACKGROUND', (1, 0), (1, -1), colors.lightgrey),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    
+    story.append(stats_table)
+    story.append(Spacer(1, 20))
+    
+    # Randevu geçmişi
+    if randevular:
+        story.append(Paragraph("Randevu Geçmişi", heading_style))
+        
+        randevu_data = [['Tarih', 'Saat', 'Defter', 'Durum', 'Notlar']]
+        
+        for randevu in randevular:
+            defter_adi = 'Bilinmeyen'
+            if randevu.DefterID:
+                defter = RandevuDefterAyar.query.filter_by(AyarID=randevu.DefterID).first()
+                if defter:
+                    defter_adi = defter.DefterAdi
+            
+            randevu_data.append([
+                randevu.RandevuTarihi.strftime('%d.%m.%Y') if randevu.RandevuTarihi else '-',
+                randevu.RandevuTarihi.strftime('%H:%M') if randevu.RandevuTarihi else '-',
+                defter_adi,
+                randevu.Durum,
+                randevu.RandevuAciklamasi or '-'
+            ])
+        
+        randevu_table = Table(randevu_data, colWidths=[1*inch, 0.8*inch, 1.2*inch, 1*inch, 2*inch])
+        randevu_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), turkish_font_bold),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('FONTNAME', (0, 1), (-1, -1), turkish_font),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        story.append(randevu_table)
+    else:
+        story.append(Paragraph("Bu müşteri için randevu bulunamadı.", normal_style))
+    
+    # PDF'i oluştur
+    doc.build(story)
+    buffer.seek(0)
+    
+    # Dosya adı
+    filename = f"musteri_detay_{musteri.MusteriAdi}_{musteri.MusteriSoyadi}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    
+    return send_file(buffer, mimetype='application/pdf', as_attachment=True, download_name=filename)
+
+@app.route('/rapor/musteri-detay/<int:musteri_id>/excel')
+@login_required
+def musteri_detay_excel(musteri_id):
+    """Müşteri detay raporu Excel"""
+    firma_id = session.get('firma_id')
+    if not firma_id:
+        return redirect(url_for('login'))
+    
+    # Müşteri bilgilerini getir
+    musteri = Musteri.query.filter_by(MusteriID=musteri_id, FirmaID=firma_id).first()
+    if not musteri:
+        flash('Müşteri bulunamadı.', 'error')
+        return redirect(url_for('rapor_musteriler'))
+    
+    # Plaka kodlarını şehir isimlerine dönüştür
+    plaka_to_sehir = {
+        '01': 'Adana', '02': 'Adıyaman', '03': 'Afyonkarahisar', '04': 'Ağrı', '05': 'Amasya',
+        '06': 'Ankara', '07': 'Antalya', '08': 'Artvin', '09': 'Aydın', '10': 'Balıkesir',
+        '11': 'Bilecik', '12': 'Bingöl', '13': 'Bitlis', '14': 'Bolu', '15': 'Burdur',
+        '16': 'Bursa', '17': 'Çanakkale', '18': 'Çankırı', '19': 'Çorum', '20': 'Denizli',
+        '21': 'Diyarbakır', '22': 'Edirne', '23': 'Elazığ', '24': 'Erzincan', '25': 'Erzurum',
+        '26': 'Eskişehir', '27': 'Gaziantep', '28': 'Giresun', '29': 'Gümüşhane', '30': 'Hakkari',
+        '31': 'Hatay', '32': 'Isparta', '33': 'Mersin', '34': 'İstanbul', '35': 'İzmir',
+        '36': 'Kars', '37': 'Kastamonu', '38': 'Kayseri', '39': 'Kırklareli', '40': 'Kırşehir',
+        '41': 'Kocaeli', '42': 'Konya', '43': 'Kütahya', '44': 'Malatya', '45': 'Manisa',
+        '46': 'Kahramanmaraş', '47': 'Mardin', '48': 'Muğla', '49': 'Muş', '50': 'Nevşehir',
+        '51': 'Niğde', '52': 'Ordu', '53': 'Rize', '54': 'Sakarya', '55': 'Samsun',
+        '56': 'Siirt', '57': 'Sinop', '58': 'Sivas', '59': 'Tekirdağ', '60': 'Tokat',
+        '61': 'Trabzon', '62': 'Tunceli', '63': 'Şanlıurfa', '64': 'Uşak', '65': 'Van',
+        '66': 'Yozgat', '67': 'Zonguldak', '68': 'Aksaray', '69': 'Bayburt', '70': 'Karaman',
+        '71': 'Kırıkkale', '72': 'Batman', '73': 'Şırnak', '74': 'Bartın', '75': 'Ardahan',
+        '76': 'Iğdır', '77': 'Yalova', '78': 'Karabük', '79': 'Kilis', '80': 'Osmaniye', '81': 'Düzce'
+    }
+    
+    # Müşteri randevularını getir
+    randevular = Randevu.query.filter_by(
+        MusteriID=musteri_id,
+        FirmaID=firma_id
+    ).order_by(Randevu.RandevuTarihi.desc()).all()
+    
+    # Excel dosyası oluştur
+    wb = Workbook()
+    
+    # Müşteri bilgileri sayfası
+    ws1 = wb.active
+    ws1.title = "Müşteri Bilgileri"
+    
+    # Başlık
+    ws1['A1'] = "Müşteri Detay Raporu"
+    ws1['A1'].font = Font(size=16, bold=True)
+    ws1.merge_cells('A1:D1')
+    
+    # Müşteri bilgileri
+    row = 3
+    ws1[f'A{row}'] = "Ad Soyad:"
+    ws1[f'B{row}'] = f"{musteri.MusteriAdi} {musteri.MusteriSoyadi}"
+    row += 1
+    
+    ws1[f'A{row}'] = "Telefon:"
+    telefon_cell = ws1[f'B{row}']
+    telefon_cell.value = musteri.Telefon or 'Belirtilmemiş'
+    telefon_cell.number_format = '@'  # Metin formatı
+    row += 1
+    
+    ws1[f'A{row}'] = "E-posta:"
+    ws1[f'B{row}'] = musteri.Email or 'Belirtilmemiş'
+    row += 1
+    
+    ws1[f'A{row}'] = "Yaş:"
+    ws1[f'B{row}'] = musteri.Yas or 'Belirtilmemiş'
+    row += 1
+    
+    ws1[f'A{row}'] = "Cinsiyet:"
+    ws1[f'B{row}'] = musteri.Cinsiyet or 'Belirtilmemiş'
+    row += 1
+    
+    sehir_adi = plaka_to_sehir.get(musteri.Sehir, musteri.Sehir) if musteri.Sehir else 'Belirtilmemiş'
+    ws1[f'A{row}'] = "Şehir:"
+    ws1[f'B{row}'] = sehir_adi
+    row += 1
+    
+    ws1[f'A{row}'] = "İlçe:"
+    ws1[f'B{row}'] = musteri.Ilce or 'Belirtilmemiş'
+    row += 1
+    
+    ws1[f'A{row}'] = "Doğum Tarihi:"
+    ws1[f'B{row}'] = musteri.DogumTarihi.strftime('%d.%m.%Y') if musteri.DogumTarihi else 'Belirtilmemiş'
+    row += 1
+    
+    if musteri.Adres:
+        ws1[f'A{row}'] = "Adres:"
+        ws1[f'B{row}'] = musteri.Adres
+        row += 1
+    
+    if musteri.Notlar:
+        ws1[f'A{row}'] = "Notlar:"
+        ws1[f'B{row}'] = musteri.Notlar
+        row += 1
+    
+    # Randevu istatistikleri
+    row += 2
+    ws1[f'A{row}'] = "Randevu İstatistikleri"
+    ws1[f'A{row}'].font = Font(size=14, bold=True)
+    row += 1
+    
+    toplam_randevu = len(randevular)
+    tamamlanan_randevu = len([r for r in randevular if r.Durum == 'Tamamlandı'])
+    iptal_randevu = len([r for r in randevular if r.Durum == 'İptal'])
+    bekleyen_randevu = len([r for r in randevular if r.Durum == 'Beklemede'])
+    
+    ws1[f'A{row}'] = "Toplam Randevu:"
+    ws1[f'B{row}'] = toplam_randevu
+    row += 1
+    
+    ws1[f'A{row}'] = "Tamamlanan:"
+    ws1[f'B{row}'] = tamamlanan_randevu
+    row += 1
+    
+    ws1[f'A{row}'] = "Beklemede:"
+    ws1[f'B{row}'] = bekleyen_randevu
+    row += 1
+    
+    ws1[f'A{row}'] = "İptal:"
+    ws1[f'B{row}'] = iptal_randevu
+    
+    # Randevu geçmişi sayfası
+    ws2 = wb.create_sheet("Randevu Geçmişi")
+    
+    # Başlıklar
+    headers = ['Tarih', 'Saat', 'Defter', 'Durum', 'Notlar']
+    for col, header in enumerate(headers, 1):
+        cell = ws2.cell(row=1, column=col, value=header)
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+    
+    # Randevu verileri
+    for row_idx, randevu in enumerate(randevular, 2):
+        defter_adi = 'Bilinmeyen'
+        if randevu.DefterID:
+            defter = RandevuDefterAyar.query.filter_by(AyarID=randevu.DefterID).first()
+            if defter:
+                defter_adi = defter.DefterAdi
+        
+        ws2.cell(row=row_idx, column=1, value=randevu.RandevuTarihi.strftime('%d.%m.%Y') if randevu.RandevuTarihi else '-')
+        ws2.cell(row=row_idx, column=2, value=randevu.RandevuTarihi.strftime('%H:%M') if randevu.RandevuTarihi else '-')
+        ws2.cell(row=row_idx, column=3, value=defter_adi)
+        ws2.cell(row=row_idx, column=4, value=randevu.Durum)
+        ws2.cell(row=row_idx, column=5, value=randevu.RandevuAciklamasi or '-')
+    
+    # Sütun genişliklerini ayarla
+    for ws in [ws1, ws2]:
+        for column in ws.columns:
+            max_length = 0
+            column_letter = get_column_letter(column[0].column)
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+    
+    # Excel dosyasını kaydet
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    # Dosya adı
+    filename = f"musteri_detay_{musteri.MusteriAdi}_{musteri.MusteriSoyadi}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    
+    return send_file(buffer, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
+                    as_attachment=True, download_name=filename)
 
 @app.route('/rapor/musteriler')
 @login_required
@@ -2071,22 +3498,39 @@ def rapor_musteriler():
     firma_id = session['firma_id']
 
     # Filtreler
-    tarih_baslangic_str = request.args.get('baslangic')
-    tarih_bitis_str = request.args.get('bitis')
     kategori_id = request.args.get('kategori_id', type=int)
     sadece_aktif = request.args.get('aktif', default='1')  # '1' aktif, '' hepsi
     iletisim_var = request.args.get('iletisim_var')  # 'telefon', 'email', 'herikisi'
+    
+    # Yeni filtreler
+    yas_min = request.args.get('yas_min', type=int)
+    yas_max = request.args.get('yas_max', type=int)
+    cinsiyet = request.args.get('cinsiyet')
+    dogum_tarihi = request.args.get('dogum_tarihi')
+    sehir = request.args.get('sehir')
+    ilce = request.args.get('ilce')
+    
     format_tip = request.args.get('format')  # 'csv' ise CSV döndür
 
-    # Tarih aralığı
-    try:
-        baslangic = datetime.strptime(tarih_baslangic_str, '%Y-%m-%d') if tarih_baslangic_str else None
-    except Exception:
-        baslangic = None
-    try:
-        bitis = datetime.strptime(tarih_bitis_str, '%Y-%m-%d') if tarih_bitis_str else None
-    except Exception:
-        bitis = None
+    # Plaka kodları - şehir isimleri dönüşüm tablosu
+    plaka_to_sehir = {
+        '01': 'Adana', '02': 'Adıyaman', '03': 'Afyonkarahisar', '04': 'Ağrı', '05': 'Amasya',
+        '06': 'Ankara', '07': 'Antalya', '08': 'Artvin', '09': 'Aydın', '10': 'Balıkesir',
+        '11': 'Bilecik', '12': 'Bingöl', '13': 'Bitlis', '14': 'Bolu', '15': 'Burdur',
+        '16': 'Bursa', '17': 'Çanakkale', '18': 'Çankırı', '19': 'Çorum', '20': 'Denizli',
+        '21': 'Diyarbakır', '22': 'Edirne', '23': 'Elazığ', '24': 'Erzincan', '25': 'Erzurum',
+        '26': 'Eskişehir', '27': 'Gaziantep', '28': 'Giresun', '29': 'Gümüşhane', '30': 'Hakkari',
+        '31': 'Hatay', '32': 'Isparta', '33': 'Mersin', '34': 'İstanbul', '35': 'İzmir',
+        '36': 'Kars', '37': 'Kastamonu', '38': 'Kayseri', '39': 'Kırklareli', '40': 'Kırşehir',
+        '41': 'Kocaeli', '42': 'Konya', '43': 'Kütahya', '44': 'Malatya', '45': 'Manisa',
+        '46': 'Kahramanmaraş', '47': 'Mardin', '48': 'Muğla', '49': 'Muş', '50': 'Nevşehir',
+        '51': 'Niğde', '52': 'Ordu', '53': 'Rize', '54': 'Sakarya', '55': 'Samsun',
+        '56': 'Siirt', '57': 'Sinop', '58': 'Sivas', '59': 'Tekirdağ', '60': 'Tokat',
+        '61': 'Trabzon', '62': 'Tunceli', '63': 'Şanlıurfa', '64': 'Uşak', '65': 'Van',
+        '66': 'Yozgat', '67': 'Zonguldak', '68': 'Aksaray', '69': 'Bayburt', '70': 'Karaman',
+        '71': 'Kırıkkale', '72': 'Batman', '73': 'Şırnak', '74': 'Bartın', '75': 'Ardahan',
+        '76': 'Iğdır', '77': 'Yalova', '78': 'Karabük', '79': 'Kilis', '80': 'Osmaniye', '81': 'Düzce'
+    }
 
     # Müşteri temel sorgusu
     musteri_query = Musteri.query.filter_by(FirmaID=firma_id)
@@ -2105,6 +3549,27 @@ def rapor_musteriler():
             Musteri.Telefon.isnot(None), Musteri.Telefon != '',
             Musteri.Email.isnot(None), Musteri.Email != ''
         )
+    
+    # Yeni filtreler
+    if yas_min is not None:
+        musteri_query = musteri_query.filter(Musteri.Yas >= yas_min)
+    if yas_max is not None:
+        musteri_query = musteri_query.filter(Musteri.Yas <= yas_max)
+    if cinsiyet:
+        musteri_query = musteri_query.filter(Musteri.Cinsiyet == cinsiyet)
+    if dogum_tarihi:
+        try:
+            dogum_tarihi_obj = datetime.strptime(dogum_tarihi, '%Y-%m-%d').date()
+            musteri_query = musteri_query.filter(Musteri.DogumTarihi == dogum_tarihi_obj)
+        except:
+            pass
+    if sehir:
+        # Seçilen şehir ismini plaka koduna dönüştür
+        sehir_to_plaka = {v: k for k, v in plaka_to_sehir.items()}
+        plaka_kodu = sehir_to_plaka.get(sehir, sehir)  # Eğer şehir ismi plaka kodunda yoksa orijinal değeri kullan
+        musteri_query = musteri_query.filter(Musteri.Sehir == plaka_kodu)
+    if ilce:
+        musteri_query = musteri_query.filter(Musteri.Ilce == ilce)
 
     musteriler = musteri_query.order_by(Musteri.MusteriAdi, Musteri.MusteriSoyadi).all()
 
@@ -2112,21 +3577,10 @@ def rapor_musteriler():
     toplam_musteri = Musteri.query.filter_by(FirmaID=firma_id).count()
     aktif_musteri = Musteri.query.filter_by(FirmaID=firma_id, Aktif=True).count()
     yeni_musteri = 0
-    if baslangic or bitis:
-        q = Musteri.query.filter(Musteri.FirmaID == firma_id)
-        if baslangic:
-            q = q.filter(Musteri.OlusturmaTarihi >= baslangic)
-        if bitis:
-            q = q.filter(Musteri.OlusturmaTarihi < (bitis + timedelta(days=1)))
-        yeni_musteri = q.count()
 
     # Randevu istatistikleri (müşteri başına randevu sayısı)
     randevu_q = db.session.query(Randevu.MusteriID, db.func.count(Randevu.RandevuID).label('adet')) 
     randevu_q = randevu_q.filter(Randevu.FirmaID == firma_id, Randevu.MusteriID.isnot(None))
-    if baslangic:
-        randevu_q = randevu_q.filter(Randevu.RandevuTarihi >= baslangic)
-    if bitis:
-        randevu_q = randevu_q.filter(Randevu.RandevuTarihi < (bitis + timedelta(days=1)))
     randevu_q = randevu_q.group_by(Randevu.MusteriID)
     musteri_id_to_randevu_adet = {mid: adet for mid, adet in randevu_q.all()}
 
@@ -2138,10 +3592,6 @@ def rapor_musteriler():
         )
         .filter(Randevu.FirmaID == firma_id, Randevu.MusteriID.isnot(None))
     )
-    if baslangic:
-        randevu_count_sq = randevu_count_sq.filter(Randevu.RandevuTarihi >= baslangic)
-    if bitis:
-        randevu_count_sq = randevu_count_sq.filter(Randevu.RandevuTarihi < (bitis + timedelta(days=1)))
     randevu_count_sq = randevu_count_sq.group_by(Randevu.MusteriID).subquery()
 
     top_q = (
@@ -2153,49 +3603,226 @@ def rapor_musteriler():
         top_q = top_q.filter(Musteri.Aktif == True)
     if kategori_id:
         top_q = top_q.filter(Musteri.KategoriID == kategori_id)
-    top_musteriler = top_q.order_by(db.desc(randevu_count_sq.c.adet)).limit(10).all()
+    # Müşterileri birleştir (ad+soyad+telefon)
+    def _norm_name(v):
+        return (v or '').strip().lower()
+    def _norm_phone(v):
+        v = ''.join(ch for ch in (v or '') if ch.isdigit())
+        return v[-10:] if len(v) >= 10 else v
 
-    # CSV dışa aktarım
+    merged = {}
+    for m in musteriler:
+        k = (_norm_name(m.MusteriAdi), _norm_name(m.MusteriSoyadi), _norm_phone(m.Telefon))
+        if k not in merged:
+            merged[k] = {
+                'id': m.MusteriID,
+                'ad': m.MusteriAdi,
+                'soyad': m.MusteriSoyadi,
+                'telefon': m.Telefon or '',
+                'email': m.Email or '',
+                'aktif': bool(m.Aktif),
+                'kategori': m.kategori.KategoriAdi if m.kategori else None,
+                'olusturma': m.OlusturmaTarihi,
+                'randevu_sayisi': musteri_id_to_randevu_adet.get(m.MusteriID, 0)
+            }
+        else:
+            it = merged[k]
+            it['randevu_sayisi'] += musteri_id_to_randevu_adet.get(m.MusteriID, 0)
+            if not it['email'] and m.Email:
+                it['email'] = m.Email
+            if not it['kategori'] and m.kategori:
+                it['kategori'] = m.kategori.KategoriAdi
+            it['aktif'] = it['aktif'] or bool(m.Aktif)
+            if it['olusturma'] is None or (m.OlusturmaTarihi and m.OlusturmaTarihi < it['olusturma']):
+                it['olusturma'] = m.OlusturmaTarihi
+
+    merged_rows = list(merged.values())
+
+    # En çok randevusu olan 10 müşteri (birleştirilmiş verilerden)
+    top_musteriler = sorted(merged_rows, key=lambda x: x['randevu_sayisi'], reverse=True)[:10]
+
+    # CSV dışa aktarım (birleştirilmiş)
     if format_tip == 'csv':
-        output = BytesIO()
+        output = StringIO()
         writer = csv.writer(output, delimiter=';')
         writer.writerow(['MusteriID', 'Ad', 'Soyad', 'Telefon', 'Email', 'Aktif', 'Kategori', 'OlusturmaTarihi', 'RandevuSayisi'])
-        for m in musteriler:
-            randevu_adet = musteri_id_to_randevu_adet.get(m.MusteriID, 0)
+        for r in merged_rows:
+            # Telefon numarasını Excel'de metin olarak tanıması için +90'dan sonra boşluk ekle
+            telefon = r['telefon'] or ''
+            if telefon and telefon.startswith('+90'):
+                telefon = telefon.replace('+90', '+90 ')  # +90'dan sonra boşluk ekle
             writer.writerow([
-                m.MusteriID,
-                m.MusteriAdi,
-                m.MusteriSoyadi,
-                m.Telefon or '',
-                m.Email or '',
-                'Evet' if m.Aktif else 'Hayır',
-                m.kategori.KategoriAdi if m.kategori else '',
-                (m.OlusturmaTarihi.strftime('%Y-%m-%d %H:%M') if m.OlusturmaTarihi else ''),
-                randevu_adet
+                r['id'], r['ad'], r['soyad'], telefon, r['email'], 'Evet' if r['aktif'] else 'Hayır', r['kategori'] or '', (r['olusturma'].strftime('%Y-%m-%d %H:%M') if r['olusturma'] else ''), r['randevu_sayisi']
             ])
         output.seek(0)
         filename = f"musteri_raporu_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
-        return send_file(output, mimetype='text/csv', as_attachment=True, download_name=filename)
+        data = output.getvalue().encode('utf-8-sig')
+        return send_file(BytesIO(data), mimetype='text/csv; charset=utf-8', as_attachment=True, download_name=filename)
 
     # Kategoriler dropdown için
     kategoriler = MusteriKategori.query.filter_by(FirmaID=firma_id).order_by(MusteriKategori.KategoriAdi).all()
+    
+    # Şehir ve ilçe seçenekleri
+    sehirler = db.session.query(Musteri.Sehir).filter(
+        Musteri.FirmaID == firma_id,
+        Musteri.Sehir.isnot(None),
+        Musteri.Sehir != ''
+    ).distinct().order_by(Musteri.Sehir).all()
+    
+    
+    # Plaka kodlarını şehir isimlerine dönüştür ve benzersiz hale getir
+    sehir_listesi = []
+    for s in sehirler:
+        plaka = s[0]
+        sehir_adi = plaka_to_sehir.get(plaka, plaka)  # Eğer plaka kodunda yoksa orijinal değeri kullan
+        if sehir_adi not in sehir_listesi:
+            sehir_listesi.append(sehir_adi)
+    
+    sehir_listesi.sort()  # Alfabetik sırala
+    
+    ilceler = db.session.query(Musteri.Ilce).filter(
+        Musteri.FirmaID == firma_id,
+        Musteri.Ilce.isnot(None),
+        Musteri.Ilce != ''
+    ).distinct().order_by(Musteri.Ilce).all()
+    ilce_listesi = [i[0] for i in ilceler]
+    
+    # Grafik verileri
+    # Cinsiyet dağılımı
+    gender_stats = db.session.query(Musteri.Cinsiyet, db.func.count(Musteri.MusteriID)).filter(
+        Musteri.FirmaID == firma_id
+    ).group_by(Musteri.Cinsiyet).all()
+    gender_data = {gender: count for gender, count in gender_stats if gender}
+    
+    # Yaş dağılımı (yaş grupları)
+    age_groups = {
+        '0-18': 0, '19-25': 0, '26-35': 0, '36-45': 0, '46-55': 0, '56-65': 0, '65+': 0
+    }
+    age_stats = db.session.query(Musteri.Yas).filter(
+        Musteri.FirmaID == firma_id, Musteri.Yas.isnot(None)
+    ).all()
+    for (yas,) in age_stats:
+        if yas <= 18:
+            age_groups['0-18'] += 1
+        elif yas <= 25:
+            age_groups['19-25'] += 1
+        elif yas <= 35:
+            age_groups['26-35'] += 1
+        elif yas <= 45:
+            age_groups['36-45'] += 1
+        elif yas <= 55:
+            age_groups['46-55'] += 1
+        elif yas <= 65:
+            age_groups['56-65'] += 1
+        else:
+            age_groups['65+'] += 1
+    
+    # Kategori dağılımı
+    category_stats = db.session.query(
+        MusteriKategori.KategoriAdi, db.func.count(Musteri.MusteriID)
+    ).join(Musteri, Musteri.KategoriID == MusteriKategori.KategoriID).filter(
+        Musteri.FirmaID == firma_id
+    ).group_by(MusteriKategori.KategoriAdi).all()
+    category_data = {kategori: count for kategori, count in category_stats}
+    
+    # Şehir dağılımı (top 10)
+    city_stats = db.session.query(
+        Musteri.Sehir, db.func.count(Musteri.MusteriID)
+    ).filter(
+        Musteri.FirmaID == firma_id, Musteri.Sehir.isnot(None), Musteri.Sehir != ''
+    ).group_by(Musteri.Sehir).order_by(db.func.count(Musteri.MusteriID).desc()).limit(10).all()
+    city_data = {sehir: count for sehir, count in city_stats}
 
     # Görüntülenecek satırlar için zenginleştirme
     rows = []
-    for m in musteriler:
+    for r in merged_rows:
         rows.append({
-            'id': m.MusteriID,
-            'ad': m.MusteriAdi,
-            'soyad': m.MusteriSoyadi,
-            'tam_ad': m.tam_adi,
-            'telefon': m.Telefon,
-            'email': m.Email,
-            'aktif': m.Aktif,
-            'kategori': m.kategori.KategoriAdi if m.kategori else None,
-            'olusturma': m.OlusturmaTarihi,
-            'randevu_sayisi': musteri_id_to_randevu_adet.get(m.MusteriID, 0)
+            'id': r['id'],
+            'ad': r['ad'],
+            'soyad': r['soyad'],
+            'tam_ad': f"{r['ad']} {r['soyad']}".strip(),
+            'telefon': r['telefon'],
+            'email': r['email'],
+            'aktif': r['aktif'],
+            'kategori': r['kategori'],
+            'olusturma': r['olusturma'],
+            'randevu_sayisi': r['randevu_sayisi']
         })
 
+    # Zaman serisi analizi - Aylık müşteri artışı
+    monthly_data = {}
+    for m in musteriler:
+        if m.OlusturmaTarihi:
+            month_key = m.OlusturmaTarihi.strftime('%Y-%m')
+            monthly_data[month_key] = monthly_data.get(month_key, 0) + 1
+    
+    # Zaman serisi analizi - Haftalık müşteri artışı (son 12 hafta)
+    weekly_data = {}
+    today = datetime.now().date()
+    
+    # Son 12 hafta için haftalık veriler
+    for i in range(12):
+        week_start = today - timedelta(weeks=i+1)
+        week_end = today - timedelta(weeks=i)
+        week_key = f"{week_start.strftime('%Y-%m-%d')} - {week_end.strftime('%Y-%m-%d')}"
+        weekly_data[week_key] = 0
+    
+    for m in musteriler:
+        if m.OlusturmaTarihi:
+            m_date = m.OlusturmaTarihi.date()
+            for i in range(12):
+                week_start = today - timedelta(weeks=i+1)
+                week_end = today - timedelta(weeks=i)
+                if week_start <= m_date < week_end:
+                    week_key = f"{week_start.strftime('%Y-%m-%d')} - {week_end.strftime('%Y-%m-%d')}"
+                    weekly_data[week_key] = weekly_data.get(week_key, 0) + 1
+                    break
+    
+    # Randevu trendleri - Müşteri başına randevu sayısı analizi
+    from collections import defaultdict
+    
+    # Müşteri başına randevu sayısı dağılımı
+    randevu_sayisi_dagilimi = defaultdict(int)
+    for m in musteriler:
+        randevu_sayisi = musteri_id_to_randevu_adet.get(m.MusteriID, 0)
+        randevu_sayisi_dagilimi[randevu_sayisi] += 1
+    
+    # En çok randevu alan müşteriler (top 10)
+    en_cok_randevu_alan = []
+    for m in musteriler:
+        randevu_sayisi = musteri_id_to_randevu_adet.get(m.MusteriID, 0)
+        if randevu_sayisi > 0:
+            en_cok_randevu_alan.append({
+                'musteri_adi': f"{m.MusteriAdi} {m.MusteriSoyadi}",
+                'randevu_sayisi': randevu_sayisi
+            })
+    
+    # Randevu sayısına göre sırala (azalan)
+    en_cok_randevu_alan.sort(key=lambda x: x['randevu_sayisi'], reverse=True)
+    en_cok_randevu_alan = en_cok_randevu_alan[:10]
+    
+    # Randevu sıklığı analizi (0, 1, 2-5, 6-10, 10+ randevu)
+    randevu_siklik_dagilimi = {
+        '0 Randevu': 0,
+        '1 Randevu': 0,
+        '2-5 Randevu': 0,
+        '6-10 Randevu': 0,
+        '10+ Randevu': 0
+    }
+    
+    for m in musteriler:
+        randevu_sayisi = musteri_id_to_randevu_adet.get(m.MusteriID, 0)
+        if randevu_sayisi == 0:
+            randevu_siklik_dagilimi['0 Randevu'] += 1
+        elif randevu_sayisi == 1:
+            randevu_siklik_dagilimi['1 Randevu'] += 1
+        elif 2 <= randevu_sayisi <= 5:
+            randevu_siklik_dagilimi['2-5 Randevu'] += 1
+        elif 6 <= randevu_sayisi <= 10:
+            randevu_siklik_dagilimi['6-10 Randevu'] += 1
+        else:
+            randevu_siklik_dagilimi['10+ Randevu'] += 1
+    
     return render_template(
         'rapor_musteriler.html',
         rows=rows,
@@ -2204,12 +3831,27 @@ def rapor_musteriler():
         yeni_musteri=yeni_musteri,
         top_musteriler=top_musteriler,
         kategoriler=kategoriler,
+        sehir_listesi=sehir_listesi,
+        ilce_listesi=ilce_listesi,
+        gender_data=gender_data,
+        age_groups=age_groups,
+        category_data=category_data,
+        city_data=city_data,
+        monthly_data=monthly_data,
+        weekly_data=weekly_data,
+        randevu_sayisi_dagilimi=dict(randevu_sayisi_dagilimi),
+        en_cok_randevu_alan=en_cok_randevu_alan,
+        randevu_siklik_dagilimi=randevu_siklik_dagilimi,
         filtreler={
-            'baslangic': tarih_baslangic_str or '',
-            'bitis': tarih_bitis_str or '',
             'kategori_id': kategori_id or '',
             'aktif': sadece_aktif,
-            'iletisim_var': iletisim_var or ''
+            'iletisim_var': iletisim_var or '',
+            'yas_min': yas_min or '',
+            'yas_max': yas_max or '',
+            'cinsiyet': cinsiyet or '',
+            'dogum_tarihi': dogum_tarihi or '',
+            'sehir': sehir or '',
+            'ilce': ilce or ''
         }
     )
 
@@ -2270,11 +3912,27 @@ def randevu_duzenle(randevu_id):
                 tam_telefon = f"{telefon_ulke_kodu}{telefon_numara}" if telefon_numara else ''
                 
                 musteri_email = request.form.get('musteri_email', '').strip()
+                musteri_cinsiyet = request.form.get('musteri_cinsiyet', '').strip()
+                
+                # Doğum tarihi ve yaş güncelleme
+                dogum_tarihi = request.form.get('musteri_dogum_tarihi')
+                if dogum_tarihi:
+                    randevu.musteri.DogumTarihi = datetime.strptime(dogum_tarihi, '%Y-%m-%d').date()
+                    # Yaşı hesapla
+                    bugun = datetime.now().date()
+                    yas = bugun.year - randevu.musteri.DogumTarihi.year
+                    if (bugun.month, bugun.day) < (randevu.musteri.DogumTarihi.month, randevu.musteri.DogumTarihi.day):
+                        yas -= 1
+                    randevu.musteri.Yas = yas
+                elif request.form.get('musteri_yas'):
+                    randevu.musteri.Yas = request.form.get('musteri_yas', type=int)
                 
                 if tam_telefon:
                     randevu.musteri.Telefon = tam_telefon
                 if musteri_email:
                     randevu.musteri.Email = musteri_email
+                if musteri_cinsiyet:
+                    randevu.musteri.Cinsiyet = musteri_cinsiyet
                 
                 randevu.musteri.GuncellemeTarihi = datetime.utcnow()
             
@@ -2414,17 +4072,53 @@ def randevu_ekle():
             if not musteri:
                 flash('Seçilen müşteri bulunamadı', 'error')
                 return redirect(url_for('randevu_ekle'))
+            
+            # Müşteri bilgilerini güncelle
+            musteri.Sehir = request.form.get('musteri_sehir', '') or musteri.Sehir
+            musteri.Ilce = request.form.get('musteri_ilce', '') or musteri.Ilce
+            musteri.Adres = request.form.get('musteri_adres', '') or musteri.Adres
+            musteri.Cinsiyet = request.form.get('musteri_cinsiyet', '') or musteri.Cinsiyet
+            musteri.KategoriID = request.form.get('musteri_kategori', type=int) or musteri.KategoriID
+            musteri.Notlar = request.form.get('musteri_notlar', '') or musteri.Notlar
+            
+            # Doğum tarihi ve yaş güncelleme
+            dogum_tarihi = request.form.get('musteri_dogum_tarihi')
+            if dogum_tarihi:
+                musteri.DogumTarihi = datetime.strptime(dogum_tarihi, '%Y-%m-%d').date()
+                # Yaşı hesapla
+                bugun = datetime.now().date()
+                yas = bugun.year - musteri.DogumTarihi.year
+                if (bugun.month, bugun.day) < (musteri.DogumTarihi.month, musteri.DogumTarihi.day):
+                    yas -= 1
+                musteri.Yas = yas
+            elif request.form.get('musteri_yas'):
+                musteri.Yas = request.form.get('musteri_yas', type=int)
+            
+            db.session.commit()
         else:
             # Telefon numarasını ülke kodu ile birleştir
             telefon_ulke_kodu = request.form.get('telefon_ulke_kodu', '+90')
             telefon_numara = request.form.get('musteri_telefon', '').replace(' ', '')
             tam_telefon = f"{telefon_ulke_kodu}{telefon_numara}" if telefon_numara else ''
             
+            # Doğum tarihi ve yaş hesaplama
+            dogum_tarihi = request.form.get('musteri_dogum_tarihi')
+            yas = None
+            if dogum_tarihi:
+                dogum_tarihi_obj = datetime.strptime(dogum_tarihi, '%Y-%m-%d').date()
+                # Yaşı hesapla
+                bugun = datetime.now().date()
+                yas = bugun.year - dogum_tarihi_obj.year
+                if (bugun.month, bugun.day) < (dogum_tarihi_obj.month, dogum_tarihi_obj.day):
+                    yas -= 1
+            elif request.form.get('musteri_yas'):
+                yas = request.form.get('musteri_yas', type=int)
+            
             # Yeni müşteri oluştur
             musteri = Musteri(
                 FirmaID=session['firma_id'],
                 MusteriAdi=request.form['musteri_adi'],
-                MusteriSoyadi=request.form['musteri_soyadi'],
+                MusteriSoyadi=request.form.get('musteri_soyadi', 'Müşteri'),
                 Telefon=tam_telefon,
                 Email=request.form.get('musteri_email', ''),
                 # Yeni adres alanları
@@ -2434,7 +4128,9 @@ def randevu_ekle():
                 Adres=request.form.get('musteri_adres', ''),
                 Cinsiyet=request.form.get('musteri_cinsiyet', ''),
                 KategoriID=request.form.get('musteri_kategori', type=int) or None,
-                Notlar=request.form.get('musteri_notlar', '')
+                Notlar=request.form.get('musteri_notlar', ''),
+                DogumTarihi=dogum_tarihi_obj if dogum_tarihi else None,
+                Yas=yas
             )
             db.session.add(musteri)
             db.session.flush()  # ID'yi almak için
@@ -2446,6 +4142,7 @@ def randevu_ekle():
             RandevuTarihi=randevu_dt,
             RandevuSuresi=randevu_suresi,
             MusteriAdi=request.form['musteri_adi'],
+            MusteriSoyadi=request.form.get('musteri_soyadi', 'Müşteri'),
             MusteriTelefon=request.form.get('musteri_telefon', ''),
             MusteriEmail=request.form.get('musteri_email', ''),
             MusteriID=musteri_id,  # Müşteri ID'sini ekle
@@ -2457,6 +4154,48 @@ def randevu_ekle():
         
         db.session.add(randevu)
         db.session.commit()
+
+        # SMS: randevu olusturuldugunda gonder
+        try:
+            sms_ayar = FirmaSMSAyar.query.filter_by(FirmaID=session['firma_id'], Aktif=True).first()
+            if sms_ayar and sms_ayar.SMSGonderOnCreate and randevu.MusteriTelefon:
+                sms_text = (sms_ayar.VarsayilanSMSMetni or "Merhaba {MUSTERI_ADI}, {RANDEVU_TARIH} tarihindeki randevunuzu hatırlatırız.")
+                # Ad + Soyad birlestir
+                try:
+                    if randevu.musteri and randevu.musteri.MusteriSoyadi:
+                        full_name = f"{randevu.musteri.MusteriAdi} {randevu.musteri.MusteriSoyadi}".strip()
+                    else:
+                        full_name = (randevu.MusteriAdi or '').strip()
+                except Exception:
+                    full_name = (randevu.MusteriAdi or '').strip()
+
+                sms_text = sms_text.replace('{MUSTERI_ADI}', full_name or '-')\
+                                   .replace('{RANDEVU_TARIH}', randevu.RandevuTarihi.strftime('%d.%m.%Y %H:%M'))
+                # Defter adi
+                try:
+                    defter_adi = randevu.defter.DefterAdi if randevu.defter else ''
+                except Exception:
+                    defter_adi = ''
+                sms_text = sms_text.replace('{DEFTER_ADI}', defter_adi)
+                send_sms_with_firma_settings(session['firma_id'], randevu.MusteriTelefon, sms_text)
+        except Exception as e:
+            print(f"Randevu olusturuldu SMS gonderim hatasi: {e}")
+
+        # SMS: 24 saat once hatirlatma kaydi
+        try:
+            sms_ayar = sms_ayar or FirmaSMSAyar.query.filter_by(FirmaID=session['firma_id'], Aktif=True).first()
+            if sms_ayar and sms_ayar.SMSGonder24SaatOnce and randevu.MusteriTelefon:
+                s = RandevuSMSHatirlatma(
+                    RandevuID=randevu.RandevuID,
+                    FirmaID=session['firma_id'],
+                    RecipientPhone=randevu.MusteriTelefon,
+                    MinutesBefore=1440
+                )
+                db.session.add(s)
+                db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"SMS hatirlatma kaydi olusurken hata: {e}")
 
         # Varsayilan: 60 ve 10 dk once hatirlatma (email varsa)
         try:
@@ -2517,6 +4256,28 @@ def randevu_ekle():
             email_sent = send_email_with_firma_settings(randevu.FirmaID, randevu.MusteriEmail, subject, body)
             if not email_sent:
                 send_email_simple(randevu.MusteriEmail, subject, body)
+        
+        # WhatsApp mesajı gönder (eğer ayar aktifse)
+        try:
+            whatsapp_ayar = FirmaWhatsAppAyar.query.filter_by(FirmaID=session['firma_id'], Aktif=True).first()
+            if whatsapp_ayar and whatsapp_ayar.MesajGonderOnCreate and whatsapp_ayar.RandevuOlusturmaMesaji:
+                # Telefon numarasını temizle (sadece rakamlar)
+                phone_clean = ''.join(filter(str.isdigit, randevu.MusteriTelefon))
+                if phone_clean and len(phone_clean) >= 10:
+                    # Mesaj şablonunu değişkenlerle doldur
+                    message = whatsapp_ayar.RandevuOlusturmaMesaji
+                    message = message.replace('{musteri_adi}', randevu.MusteriAdi or 'Müşteri')
+                    message = message.replace('{tarih}', randevu_dt.strftime('%d.%m.%Y'))
+                    message = message.replace('{saat}', randevu_dt.strftime('%H:%M'))
+                    message = message.replace('{defter}', defter_ayar.DefterAdi)
+                    message = message.replace('{referans}', randevu.Referans.Ad if randevu.Referans else 'Yok')
+                    
+                    # WhatsApp mesajı gönder
+                    success, result = send_whatsapp_message(phone_clean, message, session['firma_id'])
+                    if not success:
+                        print(f"WhatsApp mesajı gönderilemedi: {result}")
+        except Exception as e:
+            print(f"WhatsApp mesajı gönderme hatası: {str(e)}")
         
         flash('Randevu başarıyla oluşturuldu!', 'success')
         return redirect(url_for('randevular'))
@@ -2672,6 +4433,13 @@ def randevu_durum(randevu_id):
 
     randevu.Durum = yeni_durum
     db.session.commit()
+    
+    # Eğer randevu iptal edildiyse, slot'u açık hale getir
+    if yeni_durum == 'Iptal':
+        # Randevu iptal edildiğinde slot artık kullanılabilir
+        # Bu durumda slot API'si otomatik olarak bu slot'u açık gösterecek
+        pass
+    
     flash('Randevu durumu güncellendi', 'success')
     return redirect(url_for('randevular'))
 
@@ -2683,6 +4451,8 @@ def takvim():
     year = request.args.get('year', type=int) or datetime.now().year
     month = request.args.get('month', type=int) or datetime.now().month
     view_type = request.args.get('view', 'month')  # month, week
+    defter_id = request.args.get('defter_id', type=int)
+    week_start_param = request.args.get('week_start')  # YYYY-MM-DD (Pazartesi)
     
     # Tarih aralığı hesapla
     if view_type == 'month':
@@ -2692,29 +4462,83 @@ def takvim():
         else:
             end_date = datetime(year, month + 1, 1)
     else:  # week
-        # Haftanın başlangıcını bul (Pazartesi)
-        today = datetime.now()
-        days_since_monday = today.weekday()
-        start_date = today - timedelta(days=days_since_monday)
+        # Haftanın başlangıcı parametreden ya da bugüne göre Pazartesi
+        if week_start_param:
+            try:
+                ws = datetime.strptime(week_start_param, '%Y-%m-%d')
+            except ValueError:
+                ws = datetime.now()
+        else:
+            ws = datetime.now()
+        days_since_monday = ws.weekday()
+        start_date = ws - timedelta(days=days_since_monday)
         start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
         end_date = start_date + timedelta(days=7)
     
+    # Kullanıcının yetkili olduğu defterleri getir
+    if session.get('is_admin', False):
+        # Admin kullanıcılar tüm defterleri görebilir
+        defterler = RandevuDefterAyar.query.filter_by(FirmaID=session['firma_id'], Aktif=True).all()
+    else:
+        # Normal kullanıcılar sadece yetkili oldukları randevuların defterlerini görebilir
+        from sqlalchemy import distinct
+        yetkili_defter_ids = db.session.query(distinct(Randevu.DefterID)).join(RandevuYetki).filter(
+            RandevuYetki.KullaniciID == session['user_id'],
+            RandevuYetki.GoruntulemeYetkisi == True,
+            Randevu.FirmaID == session['firma_id']
+        ).all()
+        
+        # Yetkili defter ID'lerini liste olarak al
+        defter_id_list = [defter_id[0] for defter_id in yetkili_defter_ids if defter_id[0] is not None]
+        
+        if defter_id_list:
+            defterler = RandevuDefterAyar.query.filter(
+                RandevuDefterAyar.AyarID.in_(defter_id_list),
+                RandevuDefterAyar.FirmaID == session['firma_id'],
+                RandevuDefterAyar.Aktif == True
+            ).all()
+        else:
+            # Eğer hiç yetkili defter yoksa boş liste
+            defterler = []
+    
+    # Eğer defter seçilmemişse:
+    # - Aylık görünümde: tüm defterler gösterilir
+    # - Haftalık görünümde: ilk defter seçili gelir
+    if not defter_id and view_type == 'week' and defterler:
+        defter_id = defterler[0].AyarID
+    
     # Randevuları getir
     if session.get('is_admin', False):
-        randevular = Randevu.query.filter(
+        query = Randevu.query.filter(
             Randevu.FirmaID == session['firma_id'],
             Randevu.RandevuTarihi >= start_date,
             Randevu.RandevuTarihi < end_date
-        ).order_by(Randevu.RandevuTarihi).all()
+        )
+        if defter_id:
+            query = query.filter(Randevu.DefterID == defter_id)
+        randevular = query.order_by(Randevu.RandevuTarihi).all()
     else:
-        randevular = db.session.query(Randevu).join(RandevuYetki).filter(
+        query = db.session.query(Randevu).join(RandevuYetki).filter(
             RandevuYetki.KullaniciID == session['user_id'],
             RandevuYetki.GoruntulemeYetkisi == True,
             Randevu.FirmaID == session['firma_id'],
             Randevu.RandevuTarihi >= start_date,
             Randevu.RandevuTarihi < end_date
-        ).order_by(Randevu.RandevuTarihi).all()
+        )
+        if defter_id:
+            query = query.filter(Randevu.DefterID == defter_id)
+        randevular = query.order_by(Randevu.RandevuTarihi).all()
     
+    # Haftalık görünüm için başlık ve gezinme verileri
+    week_start_str = start_date.strftime('%Y-%m-%d') if view_type == 'week' else None
+    prev_week_start = (start_date - timedelta(days=7)).strftime('%Y-%m-%d') if view_type == 'week' else None
+    next_week_start = (start_date + timedelta(days=7)).strftime('%Y-%m-%d') if view_type == 'week' else None
+    if view_type == 'week':
+        week_end_display = (end_date - timedelta(days=1))
+        week_range_title = f"{start_date.strftime('%d %b %Y')} - {week_end_display.strftime('%d %b %Y')}"
+    else:
+        week_range_title = None
+
     return render_template('takvim.html', 
                          randevular=randevular, 
                          year=year, 
@@ -2723,7 +4547,13 @@ def takvim():
                          start_date=start_date,
                          end_date=end_date,
                          datetime=datetime,
-                         timedelta=timedelta)
+                         timedelta=timedelta,
+                         defterler=defterler,
+                         selected_defter_id=defter_id,
+                         week_start_str=week_start_str,
+                         prev_week_start=prev_week_start,
+                         next_week_start=next_week_start,
+                         week_range_title=week_range_title)
 
 # API: Randevu taşıma (drag & drop)
 @app.route('/api/randevu/tasi', methods=['POST'])
@@ -2766,13 +4596,23 @@ def api_randevu_tasi():
     if not (is_admin or randevu.OlusturanKullaniciID == session['user_id'] or has_edit_perm):
         return jsonify({"success": False, "message": "Yetkiniz yok"}), 403
     
-    # Çakışma kontrolü
+    # Hedef defter bilgisine göre slot'a yapıştır
+    try:
+        defter_ayar = RandevuDefterAyar.query.get(randevu.DefterID)
+        slot_dk = (defter_ayar.SlotDakika if defter_ayar and defter_ayar.SlotDakika else 30)
+        # minute'i slot basamağına yuvarla (aşağı)
+        yeni_dt = yeni_dt.replace(minute=(yeni_dt.minute // slot_dk) * slot_dk, second=0, microsecond=0)
+    except Exception as e:
+        print(f"Slot yuvarlama hatası: {e}")
+
+    # Çakışma kontrolü (aynı defter için)
     randevu_suresi = randevu.RandevuSuresi or 60
     bitis_tarihi = yeni_dt + timedelta(minutes=randevu_suresi)
     
     # Mevcut randevuları kontrol et
     mevcut_randevular = Randevu.query.filter(
         Randevu.FirmaID == session['firma_id'],
+        Randevu.DefterID == randevu.DefterID,
         Randevu.RandevuID != randevu_id
     ).all()
     
@@ -2940,6 +4780,9 @@ def api_slots():
 
     def is_overlapping(slot_start: datetime, slot_end: datetime) -> bool:
         for r in existing:
+            # İptal edilen randevuları hariç tut
+            if r.Durum == 'Iptal':
+                continue
             r_start = r.RandevuTarihi
             r_end = r_start + timedelta(minutes=(r.RandevuSuresi or 60))
             if r_start < slot_end and slot_start < r_end:
@@ -3051,7 +4894,27 @@ def raporlar():
     except ValueError:
         end_date = today
 
-    return render_template('raporlar.html', baslangic=start_date.strftime('%Y-%m-%d'), bitis=end_date.strftime('%Y-%m-%d'))
+    # Kapasite ve defter parametrelerini al
+    kapasite = request.args.get('kapasite', '8')
+    defter_id = request.args.get('defter_id', '')
+    print(f"Form parametreleri - defter_id: '{defter_id}', kapasite: '{kapasite}'")
+    
+    # Defter listesini al
+    defterler = RandevuDefterAyar.query.filter(
+        RandevuDefterAyar.FirmaID == session['firma_id'],
+        RandevuDefterAyar.Aktif == True
+    ).all()
+    print(f"Bulunan defter sayısı: {len(defterler)}")
+    for defter in defterler:
+        print(f"Defter: {defter.DefterAdi} (ID: {defter.AyarID})")
+    
+    return render_template('raporlar.html', 
+                         baslangic=start_date.strftime('%Y-%m-%d'), 
+                         bitis=end_date.strftime('%Y-%m-%d'),
+                         kapasite=kapasite,
+                         defter_id=defter_id,
+                         defterler=defterler)
+
 
 # Raporlar API - Ozet
 @app.route('/api/raporlar/ozet')
@@ -3059,6 +4922,7 @@ def raporlar():
 def api_raporlar_ozet():
     baslangic = request.args.get('baslangic')
     bitis = request.args.get('bitis')
+    defter_id = request.args.get('defter_id', '')
     try:
         start_date = datetime.strptime(baslangic, '%Y-%m-%d').date() if baslangic else (datetime.now().date() - timedelta(days=30))
         end_date = datetime.strptime(bitis, '%Y-%m-%d').date() if bitis else datetime.now().date()
@@ -3084,8 +4948,30 @@ def api_raporlar_ozet():
             Randevu.RandevuTarihi >= start_dt,
             Randevu.RandevuTarihi <= end_dt
         )
+    
+    # Defter filtresi ekle (Randevu.DefterID üzerinden)
+    if defter_id:
+        print(f"API Ozet - Defter filtresi uygulanıyor: {defter_id}")
+        
+        # Debug: Mevcut randevuları kontrol et
+        all_randevular = q.all()
+        print(f"DEBUG: Filtre öncesi toplam randevu: {len(all_randevular)}")
+        
+        # Debug: İlk randevunun DefterID'sini kontrol et
+        if all_randevular:
+            first_randevu = all_randevular[0]
+            print(f"DEBUG: İlk randevu DefterID: {first_randevu.DefterID}")
+        
+        # Debug: DefterID=5 olan randevuları kontrol et
+        defter_randevular = q.filter(Randevu.DefterID == defter_id).all()
+        print(f"DEBUG: DefterID={defter_id} olan randevu sayısı: {len(defter_randevular)}")
+        
+        q = q.filter(Randevu.DefterID == defter_id)
+    else:
+        print("API Ozet - Defter filtresi uygulanmıyor")
 
     items = q.all()
+    print(f"API Ozet - Toplam {len(items)} randevu bulundu")
 
     toplam = len(items)
     durum_counter = Counter(r.Durum or 'Bilinmiyor' for r in items)
@@ -3103,6 +4989,260 @@ def api_raporlar_ozet():
         "durumlar": durum_counter,
         "referanslar": ref_counter,
         "saatler": {"labels": saatler, "values": saat_deger}
+    })
+
+# Yoğun Saatler Raporu API
+@app.route('/api/raporlar/yoğun-saatler')
+@login_required
+def api_raporlar_yogun_saatler():
+    baslangic = request.args.get('baslangic')
+    bitis = request.args.get('bitis')
+    kapasite = int(request.args.get('kapasite', 8))  # Varsayılan günlük kapasite 8
+    defter_id = request.args.get('defter_id', '')
+    
+    try:
+        start_date = datetime.strptime(baslangic, '%Y-%m-%d').date() if baslangic else (datetime.now().date() - timedelta(days=30))
+        end_date = datetime.strptime(bitis, '%Y-%m-%d').date() if bitis else datetime.now().date()
+    except ValueError:
+        return jsonify({"success": False, "message": "Tarih formatı YYYY-MM-DD olmalı"}), 400
+
+    # Tarihleri kapsayan datetime araligi
+    start_dt = datetime(start_date.year, start_date.month, start_date.day, 0, 0)
+    end_dt = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59)
+
+    # Izin farkindaligi
+    if session.get('is_admin', False):
+        q = Randevu.query.filter(
+            Randevu.FirmaID == session['firma_id'],
+            Randevu.RandevuTarihi >= start_dt,
+            Randevu.RandevuTarihi <= end_dt
+        )
+    else:
+        q = db.session.query(Randevu).join(RandevuYetki).filter(
+            RandevuYetki.KullaniciID == session['user_id'],
+            RandevuYetki.GoruntulemeYetkisi == True,
+            Randevu.FirmaID == session['firma_id'],
+            Randevu.RandevuTarihi >= start_dt,
+            Randevu.RandevuTarihi <= end_dt
+        )
+    
+    # Defter filtresi ekle (Randevu.DefterID üzerinden)
+    if defter_id:
+        print(f"API Yogun Saatler - Defter filtresi uygulanıyor: {defter_id}")
+        q = q.filter(Randevu.DefterID == defter_id)
+    else:
+        print("API Yogun Saatler - Defter filtresi uygulanmıyor")
+
+    items = q.all()
+
+    # Saatlik dağılım
+    saat_counter = defaultdict(int)
+    for r in items:
+        saat_counter[r.RandevuTarihi.hour] += 1
+    
+    # 0-23 saat arası tüm saatler
+    saatler = list(range(0, 24))
+    saat_deger = [saat_counter.get(h, 0) for h in saatler]
+    
+    # En yoğun saat
+    max_appointments = max(saat_deger) if saat_deger else 0
+    peak_hour = saatler[saat_deger.index(max_appointments)] if max_appointments > 0 else 0
+    
+    # Ortalama kapasite kullanımı
+    total_days = (end_date - start_date).days + 1
+    total_possible_appointments = total_days * kapasite
+    total_actual_appointments = len(items)
+    avg_capacity_usage = (total_actual_appointments / total_possible_appointments * 100) if total_possible_appointments > 0 else 0
+    
+    # Verimlilik oranı (yoğun saatlerdeki verimlilik)
+    peak_hours = [h for h in saatler if saat_counter.get(h, 0) >= max_appointments * 0.8]
+    peak_hours_appointments = sum(saat_counter.get(h, 0) for h in peak_hours)
+    efficiency_rate = (peak_hours_appointments / total_actual_appointments * 100) if total_actual_appointments > 0 else 0
+    
+    # Haftalık dağılım
+    weekly_counter = defaultdict(int)
+    for r in items:
+        week_start = r.RandevuTarihi.date() - timedelta(days=r.RandevuTarihi.weekday())
+        weekly_counter[week_start] += 1
+    
+    # Son 12 hafta
+    weekly_labels = []
+    weekly_values = []
+    for i in range(12):
+        week_start = end_date - timedelta(weeks=i)
+        week_start = week_start - timedelta(days=week_start.weekday())
+        weekly_labels.insert(0, week_start.strftime('%d/%m'))
+        weekly_values.insert(0, weekly_counter.get(week_start, 0))
+    
+    # Saatlik verimlilik
+    hourly_efficiency = []
+    for h in saatler:
+        hour_appointments = saat_counter.get(h, 0)
+        hour_efficiency = (hour_appointments / max_appointments * 100) if max_appointments > 0 else 0
+        hourly_efficiency.append(round(hour_efficiency, 1))
+
+    return jsonify({
+        "success": True,
+        "peakHour": peak_hour,
+        "avgCapacityUsage": round(avg_capacity_usage, 1),
+        "efficiencyRate": round(efficiency_rate, 1),
+        "hourlyData": {
+            "labels": [f"{h:02d}" for h in saatler],
+            "values": saat_deger
+        },
+        "weeklyData": {
+            "labels": weekly_labels,
+            "values": weekly_values
+        },
+        "hourlyEfficiency": hourly_efficiency
+    })
+
+@app.route('/api/raporlar/heatmap')
+@login_required
+def api_raporlar_heatmap():
+    baslangic = request.args.get('baslangic')
+    bitis = request.args.get('bitis')
+    defter_id = request.args.get('defter_id', '')
+    
+    try:
+        start_date = datetime.strptime(baslangic, '%Y-%m-%d').date() if baslangic else (datetime.now().date() - timedelta(days=30))
+        end_date = datetime.strptime(bitis, '%Y-%m-%d').date() if bitis else datetime.now().date()
+    except ValueError:
+        return jsonify({"success": False, "message": "Tarih formatı YYYY-MM-DD olmalı"}), 400
+
+    # Tarihleri kapsayan datetime araligi
+    start_dt = datetime(start_date.year, start_date.month, start_date.day, 0, 0)
+    end_dt = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59)
+
+    # Izin farkindaligi
+    if session.get('is_admin', False):
+        q = Randevu.query.filter(
+            Randevu.FirmaID == session['firma_id'],
+            Randevu.RandevuTarihi >= start_dt,
+            Randevu.RandevuTarihi <= end_dt
+        )
+    else:
+        q = db.session.query(Randevu).join(RandevuYetki).filter(
+            RandevuYetki.KullaniciID == session['user_id'],
+            RandevuYetki.GoruntulemeYetkisi == True,
+            Randevu.FirmaID == session['firma_id'],
+            Randevu.RandevuTarihi >= start_dt,
+            Randevu.RandevuTarihi <= end_dt
+        )
+    
+    # Defter filtresi ekle (Randevu.DefterID üzerinden)
+    if defter_id:
+        print(f"API Heatmap - Defter filtresi uygulanıyor: {defter_id}")
+        q = q.filter(Randevu.DefterID == defter_id)
+    else:
+        print("API Heatmap - Defter filtresi uygulanmıyor")
+
+    items = q.all()
+
+    # Günlük ve saatlik dağılım
+    heatmap_data = {
+        'Monday': {},
+        'Tuesday': {},
+        'Wednesday': {},
+        'Thursday': {},
+        'Friday': {},
+        'Saturday': {},
+        'Sunday': {}
+    }
+    
+    # Gün isimleri
+    day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    
+    for r in items:
+        # Gün adını al (0=Monday, 6=Sunday)
+        day_name = day_names[r.RandevuTarihi.weekday()]
+        hour = r.RandevuTarihi.hour
+        
+        # Sadece çalışma saatleri (9-18)
+        if 9 <= hour <= 18:
+            if hour not in heatmap_data[day_name]:
+                heatmap_data[day_name][hour] = 0
+            heatmap_data[day_name][hour] += 1
+    
+    return jsonify({
+        "success": True,
+        "heatmapData": heatmap_data
+    })
+
+# Personel Performans Raporu API
+@app.route('/api/raporlar/personel-performans')
+@login_required
+def api_raporlar_personel_performans():
+    baslangic = request.args.get('baslangic')
+    bitis = request.args.get('bitis')
+    defter_id = request.args.get('defter_id', '')
+
+    try:
+        start_date = datetime.strptime(baslangic, '%Y-%m-%d').date() if baslangic else (datetime.now().date() - timedelta(days=30))
+        end_date = datetime.strptime(bitis, '%Y-%m-%d').date() if bitis else datetime.now().date()
+    except ValueError:
+        return jsonify({"success": False, "message": "Tarih formatı YYYY-MM-DD olmalı"}), 400
+
+    start_dt = datetime(start_date.year, start_date.month, start_date.day, 0, 0)
+    end_dt = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59)
+
+    # İzin farkındalığı
+    if session.get('is_admin', False):
+        q = Randevu.query.filter(
+            Randevu.FirmaID == session['firma_id'],
+            Randevu.RandevuTarihi >= start_dt,
+            Randevu.RandevuTarihi <= end_dt
+        )
+    else:
+        q = db.session.query(Randevu).join(RandevuYetki).filter(
+            RandevuYetki.KullaniciID == session['user_id'],
+            RandevuYetki.GoruntulemeYetkisi == True,
+            Randevu.FirmaID == session['firma_id'],
+            Randevu.RandevuTarihi >= start_dt,
+            Randevu.RandevuTarihi <= end_dt
+        )
+
+    if defter_id:
+        q = q.filter(Randevu.DefterID == defter_id)
+
+    items = q.all()
+
+    # Personel bazında grupla
+    performance = {}
+    for r in items:
+        user_id = r.OlusturanKullaniciID
+        if user_id not in performance:
+            performance[user_id] = {
+                'kullaniciId': user_id,
+                'adSoyad': f"{r.olusturan_kullanici.Ad} {r.olusturan_kullanici.Soyad}" if r.olusturan_kullanici else 'Bilinmiyor',
+                'toplam': 0,
+                'durumlar': defaultdict(int)
+            }
+        performance[user_id]['toplam'] += 1
+        durum = r.Durum or 'Bilinmiyor'
+        performance[user_id]['durumlar'][durum] += 1
+
+    # Sonuçları listeye çevir ve toplam sayıya göre sırala
+    rows = []
+    for _, info in performance.items():
+        rows.append({
+            'kullaniciId': info['kullaniciId'],
+            'adSoyad': info['adSoyad'],
+            'toplam': info['toplam'],
+            'beklemede': info['durumlar'].get('Beklemede', 0),
+            'tamamlandi': info['durumlar'].get('Tamamlandı', 0),
+            'iptal': info['durumlar'].get('İptal', 0) + info['durumlar'].get('Iptal', 0)
+        })
+    rows.sort(key=lambda x: x['toplam'], reverse=True)
+
+    labels = [r['adSoyad'] for r in rows]
+    counts = [r['toplam'] for r in rows]
+
+    return jsonify({
+        'success': True,
+        'labels': labels,
+        'counts': counts,
+        'rows': rows
     })
 
 @app.route('/api/musteri/ara')
@@ -3134,6 +5274,12 @@ def api_musteri_ara():
             'tam_adi': musteri.tam_adi,
             'telefon': musteri.Telefon or '',
             'email': musteri.Email or '',
+            'cinsiyet': musteri.Cinsiyet or '',
+            'ulke': musteri.Ulke or 'TR',
+            'sehir': musteri.Sehir or '',
+            'ilce': musteri.Ilce or '',
+            'adres': musteri.Adres or '',
+            'notlar': musteri.Notlar or '',
             'kategori': musteri.kategori.KategoriAdi if musteri.kategori else 'Kategori Yok',
             'kategori_id': musteri.kategori.KategoriID if musteri.kategori else None,
             'kategori_rengi': musteri.kategori.Renk if musteri.kategori else '#6c757d'

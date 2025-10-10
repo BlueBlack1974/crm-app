@@ -5,6 +5,40 @@
 {% block extra_css %}
 <style>
 .card { box-shadow: 0 2px 4px rgba(0,0,0,.06); }
+
+/* Grafik boyutlarını zorla */
+#saatChart {
+  height: 200px !important;
+  max-height: 200px !important;
+  width: 100% !important;
+}
+
+#durumChart {
+  height: 250px !important;
+  max-height: 250px !important;
+  width: 100% !important;
+}
+
+#refChart {
+  height: 250px !important;
+  max-height: 250px !important;
+  width: 100% !important;
+}
+
+.peak-hour-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.capacity-card {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+}
+
+.efficiency-card {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+}
 </style>
 {% endblock %}
 
@@ -22,12 +56,26 @@
     <label class="form-label">{{ _('End Date') }}</label>
     <input type="date" class="form-control" name="bitis" value="{{ bitis }}">
   </div>
+  <div class="col-auto">
+    <label class="form-label">{{ _('Max Daily Capacity') }}</label>
+    <input type="number" class="form-control" name="kapasite" value="{{ kapasite }}" min="1" max="100" placeholder="8">
+  </div>
+  <div class="col-auto">
+    <label class="form-label">{{ _('Book') }}</label>
+    <select class="form-control" name="defter_id" id="defterSelect" onchange="console.log('Defter değişti:', this.value)">
+      <option value="">{{ _('All Books') }}</option>
+      {% for defter in defterler %}
+      <option value="{{ defter.AyarID }}" {% if defter_id|string == defter.AyarID|string %}selected{% endif %}>{{ defter.DefterAdi }}</option>
+      {% endfor %}
+    </select>
+  </div>
   <div class="col-auto align-self-end">
     <button class="btn btn-primary" type="submit">{{ _('Apply') }}</button>
   </div>
 </form>
 
-<div class="row g-3">
+<!-- KPI Kartları -->
+<div class="row g-3 mb-4">
   <div class="col-md-3">
     <div class="card">
       <div class="card-body">
@@ -36,10 +84,40 @@
       </div>
     </div>
   </div>
+  <div class="col-md-3">
+    <div class="card peak-hour-card">
+      <div class="card-body text-center">
+        <h5 class="card-title">{{ _('Peak Hour') }}</h5>
+        <h2 class="mb-0" id="peakHour">-</h2>
+        <small>{{ _('Most Active Hour') }}</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card capacity-card">
+      <div class="card-body text-center">
+        <h5 class="card-title">{{ _('Capacity Usage') }}</h5>
+        <h2 class="mb-0" id="capacityUsage">-</h2>
+        <small>{{ _('Average Daily Usage') }}</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card efficiency-card">
+      <div class="card-body text-center">
+        <h5 class="card-title">{{ _('Efficiency Rate') }}</h5>
+        <h2 class="mb-0" id="efficiencyRate">-</h2>
+        <small>{{ _('Peak Hours Efficiency') }}</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
   <div class="col-md-9">
     <div class="card">
       <div class="card-body">
-        <canvas id="saatChart" height="80"></canvas>
+        <canvas id="saatChart" style="height: 200px !important;"></canvas>
       </div>
     </div>
   </div>
@@ -47,7 +125,7 @@
     <div class="card">
       <div class="card-body">
         <h6>{{ _('By Status') }}</h6>
-        <canvas id="durumChart" height="120"></canvas>
+        <canvas id="durumChart" style="height: 250px !important;"></canvas>
       </div>
     </div>
   </div>
@@ -55,7 +133,36 @@
     <div class="card">
       <div class="card-body">
         <h6>{{ _('By Reference') }}</h6>
-        <canvas id="refChart" height="120"></canvas>
+        <canvas id="refChart" style="height: 250px !important;"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detaylı Saat Analizi -->
+<div class="row g-3 mt-3">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">{{ _('Detailed Hour Analysis') }}</h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>{{ _('Hour') }}</th>
+                <th>{{ _('Appointments') }}</th>
+                <th>{{ _('Capacity Usage') }}</th>
+                <th>{{ _('Efficiency') }}</th>
+                <th>{{ _('Status') }}</th>
+              </tr>
+            </thead>
+            <tbody id="hourlyTable">
+              <!-- JavaScript ile doldurulacak -->
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -63,21 +170,88 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Chart.js base.html'de yüklendi -->
 <script>
 async function loadReport() {
   const params = new URLSearchParams(window.location.search);
+  console.log('API çağrısı parametreleri:', params.toString());
+  console.log('Defter ID:', params.get('defter_id'));
   const res = await fetch('/api/raporlar/ozet?' + params.toString());
   const data = await res.json();
   if (!data.success) { alert('{{ _("Report could not be loaded") }}'); return; }
 
   document.getElementById('toplam').textContent = data.toplam;
 
+  // Yoğun saatler verilerini yükle
+  const peakRes = await fetch('/api/raporlar/yoğun-saatler?' + params.toString());
+  const peakData = await peakRes.json();
+  
+  if (peakData.success) {
+    // KPI'ları güncelle
+    document.getElementById('peakHour').textContent = peakData.peakHour + ':00';
+    document.getElementById('capacityUsage').textContent = peakData.avgCapacityUsage + '%';
+    document.getElementById('efficiencyRate').textContent = peakData.efficiencyRate + '%';
+    
+    // Detaylı tablo
+    const tableBody = document.getElementById('hourlyTable');
+    tableBody.innerHTML = '';
+    
+    const kapasite = params.get('kapasite') || 8;
+    
+    peakData.hourlyData.labels.forEach((hour, index) => {
+      const appointments = peakData.hourlyData.values[index];
+      const capacityUsage = (appointments / kapasite * 100).toFixed(1);
+      const efficiency = peakData.hourlyEfficiency[index];
+      
+      let status = '';
+      let statusClass = '';
+      if (capacityUsage >= 90) {
+        status = '{{ _("Very Busy") }}';
+        statusClass = 'text-danger';
+      } else if (capacityUsage >= 70) {
+        status = '{{ _("Busy") }}';
+        statusClass = 'text-warning';
+      } else if (capacityUsage >= 50) {
+        status = '{{ _("Moderate") }}';
+        statusClass = 'text-info';
+      } else {
+        status = '{{ _("Quiet") }}';
+        statusClass = 'text-success';
+      }
+      
+      const row = `
+        <tr>
+          <td>${hour}:00</td>
+          <td>${appointments}</td>
+          <td>${capacityUsage}%</td>
+          <td>${efficiency}%</td>
+          <td><span class="${statusClass}">${status}</span></td>
+        </tr>
+      `;
+      tableBody.innerHTML += row;
+    });
+  }
+
   // Saat grafiği
   new Chart(document.getElementById('saatChart'), {
     type: 'line',
     data: { labels: data.saatler.labels, datasets: [{ label: '{{ _('By Hours') }}', data: data.saatler.values, borderColor: '#0d6efd', fill: false }]},
-    options: { scales: { y: { beginAtZero: true }}}
+    options: { 
+      responsive: true,
+      maintainAspectRatio: false,
+      aspectRatio: 3,
+      scales: { 
+        y: { 
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1,
+            callback: function(value) {
+              return Number.isInteger(value) ? value : null;
+            }
+          }
+        }
+      }
+    }
   });
 
   // Durum grafiği
@@ -85,7 +259,17 @@ async function loadReport() {
   const durumValues = Object.values(data.durumlar);
   new Chart(document.getElementById('durumChart'), {
     type: 'doughnut',
-    data: { labels: durumLabels, datasets: [{ data: durumValues, backgroundColor: ['#ffc107','#198754','#dc3545','#0dcaf0','#6c757d'] }]}
+    data: { labels: durumLabels, datasets: [{ data: durumValues, backgroundColor: ['#ffc107','#198754','#dc3545','#0dcaf0','#6c757d'] }]},
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      aspectRatio: 1,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        }
+      }
+    }
   });
 
   // Referans grafiği
@@ -94,9 +278,36 @@ async function loadReport() {
   new Chart(document.getElementById('refChart'), {
     type: 'bar',
     data: { labels: refLabels, datasets: [{ label: '{{ _('Count') }}', data: refValues, backgroundColor: '#20c997' }]},
-    options: { scales: { y: { beginAtZero: true }}}
+    options: { 
+      responsive: true,
+      maintainAspectRatio: false,
+      aspectRatio: 1,
+      scales: { 
+        y: { 
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1,
+            callback: function(value) {
+              return Number.isInteger(value) ? value : null;
+            }
+          }
+        }
+      }
+    }
   });
 }
+
+// Form submit debug
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.querySelector('form');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      const defterSelect = document.getElementById('defterSelect');
+      console.log('Form submit - Seçilen defter:', defterSelect.value);
+    });
+  }
+});
+
 loadReport();
 </script>
 {% endblock %}

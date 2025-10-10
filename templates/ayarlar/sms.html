@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}SMS Ayarları - CRM{% endblock %}
+{% block title %}{{ _('SMS Settings') }} - CRM{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
-        <h1 class="h2">SMS Ayarları</h1>
+        <h1 class="h2">{{ _('SMS Settings') }}</h1>
         {% if is_admin %}
         <div class="mt-2">
-            <label for="firma_secimi" class="form-label">Firma Seçin:</label>
+            <label for="firma_secimi" class="form-label">{{ _('Select Company:') }}</label>
             <select id="firma_secimi" class="form-select" style="width: auto; display: inline-block;" onchange="changeFirma()">
                 {% for f in tum_firmalar %}
                 <option value="{{ f.FirmaID }}" {{ 'selected' if f.FirmaID == selected_firma_id else '' }}>
@@ -25,28 +25,18 @@
     </div>
     <div class="btn-toolbar mb-2 mb-md-0">
         <a href="{{ url_for('ayarlar') }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left me-1"></i>Geri
+            <i class="fas fa-arrow-left me-1"></i>{{ _('Back') }}
         </a>
     </div>
 </div>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        {% for category, message in messages %}
-            <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
-{% endwith %}
 
 <div class="row">
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
                 <h5 class="card-title mb-0">
-                    <i class="fas fa-sms me-2"></i>SMS Firma Ayarları
+                    <i class="fas fa-sms me-2"></i>{{ _('SMS Provider Settings') }}
                 </h5>
             </div>
             <div class="card-body">
@@ -56,34 +46,63 @@
                         <input type="hidden" name="firma_id" value="{{ selected_firma_id }}">
                         {% endif %}
                         <div class="mb-3">
-                            <label for="sms_firmasi" class="form-label">SMS Firması</label>
+                            <label for="sms_firmasi" class="form-label">{{ _('SMS Provider') }}</label>
                             <select class="form-select" id="sms_firmasi" name="sms_firmasi" required onchange="toggleSMSFields()">
                                 <option value="netgsm" {{ 'selected' if sms_ayar.SMSFirmasi == 'netgsm' else '' }}>NetGSM</option>
                                 <option value="iletimerkezi" {{ 'selected' if sms_ayar.SMSFirmasi == 'iletimerkezi' else '' }}>İleti Merkezi</option>
                                 <option value="mesajnet" {{ 'selected' if sms_ayar.SMSFirmasi == 'mesajnet' else '' }}>MesajNet</option>
-                                <option value="custom" {{ 'selected' if sms_ayar.SMSFirmasi == 'custom' else '' }}>Özel API</option>
+                                <option value="corvass" {{ 'selected' if sms_ayar.SMSFirmasi == 'corvass' else '' }}>Corvass</option>
+                                <option value="custom" {{ 'selected' if sms_ayar.SMSFirmasi == 'custom' else '' }}>{{ _('Custom API') }}</option>
                             </select>
+                        <div id="corvass_fields" class="sms-fields" style="display: none;">
+                            <div class="mb-3">
+                                <label for="api_url" class="form-label">{{ _('API URL') }}</label>
+                                <input type="url" class="form-control" id="api_url" name="api_url" 
+                                       value="{{ sms_ayar.API_URL or '' }}" placeholder="https://api.corvass.com/sms/send">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="api_key" class="form-label">{{ _('API Key') }}</label>
+                                        <input type="text" class="form-control" id="api_key" name="api_key" 
+                                               value="{{ sms_ayar.API_Key or '' }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="api_secret" class="form-label">{{ _('API Secret') }}</label>
+                                        <input type="password" class="form-control" id="api_secret" name="api_secret" 
+                                               value="{{ sms_ayar.API_Secret or '' }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="gonderici_adi" class="form-label">{{ _('Sender Name') }}</label>
+                                <input type="text" class="form-control" id="gonderici_adi" name="gonderici_adi" 
+                                       value="{{ sms_ayar.GondericiAdi or '' }}" maxlength="11">
+                            </div>
+                        </div>
                         </div>
                         
                         <div id="netgsm_fields" class="sms-fields" style="display: none;">
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="kullanici_adi" class="form-label">Kullanıcı Adı</label>
+                                        <label for="kullanici_adi" class="form-label">{{ _('Username') }}</label>
                                         <input type="text" class="form-control" id="kullanici_adi" name="kullanici_adi" 
                                                value="{{ sms_ayar.KullaniciAdi or '' }}">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="sifre" class="form-label">Şifre</label>
+                                        <label for="sifre" class="form-label">{{ _('Password') }}</label>
                                         <input type="password" class="form-control" id="sifre" name="sifre" 
                                                value="{{ sms_ayar.Sifre or '' }}">
                                     </div>
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label for="gonderici_adi" class="form-label">Gönderici Adı</label>
+                                <label for="gonderici_adi" class="form-label">{{ _('Sender Name') }}</label>
                                 <input type="text" class="form-control" id="gonderici_adi" name="gonderici_adi" 
                                        value="{{ sms_ayar.GondericiAdi or '' }}" maxlength="11">
                             </div>
@@ -93,21 +112,21 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="api_key" class="form-label">API Key</label>
+                                        <label for="api_key" class="form-label">{{ _('API Key') }}</label>
                                         <input type="text" class="form-control" id="api_key" name="api_key" 
                                                value="{{ sms_ayar.API_Key or '' }}">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="api_secret" class="form-label">API Secret</label>
+                                        <label for="api_secret" class="form-label">{{ _('API Secret') }}</label>
                                         <input type="password" class="form-control" id="api_secret" name="api_secret" 
                                                value="{{ sms_ayar.API_Secret or '' }}">
                                     </div>
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label for="gonderici_adi" class="form-label">Gönderici Adı</label>
+                                <label for="gonderici_adi" class="form-label">{{ _('Sender Name') }}</label>
                                 <input type="text" class="form-control" id="gonderici_adi" name="gonderici_adi" 
                                        value="{{ sms_ayar.GondericiAdi or '' }}" maxlength="11">
                             </div>
@@ -117,21 +136,21 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="kullanici_adi" class="form-label">Kullanıcı Adı</label>
+                                        <label for="kullanici_adi" class="form-label">{{ _('Username') }}</label>
                                         <input type="text" class="form-control" id="kullanici_adi" name="kullanici_adi" 
                                                value="{{ sms_ayar.KullaniciAdi or '' }}">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="sifre" class="form-label">Şifre</label>
+                                        <label for="sifre" class="form-label">{{ _('Password') }}</label>
                                         <input type="password" class="form-control" id="sifre" name="sifre" 
                                                value="{{ sms_ayar.Sifre or '' }}">
                                     </div>
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label for="gonderici_adi" class="form-label">Gönderici Adı</label>
+                                <label for="gonderici_adi" class="form-label">{{ _('Sender Name') }}</label>
                                 <input type="text" class="form-control" id="gonderici_adi" name="gonderici_adi" 
                                        value="{{ sms_ayar.GondericiAdi or '' }}" maxlength="11">
                             </div>
@@ -139,51 +158,74 @@
                         
                         <div id="custom_fields" class="sms-fields" style="display: none;">
                             <div class="mb-3">
-                                <label for="api_url" class="form-label">API URL</label>
+                                <label for="api_url" class="form-label">{{ _('API URL') }}</label>
                                 <input type="url" class="form-control" id="api_url" name="api_url" 
                                        value="{{ sms_ayar.API_URL or '' }}" placeholder="https://api.example.com/sms/send">
                             </div>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="api_key" class="form-label">API Key</label>
+                                        <label for="api_key" class="form-label">{{ _('API Key') }}</label>
                                         <input type="text" class="form-control" id="api_key" name="api_key" 
                                                value="{{ sms_ayar.API_Key or '' }}">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="api_secret" class="form-label">API Secret</label>
+                                        <label for="api_secret" class="form-label">{{ _('API Secret') }}</label>
                                         <input type="password" class="form-control" id="api_secret" name="api_secret" 
                                                value="{{ sms_ayar.API_Secret or '' }}">
                                     </div>
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label for="gonderici_adi" class="form-label">Gönderici Adı</label>
+                                <label for="gonderici_adi" class="form-label">{{ _('Sender Name') }}</label>
                                 <input type="text" class="form-control" id="gonderici_adi" name="gonderici_adi" 
                                        value="{{ sms_ayar.GondericiAdi or '' }}" maxlength="11">
                             </div>
                         </div>
                         
                         <div class="mb-3">
+                            <label for="varsayilan_sms_metni" class="form-label">{{ _('Default SMS Text') }}</label>
+                            <textarea class="form-control" id="varsayilan_sms_metni" name="varsayilan_sms_metni" rows="3" placeholder="{{ _('Hello {CUSTOMER_NAME}, we remind you of your appointment on {APPOINTMENT_DATE}.') }}">{{ sms_ayar.VarsayilanSMSMetni or '' }}</textarea>
+                            <div class="form-text">{{ _('Variables: {CUSTOMER_NAME}, {APPOINTMENT_DATE}, {BOOK_NAME}') }}</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ _('Send Time') }}</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sms_on_create" name="sms_on_create" 
+                                       {{ 'checked' if sms_ayar.SMSGonderOnCreate else '' }}>
+                                <label class="form-check-label" for="sms_on_create">{{ _('Send when appointment is created') }}</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sms_24h" name="sms_24h" 
+                                       {{ 'checked' if sms_ayar.SMSGonder24SaatOnce else '' }}>
+                                <label class="form-check-label" for="sms_24h">{{ _('Send 24 hours before appointment') }}</label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="aktif" name="aktif" 
                                        {{ 'checked' if sms_ayar.Aktif else '' }}>
                                 <label class="form-check-label" for="aktif">
-                                    Aktif
+                                    {{ _('Active') }}
                                 </label>
                             </div>
                         </div>
                         
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-1"></i>Güncelle
+                            <i class="fas fa-save me-1"></i>{{ _('Update') }}
                         </button>
-                        <a href="{{ url_for('ayarlar_sms_sil', ayar_id=sms_ayar.SMSAyarID) }}" 
-                           class="btn btn-danger ms-2" 
-                           onclick="return confirm('SMS ayarlarını silmek istediğinizden emin misiniz?')">
-                            <i class="fas fa-trash me-1"></i>Sil
-                        </a>
+                    </form>
+                    <form method="POST" action="{{ url_for('ayarlar_sms_sil', ayar_id=sms_ayar.SMSAyarID) }}" style="display:inline;">
+                        {% if is_admin %}
+                        <input type="hidden" name="firma_id" value="{{ selected_firma_id }}">
+                        {% endif %}
+                        <button type="submit" class="btn btn-danger mt-2" onclick="return confirm('{{ _('Are you sure you want to delete SMS settings?') }}')">
+                            <i class="fas fa-trash me-1"></i>{{ _('Delete') }}
+                        </button>
                     </form>
                 {% else %}
                     <form method="POST" action="{{ url_for('ayarlar_sms_ekle') }}">
@@ -191,33 +233,59 @@
                         <input type="hidden" name="firma_id" value="{{ selected_firma_id }}">
                         {% endif %}
                         <div class="mb-3">
-                            <label for="sms_firmasi" class="form-label">SMS Firması</label>
+                            <label for="sms_firmasi" class="form-label">{{ _('SMS Provider') }}</label>
                             <select class="form-select" id="sms_firmasi" name="sms_firmasi" required onchange="toggleSMSFields()">
-                                <option value="">SMS Firması Seçin</option>
+                                <option value="">{{ _('Select SMS Provider') }}</option>
                                 <option value="netgsm">NetGSM</option>
                                 <option value="iletimerkezi">İleti Merkezi</option>
                                 <option value="mesajnet">MesajNet</option>
-                                <option value="custom">Özel API</option>
+                                <option value="corvass">Corvass</option>
+                                <option value="custom">{{ _('Custom API') }}</option>
                             </select>
+                        <div id="corvass_fields" class="sms-fields" style="display: none;">
+                            <div class="mb-3">
+                                <label for="api_url" class="form-label">{{ _('API URL') }}</label>
+                                <input type="url" class="form-control" id="api_url" name="api_url" 
+                                       placeholder="https://api.corvass.com/sms/send">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="api_key" class="form-label">{{ _('API Key') }}</label>
+                                        <input type="text" class="form-control" id="api_key" name="api_key">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="api_secret" class="form-label">{{ _('API Secret') }}</label>
+                                        <input type="password" class="form-control" id="api_secret" name="api_secret">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="gonderici_adi" class="form-label">{{ _('Sender Name') }}</label>
+                                <input type="text" class="form-control" id="gonderici_adi" name="gonderici_adi" maxlength="11">
+                            </div>
+                        </div>
                         </div>
                         
                         <div id="netgsm_fields" class="sms-fields" style="display: none;">
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="kullanici_adi" class="form-label">Kullanıcı Adı</label>
+                                        <label for="kullanici_adi" class="form-label">{{ _('Username') }}</label>
                                         <input type="text" class="form-control" id="kullanici_adi" name="kullanici_adi">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="sifre" class="form-label">Şifre</label>
+                                        <label for="sifre" class="form-label">{{ _('Password') }}</label>
                                         <input type="password" class="form-control" id="sifre" name="sifre">
                                     </div>
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label for="gonderici_adi" class="form-label">Gönderici Adı</label>
+                                <label for="gonderici_adi" class="form-label">{{ _('Sender Name') }}</label>
                                 <input type="text" class="form-control" id="gonderici_adi" name="gonderici_adi" maxlength="11">
                             </div>
                         </div>
@@ -226,19 +294,19 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="api_key" class="form-label">API Key</label>
+                                        <label for="api_key" class="form-label">{{ _('API Key') }}</label>
                                         <input type="text" class="form-control" id="api_key" name="api_key">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="api_secret" class="form-label">API Secret</label>
+                                        <label for="api_secret" class="form-label">{{ _('API Secret') }}</label>
                                         <input type="password" class="form-control" id="api_secret" name="api_secret">
                                     </div>
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label for="gonderici_adi" class="form-label">Gönderici Adı</label>
+                                <label for="gonderici_adi" class="form-label">{{ _('Sender Name') }}</label>
                                 <input type="text" class="form-control" id="gonderici_adi" name="gonderici_adi" maxlength="11">
                             </div>
                         </div>
@@ -247,60 +315,78 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="kullanici_adi" class="form-label">Kullanıcı Adı</label>
+                                        <label for="kullanici_adi" class="form-label">{{ _('Username') }}</label>
                                         <input type="text" class="form-control" id="kullanici_adi" name="kullanici_adi">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="sifre" class="form-label">Şifre</label>
+                                        <label for="sifre" class="form-label">{{ _('Password') }}</label>
                                         <input type="password" class="form-control" id="sifre" name="sifre">
                                     </div>
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label for="gonderici_adi" class="form-label">Gönderici Adı</label>
+                                <label for="gonderici_adi" class="form-label">{{ _('Sender Name') }}</label>
                                 <input type="text" class="form-control" id="gonderici_adi" name="gonderici_adi" maxlength="11">
                             </div>
                         </div>
                         
                         <div id="custom_fields" class="sms-fields" style="display: none;">
                             <div class="mb-3">
-                                <label for="api_url" class="form-label">API URL</label>
+                                <label for="api_url" class="form-label">{{ _('API URL') }}</label>
                                 <input type="url" class="form-control" id="api_url" name="api_url" 
                                        placeholder="https://api.example.com/sms/send">
                             </div>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="api_key" class="form-label">API Key</label>
+                                        <label for="api_key" class="form-label">{{ _('API Key') }}</label>
                                         <input type="text" class="form-control" id="api_key" name="api_key">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="api_secret" class="form-label">API Secret</label>
+                                        <label for="api_secret" class="form-label">{{ _('API Secret') }}</label>
                                         <input type="password" class="form-control" id="api_secret" name="api_secret">
                                     </div>
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label for="gonderici_adi" class="form-label">Gönderici Adı</label>
+                                <label for="gonderici_adi" class="form-label">{{ _('Sender Name') }}</label>
                                 <input type="text" class="form-control" id="gonderici_adi" name="gonderici_adi" maxlength="11">
                             </div>
                         </div>
                         
                         <div class="mb-3">
+                            <label for="varsayilan_sms_metni" class="form-label">{{ _('Default SMS Text') }}</label>
+                            <textarea class="form-control" id="varsayilan_sms_metni" name="varsayilan_sms_metni" rows="3" placeholder="{{ _('Hello {CUSTOMER_NAME}, we remind you of your appointment on {APPOINTMENT_DATE}.') }}"></textarea>
+                            <div class="form-text">{{ _('Variables: {CUSTOMER_NAME}, {APPOINTMENT_DATE}, {BOOK_NAME}') }}</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ _('Send Time') }}</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sms_on_create" name="sms_on_create">
+                                <label class="form-check-label" for="sms_on_create">{{ _('Send when appointment is created') }}</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sms_24h" name="sms_24h">
+                                <label class="form-check-label" for="sms_24h">{{ _('Send 24 hours before appointment') }}</label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="aktif" name="aktif" checked>
                                 <label class="form-check-label" for="aktif">
-                                    Aktif
+                                    {{ _('Active') }}
                                 </label>
                             </div>
                         </div>
                         
                         <button type="submit" class="btn btn-success">
-                            <i class="fas fa-plus me-1"></i>SMS Ayarı Ekle
+                            <i class="fas fa-plus me-1"></i>{{ _('Add SMS Setting') }}
                         </button>
                     </form>
                 {% endif %}
@@ -311,36 +397,36 @@
         <div class="card">
             <div class="card-header">
                 <h5 class="card-title mb-0">
-                    <i class="fas fa-info-circle me-2"></i>SMS Firmaları
+                    <i class="fas fa-info-circle me-2"></i>{{ _('SMS Providers') }}
                 </h5>
             </div>
             <div class="card-body">
                 <h6>NetGSM:</h6>
                 <ul class="small">
-                    <li>Kullanıcı adı ve şifre gerekli</li>
-                    <li>Gönderici adı: 11 karakter max</li>
-                    <li>API: XML tabanlı</li>
+                    <li>{{ _('Username and password required') }}</li>
+                    <li>{{ _('Sender name: 11 characters max') }}</li>
+                    <li>{{ _('API: XML based') }}</li>
                 </ul>
                 
                 <h6>İleti Merkezi:</h6>
                 <ul class="small">
-                    <li>API Key ve Secret gerekli</li>
-                    <li>REST API kullanır</li>
-                    <li>JSON formatında yanıt</li>
+                    <li>{{ _('API Key and Secret required') }}</li>
+                    <li>{{ _('Uses REST API') }}</li>
+                    <li>{{ _('JSON response format') }}</li>
                 </ul>
                 
                 <h6>MesajNet:</h6>
                 <ul class="small">
-                    <li>Kullanıcı adı ve şifre gerekli</li>
-                    <li>HTTP API kullanır</li>
-                    <li>XML/JSON formatları</li>
+                    <li>{{ _('Username and password required') }}</li>
+                    <li>{{ _('Uses HTTP API') }}</li>
+                    <li>{{ _('XML/JSON formats') }}</li>
                 </ul>
                 
-                <h6>Özel API:</h6>
+                <h6>{{ _('Custom API:') }}</h6>
                 <ul class="small">
-                    <li>Kendi API URL'nizi girin</li>
-                    <li>API Key/Secret opsiyonel</li>
-                    <li>Esnek yapılandırma</li>
+                    <li>{{ _('Enter your own API URL') }}</li>
+                    <li>{{ _('API Key/Secret optional') }}</li>
+                    <li>{{ _('Flexible configuration') }}</li>
                 </ul>
             </div>
         </div>

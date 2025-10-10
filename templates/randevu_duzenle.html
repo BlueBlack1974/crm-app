@@ -127,6 +127,7 @@
                                                 <option value="+64">🇳🇿 +64</option>
                                             </select>
                                             <input type="tel" class="form-control" id="musteri_telefon" name="musteri_telefon" 
+                                                   value="{% if randevu.musteri.Telefon %}{{ randevu.musteri.Telefon }}{% endif %}"
                                                    placeholder="536 555 66 44"
                                                    pattern="[0-9\s]{10,15}" 
                                                    title="{{ _('Enter a valid phone number (e.g.: 536 555 66 44)') }}">
@@ -146,6 +147,37 @@
                                         <div class="invalid-feedback" id="email-error">
                                             {{ _('Enter a valid email address') }}
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="musteri_dogum_tarihi" class="form-label">{{ _('Birth Date') }}</label>
+                                        <input type="date" class="form-control" id="musteri_dogum_tarihi" name="musteri_dogum_tarihi" 
+                                               value="{% if randevu.musteri.DogumTarihi %}{{ randevu.musteri.DogumTarihi.strftime('%Y-%m-%d') }}{% endif %}">
+                                        <small class="form-text text-muted" id="yas-gosterge">
+                                            {% if randevu.musteri.Yas %}Yaş: {{ randevu.musteri.Yas }}{% else %}Yaş otomatik olarak hesaplanacak{% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="musteri_yas" class="form-label">{{ _('Age') }}</label>
+                                        <input type="number" class="form-control" id="musteri_yas" name="musteri_yas" 
+                                               value="{{ randevu.musteri.Yas or '' }}" min="0" max="120" 
+                                               placeholder="{{ _('Enter age') }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="musteri_cinsiyet" class="form-label">{{ _('Gender') }}</label>
+                                        <select class="form-select" id="musteri_cinsiyet" name="musteri_cinsiyet">
+                                            <option value="">{{ _('Select') }}</option>
+                                            <option value="Erkek" {% if randevu.musteri.Cinsiyet == 'Erkek' %}selected{% endif %}>{{ _('Male') }}</option>
+                                            <option value="Kadın" {% if randevu.musteri.Cinsiyet == 'Kadın' %}selected{% endif %}>{{ _('Female') }}</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -336,6 +368,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
             
+            // Doğum tarihi değiştiğinde yaş hesapla
+            const dogumTarihiInput = document.getElementById('musteri_dogum_tarihi');
+            const yasInput = document.getElementById('musteri_yas');
+            const yasGosterge = document.getElementById('yas-gosterge');
+            
+            if (dogumTarihiInput) {
+                dogumTarihiInput.addEventListener('change', function() {
+                    const yas = yasHesapla(this.value);
+                    if (yas !== null && yas >= 0) {
+                        yasInput.value = yas;
+                        yasGosterge.textContent = `Yaş: ${yas}`;
+                    } else {
+                        yasInput.value = '';
+                        yasGosterge.textContent = 'Yaş hesaplanamadı';
+                    }
+                });
+            }
+            
+            // Yaş değiştiğinde doğum tarihini temizle (manuel yaş girişi)
+            if (yasInput) {
+                yasInput.addEventListener('input', function() {
+                    if (this.value && dogumTarihiInput) {
+                        dogumTarihiInput.value = '';
+                        yasGosterge.textContent = 'Manuel yaş girişi';
+                    }
+                });
+            }
+            
             // Süre validation
             const sureInput = document.getElementById('randevu_suresi');
             if (sureInput) {
@@ -359,6 +419,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+    // Yaş hesaplama fonksiyonu
+    function yasHesapla(dogumTarihi) {
+        if (!dogumTarihi) return null;
+        
+        const bugun = new Date();
+        const dogum = new Date(dogumTarihi);
+        
+        let yas = bugun.getFullYear() - dogum.getFullYear();
+        const ayFarki = bugun.getMonth() - dogum.getMonth();
+        
+        if (ayFarki < 0 || (ayFarki === 0 && bugun.getDate() < dogum.getDate())) {
+            yas--;
+        }
+        
+        return yas;
+    }
 
     // Telefon formatlaması fonksiyonu
     function formatTelefon(input) {

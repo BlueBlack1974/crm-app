@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 300">
+  <rect width="600" height="300" fill="#f8f9fa"/>
+  <rect x="40" y="40" width="520" height="220" rx="12" fill="#ffffff" stroke="#dee2e6"/>
+  <text x="60" y="72" font-size="20" font-family="Segoe UI, Arial" fill="#0d6efd">Takvim</text>
+  <g fill="#6c757d">
+    <rect x="60" y="110" width="80" height="60" rx="6"/>
+    <rect x="160" y="110" width="80" height="60" rx="6"/>
+    <rect x="260" y="110" width="80" height="60" rx="6"/>
+    <rect x="360" y="110" width="80" height="60" rx="6"/>
+    <rect x="460" y="110" width="80" height="60" rx="6"/>
+  </g>
+</svg>
+
+
+
+
+

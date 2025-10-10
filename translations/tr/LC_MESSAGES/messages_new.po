@@ -1,0 +1,1039 @@
+﻿# Turkish translations for CRM Project.
+# Copyright (C) 2025 CRM Project
+# This file is distributed under the same license as the CRM project.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: CRM 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-28 20:33+0300\n"
+"PO-Revision-Date: 2025-09-27 16:04+0300\n"
+"Last-Translator: \n"
+"Language: tr\n"
+"Language-Team: tr <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+# Navigation
+#: templates/base.html:70 templates/base.html:174 templates/dashboard.html:3
+#: templates/dashboard.html:7
+msgid "Dashboard"
+msgstr "Ana Sayfa"
+
+#: templates/base.html:76 templates/base.html:175 templates/randevular.html:3
+#: templates/randevular.html:7
+msgid "Appointments"
+msgstr "Randevular"
+
+#: templates/base.html:82 templates/base.html:176 templates/dashboard.html:12
+#: templates/randevu_ekle.html:3 templates/randevular.html:24
+#: templates/takvim.html:121
+msgid "New Appointment"
+msgstr "Yeni Randevu"
+
+#: templates/base.html:88 templates/base.html:177 templates/takvim.html:3
+#: templates/takvim.html:116
+msgid "Calendar"
+msgstr "Takvim"
+
+#: templates/ayarlar/kullanici_duzenle.html:149 templates/base.html:95
+#: templates/base.html:181 templates/raporlar.html:3 templates/raporlar.html:13
+msgid "Reports"
+msgstr "Raporlar"
+
+#: templates/base.html:101 templates/base.html:184
+msgid "Appointment Report"
+msgstr "Randevu Raporu"
+
+#: templates/base.html:104 templates/base.html:185
+#: templates/rapor_musteriler.html:3 templates/rapor_musteriler.html:7
+msgid "Customer Report"
+msgstr "MÃ¼ÅŸteri Raporu"
+
+#: templates/ayarlar/kullanici_duzenle.html:152 templates/base.html:114
+#: templates/base.html:155 templates/base.html:190
+msgid "Settings"
+msgstr "Ayarlar"
+
+#: templates/base.html:126
+msgid "Language"
+msgstr "Dil"
+
+#: templates/base.html:129
+msgid "Turkish"
+msgstr "TÃ¼rkÃ§e"
+
+#: templates/base.html:130
+msgid "English"
+msgstr "Ä°ngilizce"
+
+#: templates/base.html:143
+msgid "Notifications"
+msgstr "Bildirimler"
+
+#: templates/base.html:145
+msgid "Mark all as read"
+msgstr "TÃ¼mÃ¼nÃ¼ okundu iÅŸaretle"
+
+#: templates/base.html:154
+msgid "Profile"
+msgstr "Profil"
+
+#: templates/base.html:157 templates/base.html:192
+msgid "Logout"
+msgstr "Ã‡Ä±kÄ±ÅŸ"
+
+# Dashboard
+#: templates/dashboard.html:26 templates/raporlar.html:34
+msgid "Total Appointments"
+msgstr "Toplam Randevu"
+
+#: templates/dashboard.html:43
+msgid "This Week"
+msgstr "Bu Hafta"
+
+#: templates/dashboard.html:62 templates/dashboard.html:137
+#: templates/randevu_detay.html:43 templates/randevu_duzenle.html:208
+#: templates/randevu_ekle.html:363 templates/randevular.html:105
+#: templates/randevular.html:115 templates/takvim.html:260
+msgid "Pending"
+msgstr "Beklemede"
+
+#: templates/dashboard.html:82 templates/dashboard.html:139
+#: templates/randevu_detay.html:45 templates/randevu_duzenle.html:210
+#: templates/randevu_ekle.html:364 templates/randevular.html:107
+#: templates/randevular.html:116 templates/takvim.html:261
+msgid "Confirmed"
+msgstr "OnaylandÄ±"
+
+#: templates/dashboard.html:100
+msgid "Recent Appointments"
+msgstr "Son Randevular"
+
+#: templates/dashboard.html:108
+msgid "Title"
+msgstr "BaÅŸlÄ±k"
+
+#: templates/dashboard.html:109 templates/randevular.html:65
+msgid "Customer"
+msgstr "MÃ¼ÅŸteri"
+
+#: templates/dashboard.html:110 templates/randevu_detay.html:30
+#: templates/randevu_duzenle.html:26 templates/randevu_ekle.html:109
+#: templates/randevular.html:67
+msgid "Date"
+msgstr "Tarih"
+
+#: templates/dashboard.html:111 templates/randevular.html:69
+msgid "Book"
+msgstr "Defter"
+
+#: templates/ayarlar/kullanici_duzenle.html:136 templates/dashboard.html:112
+#: templates/randevu_detay.html:40 templates/randevu_duzenle.html:205
+#: templates/randevular.html:70 templates/rapor_musteriler.html:68
+msgid "Status"
+msgstr "Durum"
+
+#: templates/ayarlar/islemler.html:77 templates/dashboard.html:113
+#: templates/randevu_detay.html:103 templates/randevular.html:72
+msgid "Actions"
+msgstr "Ä°ÅŸlemler"
+
+#: templates/dashboard.html:124 templates/randevu_detay.html:75
+#: templates/randevular.html:83
+msgid "No Customer"
+msgstr "MÃ¼ÅŸteri Yok"
+
+#: templates/dashboard.html:141 templates/randevu_detay.html:47
+#: templates/randevu_duzenle.html:212 templates/randevu_ekle.html:365
+#: templates/randevular.html:109 templates/randevular.html:117
+#: templates/takvim.html:262
+msgid "Cancelled"
+msgstr "Ä°ptal"
+
+#: templates/dashboard.html:143 templates/randevu_detay.html:49
+#: templates/randevu_duzenle.html:214 templates/randevu_ekle.html:366
+#: templates/randevular.html:111 templates/randevular.html:118
+#: templates/takvim.html:263
+msgid "Completed"
+msgstr "TamamlandÄ±"
+
+#: templates/dashboard.html:159 templates/randevular.html:147
+msgid "No appointments found"
+msgstr "HenÃ¼z randevu bulunmuyor"
+
+#: templates/dashboard.html:160 templates/randevular.html:148
+msgid "Use the button above to create your first appointment."
+msgstr "Ä°lk randevunuzu oluÅŸturmak iÃ§in yukarÄ±daki butonu kullanÄ±n."
+
+#: templates/dashboard.html:163 templates/randevu_ekle.html:57
+#: templates/randevular.html:151
+msgid "Create New Appointment"
+msgstr "Yeni Randevu OluÅŸtur"
+
+# Login
+#: templates/login.html:3 templates/login.html:12 templates/login.html:36
+msgid "Login"
+msgstr "GiriÅŸ"
+
+#: templates/login.html:13
+msgid "Appointment Management System"
+msgstr "Randevu Defteri Sistemi"
+
+#: templates/ayarlar/kullanici_duzenle.html:24
+#: templates/ayarlar/kullanici_duzenle.html:120 templates/login.html:18
+msgid "Username"
+msgstr "KullanÄ±cÄ± AdÄ±"
+
+#: templates/ayarlar/kullanici_duzenle.html:69 templates/login.html:26
+msgid "Password"
+msgstr "Åifre"
+
+#: templates/login.html:43
+msgid "Default Admin"
+msgstr "VarsayÄ±lan Admin"
+
+#: templates/randevu_detay.html:3 templates/randevu_detay.html:7
+#: templates/randevu_ekle.html:127
+msgid "Appointment Details"
+msgstr "Randevu Bilgileri"
+
+#: templates/randevu_detay.html:12 templates/randevu_duzenle.html:10
+#: templates/randevu_ekle.html:62
+msgid "Back"
+msgstr "Geri DÃ¶n"
+
+#: templates/randevu_detay.html:22 templates/randevu_duzenle.html:19
+#: templates/randevu_duzenle.html:200
+msgid "Appointment Information"
+msgstr "Randevu Bilgileri"
+
+#: templates/randevu_detay.html:27 templates/randevu_duzenle.html:43
+#: templates/randevu_ekle.html:134 templates/randevular.html:64
+msgid "Reference"
+msgstr "Referans"
+
+#: templates/ayarlar/islemler.html:75 templates/randevu_detay.html:37
+#: templates/randevular.html:68
+msgid "Duration"
+msgstr "SÃ¼re"
+
+#: templates/randevu_detay.html:38 templates/randevu_duzenle.html:61
+#: templates/randevu_duzenle.html:65 templates/randevu_duzenle.html:428
+#: templates/randevu_duzenle.html:433 templates/randevu_ekle.html:659
+msgid "minutes"
+msgstr "dakikanÄ±n katlarÄ± olmalÄ±"
+
+#: templates/ayarlar/islemler.html:38 templates/randevu_detay.html:57
+#: templates/randevu_ekle.html:173
+msgid "Description"
+msgstr "AÃ§Ä±klama"
+
+#: templates/randevu_detay.html:65 templates/randevu_duzenle.html:170
+#: templates/randevu_ekle.html:178
+msgid "Customer Information"
+msgstr "MÃ¼ÅŸteri Bilgileri"
+
+#: templates/ayarlar/kullanici_duzenle.html:124 templates/randevu_detay.html:70
+#: templates/randevu_duzenle.html:176 templates/rapor_musteriler.html:109
+msgid "Full Name"
+msgstr "Ad Soyad"
+
+# Additional translations
+#: templates/randevu_detay.html:81 templates/randevu_detay.html:84
+#: templates/randevu_duzenle.html:87 templates/randevu_duzenle.html:181
+#: templates/randevular.html:66 templates/rapor_musteriler.html:110
+msgid "Phone"
+msgstr "Telefon"
+
+#: templates/ayarlar/kullanici_duzenle.html:30
+#: templates/ayarlar/kullanici_duzenle.html:128 templates/randevu_detay.html:90
+#: templates/randevu_detay.html:93 templates/randevu_duzenle.html:141
+#: templates/randevu_duzenle.html:187 templates/randevu_ekle.html:280
+#: templates/rapor_musteriler.html:111
+msgid "Email"
+msgstr "E-posta"
+
+#: templates/randevu_detay.html:107
+msgid "Back to List"
+msgstr "Listeye DÃ¶n"
+
+#: templates/ayarlar/kullanici_duzenle.html:160
+#: templates/randevu_detay.html:110 templates/randevu_duzenle.html:223
+#: templates/rapor_musteriler.html:114
+msgid "Created"
+msgstr "OluÅŸturan"
+
+#: templates/randevu_detay.html:112 templates/randevu_duzenle.html:228
+msgid "Updated"
+msgstr "GÃ¼ncelleme"
+
+#: templates/randevu_duzenle.html:3 templates/randevu_duzenle.html:7
+msgid "Edit Appointment"
+msgstr "Randevu DÃ¼zenle"
+
+#: templates/randevu_duzenle.html:33
+msgid "Time"
+msgstr "Saat"
+
+#: templates/randevu_duzenle.html:45
+msgid "Select Reference"
+msgstr "Referans SeÃ§iniz"
+
+#: templates/ayarlar/islemler.html:45 templates/randevu_duzenle.html:57
+#: templates/randevu_ekle.html:160
+msgid "Duration (minutes)"
+msgstr "SÃ¼re (dakika)"
+
+#: templates/randevu_duzenle.html:61 templates/randevu_duzenle.html:65
+#: templates/randevu_duzenle.html:433 templates/randevu_ekle.html:659
+msgid "Duration must be multiples of"
+msgstr "SÃ¼re"
+
+#: templates/randevu_duzenle.html:73
+msgid "Notes"
+msgstr "Notlar"
+
+#: templates/randevu_duzenle.html:81
+msgid "Customer Contact Information"
+msgstr "MÃ¼ÅŸteri Ä°letiÅŸim Bilgileri"
+
+#: templates/randevu_duzenle.html:132 templates/randevu_duzenle.html:135
+#: templates/randevu_duzenle.html:398
+msgid "Enter a valid phone number (e.g.: 536 555 66 44)"
+msgstr "GeÃ§erli bir telefon numarasÄ± girin (Ã¶rn: 536 555 66 44)"
+
+#: templates/randevu_duzenle.html:145 templates/randevu_duzenle.html:147
+#: templates/randevu_duzenle.html:417
+msgid "Enter a valid email address"
+msgstr "GeÃ§erli bir e-posta adresi girin"
+
+#: templates/ayarlar/kullanici_duzenle.html:102
+#: templates/randevu_duzenle.html:157 templates/randevu_ekle.html:339
+msgid "Cancel"
+msgstr "Ä°ptal"
+
+#: templates/ayarlar/kullanici_duzenle.html:104
+#: templates/randevu_duzenle.html:159
+msgid "Update"
+msgstr "GÃ¼ncelle"
+
+#: templates/randevu_duzenle.html:193
+msgid "Customer information not found"
+msgstr "MÃ¼ÅŸteri bilgisi bulunamadÄ±"
+
+#: templates/randevu_duzenle.html:219 templates/randevular.html:71
+msgid "Created By"
+msgstr "OluÅŸturan"
+
+#: templates/randevu_duzenle.html:356
+msgid "Please enter valid phone number and email address."
+msgstr "LÃ¼tfen geÃ§erli telefon numarasÄ± ve e-posta adresi girin."
+
+#: templates/randevu_duzenle.html:395
+msgid "Valid phone number"
+msgstr "GeÃ§erli telefon numarasÄ±"
+
+#: templates/randevu_duzenle.html:414
+msgid "Valid email address"
+msgstr "GeÃ§erli e-posta adresi"
+
+#: templates/randevu_duzenle.html:428
+msgid "Minimum duration must be"
+msgstr "Minimum sÃ¼re"
+
+#: templates/randevu_duzenle.html:437
+msgid "Valid duration"
+msgstr "GeÃ§erli sÃ¼re"
+
+# Appointment
+#: templates/randevu_ekle.html:73
+msgid "Appointment Book Selection"
+msgstr "Randevu Defteri SeÃ§imi"
+
+#: templates/randevu_ekle.html:77
+msgid "Appointment Book"
+msgstr "Randevu Defteri"
+
+#: templates/randevu_ekle.html:104
+msgid "Date and Time Selection"
+msgstr "Tarih ve Saat SeÃ§imi"
+
+#: templates/ayarlar/islemler.html:74 templates/randevu_ekle.html:145
+msgid "Operation"
+msgstr "Ä°ÅŸlem"
+
+#: templates/randevu_ekle.html:147
+msgid "Select Operation"
+msgstr "Ä°ÅŸlem SeÃ§in"
+
+#: templates/ayarlar/islemler.html:89 templates/randevu_ekle.html:150
+#, fuzzy
+msgid "min"
+msgstr "Pzt"
+
+#: templates/randevu_ekle.html:204
+msgid "Customer Name"
+msgstr "MÃ¼ÅŸteri AdÄ±"
+
+#: templates/randevu_ekle.html:207
+msgid "Type name, existing customers will appear..."
+msgstr "Ad yazÄ±n, mevcut mÃ¼ÅŸteriler gÃ¶rÃ¼necek..."
+
+#: templates/randevu_ekle.html:212
+msgid "Type at least 2 characters. Matching customers will appear automatically."
+msgstr "En az 2 karakter yazÄ±n. EÅŸleÅŸen mÃ¼ÅŸteriler otomatik gÃ¶rÃ¼necek."
+
+#: templates/randevu_ekle.html:217
+msgid "Customer Surname"
+msgstr "MÃ¼ÅŸteri SoyadÄ±"
+
+#: templates/randevu_ekle.html:226
+msgid "Phone Number"
+msgstr "Telefon NumarasÄ±"
+
+#: templates/randevu_ekle.html:283
+msgid "username"
+msgstr "kullaniciadi"
+
+#: templates/randevu_ekle.html:301
+msgid "Gender"
+msgstr "Cinsiyet"
+
+#: templates/ayarlar/islemler.html:22
+#: templates/ayarlar/kullanici_duzenle.html:57 templates/randevu_ekle.html:303
+msgid "Select"
+msgstr "SeÃ§iniz"
+
+#: templates/randevu_ekle.html:304
+msgid "Male"
+msgstr "Erkek"
+
+#: templates/randevu_ekle.html:305
+msgid "Female"
+msgstr "KadÄ±n"
+
+#: templates/randevu_ekle.html:311 templates/rapor_musteriler.html:59
+#: templates/rapor_musteriler.html:112
+msgid "Category"
+msgstr "Kategori"
+
+#: templates/randevu_ekle.html:315
+msgid "Select Category"
+msgstr "Kategori SeÃ§iniz"
+
+#: templates/randevu_ekle.html:328
+msgid "Address"
+msgstr "Adres"
+
+#: templates/randevu_ekle.html:333
+msgid "Customer Notes"
+msgstr "MÃ¼ÅŸteri NotlarÄ±"
+
+#: templates/randevu_ekle.html:334
+msgid "Allergies, preferences, important information..."
+msgstr "Alerjiler, tercihler, Ã¶nemli bilgiler..."
+
+#: templates/randevu_ekle.html:342
+msgid "Create Appointment"
+msgstr "Randevu OluÅŸtur"
+
+#: templates/randevu_ekle.html:353
+msgid "Information"
+msgstr "Bilgi"
+
+#: templates/randevu_ekle.html:358
+msgid "Note"
+msgstr "Not"
+
+#: templates/randevu_ekle.html:358
+msgid ""
+"Full permissions will be automatically granted to the appointment you "
+"create."
+msgstr "OluÅŸturduÄŸunuz randevuya otomatik olarak tam yetki verilecektir."
+
+#: templates/randevu_ekle.html:361
+msgid "Appointment Statuses"
+msgstr "Randevu DurumlarÄ±"
+
+#: templates/randevu_ekle.html:363
+msgid "Newly created appointments"
+msgstr "Yeni oluÅŸturulan randevular"
+
+#: templates/randevu_ekle.html:364 templates/takvim.html:261
+msgid "Confirmed appointments"
+msgstr "OnaylanmÄ±ÅŸ randevular"
+
+#: templates/randevu_ekle.html:365 templates/takvim.html:262
+msgid "Cancelled appointments"
+msgstr "Ä°ptal edilmiÅŸ randevular"
+
+#: templates/randevu_ekle.html:366 templates/takvim.html:263
+msgid "Completed appointments"
+msgstr "TamamlanmÄ±ÅŸ randevular"
+
+#: templates/randevu_ekle.html:633
+msgid "Select book first"
+msgstr "Ã–nce defter seÃ§in"
+
+#: templates/randevu_ekle.html:634
+msgid "Select appointment book first"
+msgstr "Ã–nce randevu defteri seÃ§in"
+
+# Appointments List
+#: templates/randevular.html:11
+msgid "All References"
+msgstr "TÃ¼m Referanslar"
+
+#: templates/randevular.html:17
+msgid "All Books"
+msgstr "TÃ¼m Defterler"
+
+#: templates/randevular.html:32
+msgid "Appointment List"
+msgstr "Randevu Listesi"
+
+#: templates/randevular.html:55
+msgid "Clear Filters"
+msgstr "Filtreleri Temizle"
+
+#: templates/randevular.html:125
+msgid "View"
+msgstr "GÃ¶rÃ¼ntÃ¼le"
+
+#: templates/randevular.html:129
+msgid "Edit"
+msgstr "DÃ¼zenle"
+
+#: templates/randevular.html:132
+msgid "Are you sure you want to delete this appointment?"
+msgstr "Bu randevuyu silmek istediÄŸinizden emin misiniz?"
+
+#: templates/randevular.html:133
+msgid "Delete"
+msgstr "Sil"
+
+#: templates/rapor_musteriler.html:10
+msgid "Export CSV"
+msgstr "Raporlar"
+
+#: templates/rapor_musteriler.html:21
+msgid "Total Customers"
+msgstr "Toplam MÃ¼ÅŸteri"
+
+#: templates/rapor_musteriler.html:29
+msgid "Active Customers"
+msgstr "Aktif MÃ¼ÅŸteri"
+
+#: templates/rapor_musteriler.html:37
+msgid "New Customers"
+msgstr "Yeni MÃ¼ÅŸteri"
+
+#: templates/rapor_musteriler.html:46
+msgid "Filters"
+msgstr "Filtreleri Temizle"
+
+#: templates/rapor_musteriler.html:51 templates/raporlar.html:18
+msgid "Start Date"
+msgstr "BaÅŸlangÄ±Ã§ Tarihi"
+
+#: templates/rapor_musteriler.html:55 templates/raporlar.html:22
+msgid "End Date"
+msgstr "BitiÅŸ Tarihi"
+
+#: templates/rapor_musteriler.html:61
+msgid "All Categories"
+msgstr "TÃ¼m Kategoriler"
+
+#: templates/rapor_musteriler.html:70
+msgid "All"
+msgstr "TÃ¼mÃ¼"
+
+#: templates/ayarlar/kullanici_duzenle.html:96
+#: templates/ayarlar/kullanici_duzenle.html:139
+#: templates/rapor_musteriler.html:71
+msgid "Active"
+msgstr "Aktif"
+
+#: templates/ayarlar/kullanici_duzenle.html:141
+#: templates/rapor_musteriler.html:72
+msgid "Inactive"
+msgstr "Pasif"
+
+#: templates/rapor_musteriler.html:76
+msgid "Contact Information"
+msgstr "Bilgi"
+
+#: templates/rapor_musteriler.html:78
+msgid "Doesn't Matter"
+msgstr "Farketmez"
+
+# Additional translations
+#: templates/rapor_musteriler.html:79
+msgid "Has Phone"
+msgstr "Telefon"
+
+#: templates/rapor_musteriler.html:80
+msgid "Has Email"
+msgstr "E-posta"
+
+#: templates/rapor_musteriler.html:81
+msgid "Has Both"
+msgstr "Her Ä°kisi Var"
+
+#: templates/rapor_musteriler.html:86 templates/raporlar.html:26
+msgid "Apply"
+msgstr "Uygula"
+
+#: templates/rapor_musteriler.html:89
+msgid "Clear"
+msgstr "Takvim"
+
+#: templates/rapor_musteriler.html:100
+msgid "Customer List"
+msgstr "MÃ¼ÅŸteri"
+
+#: templates/rapor_musteriler.html:108
+msgid "ID"
+msgstr "ID"
+
+#: templates/rapor_musteriler.html:113
+msgid "Appointment Count"
+msgstr "Randevu Raporu"
+
+#: templates/rapor_musteriler.html:133
+msgid "No records found."
+msgstr "KayÄ±t bulunamadÄ±."
+
+#: templates/rapor_musteriler.html:141
+msgid "Top 10 Customers with Most Appointments"
+msgstr "En Ã‡ok Randevusu Olan 10 MÃ¼ÅŸteri"
+
+#: templates/rapor_musteriler.html:154
+msgid "No data found."
+msgstr "HenÃ¼z randevu bulunmuyor"
+
+#: templates/raporlar.html:49
+msgid "By Status"
+msgstr "Duruma GÃ¶re"
+
+#: templates/raporlar.html:57
+msgid "By Reference"
+msgstr "Referansa GÃ¶re"
+
+#: templates/raporlar.html:72
+msgid "Report could not be loaded"
+msgstr "Rapor yÃ¼klenemedi"
+
+#: templates/raporlar.html:79
+msgid "By Hours"
+msgstr "Saatlere GÃ¶re"
+
+#: templates/raporlar.html:96
+msgid "Count"
+msgstr "Adet"
+
+#: templates/takvim.html:127
+msgid "Monthly"
+msgstr "AylÄ±k"
+
+#: templates/takvim.html:131
+msgid "Weekly"
+msgstr "HaftalÄ±k"
+
+#: templates/takvim.html:143
+msgid "January"
+msgstr "Ocak"
+
+#: templates/takvim.html:143
+msgid "February"
+msgstr "Åubat"
+
+#: templates/takvim.html:143
+msgid "March"
+msgstr "Mart"
+
+#: templates/takvim.html:143
+msgid "April"
+msgstr "Nisan"
+
+#: templates/takvim.html:143
+msgid "May"
+msgstr "MayÄ±s"
+
+#: templates/takvim.html:143
+msgid "June"
+msgstr "Haziran"
+
+#: templates/takvim.html:144
+msgid "July"
+msgstr "Temmuz"
+
+#: templates/takvim.html:144
+msgid "August"
+msgstr "AÄŸustos"
+
+#: templates/takvim.html:144
+msgid "September"
+msgstr "EylÃ¼l"
+
+#: templates/takvim.html:144
+msgid "October"
+msgstr "Ekim"
+
+#: templates/takvim.html:144
+msgid "November"
+msgstr "KasÄ±m"
+
+#: templates/takvim.html:144
+msgid "December"
+msgstr "AralÄ±k"
+
+#: templates/takvim.html:146
+msgid "Weekly View"
+msgstr "HaftalÄ±k GÃ¶rÃ¼nÃ¼m"
+
+#: templates/takvim.html:160
+msgid "Today"
+msgstr "BugÃ¼n"
+
+#: templates/takvim.html:177 templates/takvim.html:222
+msgid "Mon"
+msgstr "Pzt"
+
+#: templates/takvim.html:178 templates/takvim.html:223
+msgid "Tue"
+msgstr "Sal"
+
+#: templates/takvim.html:179 templates/takvim.html:224
+msgid "Wed"
+msgstr "Ã‡ar"
+
+#: templates/takvim.html:180 templates/takvim.html:225
+msgid "Thu"
+msgstr "Per"
+
+#: templates/takvim.html:181 templates/takvim.html:226
+msgid "Fri"
+msgstr "Cum"
+
+#: templates/takvim.html:182 templates/takvim.html:227
+msgid "Sat"
+msgstr "Cmt"
+
+#: templates/takvim.html:183 templates/takvim.html:228
+msgid "Sun"
+msgstr "Paz"
+
+#: templates/takvim.html:208 templates/takvim.html:245
+msgid "Drag to move"
+msgstr "SÃ¼rÃ¼kleyerek taÅŸÄ±yÄ±n"
+
+#: templates/takvim.html:260
+msgid "New appointments"
+msgstr "Yeni randevular"
+
+#: templates/takvim.html:315
+msgid "Invalid operation"
+msgstr "GeÃ§ersiz iÅŸlem"
+
+#: templates/takvim.html:323
+msgid "Are you sure you want to move the appointment to"
+msgstr "Randevuyu"
+
+#: templates/takvim.html:345
+msgid "Appointment moved successfully!"
+msgstr "Randevu baÅŸarÄ±yla taÅŸÄ±ndÄ±!"
+
+#: templates/takvim.html:348
+msgid "Error"
+msgstr "Hata"
+
+#: templates/takvim.html:348
+msgid "Unknown error"
+msgstr "Bilinmeyen hata"
+
+#: templates/takvim.html:353
+msgid "An error occurred while moving the appointment"
+msgstr "Randevu taÅŸÄ±nÄ±rken bir hata oluÅŸtu"
+
+#: templates/ayarlar/islemler.html:3 templates/ayarlar/islemler.html:7
+msgid "Appointment Operations"
+msgstr "Randevu Ä°ÅŸlemleri"
+
+#: templates/ayarlar/islemler.html:14
+msgid "Add New Operation"
+msgstr "Yeni Ä°ÅŸlem Ekle"
+
+#: templates/ayarlar/islemler.html:20
+#: templates/ayarlar/kullanici_duzenle.html:55
+#: templates/ayarlar/kullanici_duzenle.html:132
+msgid "Company"
+msgstr "Firma"
+
+#: templates/ayarlar/islemler.html:33
+msgid "Operation Name"
+msgstr "Ä°ÅŸlem AdÄ±"
+
+#: templates/ayarlar/islemler.html:51 templates/ayarlar/islemler.html:76
+msgid "Price"
+msgstr "Fiyat"
+
+#: templates/ayarlar/islemler.html:57
+msgid "Add Operation"
+msgstr "Ä°ÅŸlem Ekle"
+
+#: templates/ayarlar/islemler.html:66
+msgid "Operations List"
+msgstr "Ä°ÅŸlemler Listesi"
+
+#: templates/ayarlar/islemler.html:93
+msgid "Are you sure you want to delete this operation?"
+msgstr "Bu iÅŸlemi silmek istediÄŸinizden emin misiniz?"
+
+#: templates/ayarlar/islemler.html:106
+msgid "No operations found."
+msgstr "Ä°ÅŸlem bulunamadÄ±."
+
+#: templates/randevu_ekle.html:331
+msgid "Country"
+msgstr "Ãœlke"
+
+#: templates/randevu_ekle.html:341
+msgid "City"
+msgstr "Åehir"
+
+#: templates/randevu_ekle.html:343
+msgid "Select City"
+msgstr "Åehir SeÃ§in"
+
+#: templates/randevu_ekle.html:355
+msgid "District"
+msgstr "Ä°lÃ§e"
+
+#: templates/randevu_ekle.html:356
+msgid "Enter district"
+msgstr "Ä°lÃ§e girin"
+
+#: templates/randevu_ekle.html:362
+msgid "Street, building, apartment..."
+msgstr "Sokak, bina, daire..."
+
+#: templates/randevu_ekle.html:333
+msgid "Select Country"
+msgstr "Ãœlke SeÃ§in"
+
+#: templates/randevu_ekle.html:342
+msgid "State/City"
+msgstr "Ä°l/Åehir"
+
+#: templates/randevu_ekle.html:344
+msgid "Select State/City"
+msgstr "Ä°l/Åehir SeÃ§in"
+
+#: templates/randevu_ekle.html:355
+msgid "Select District"
+msgstr "Ä°lÃ§e SeÃ§in"
+
+#: templates/ayarlar/kullanici_duzenle.html:3
+#: templates/ayarlar/kullanici_duzenle.html:7
+msgid "Edit User"
+msgstr "KullanÄ±cÄ± DÃ¼zenle"
+
+#: templates/ayarlar/kullanici_duzenle.html:9
+msgid "Users"
+msgstr "KullanÄ±cÄ±lar"
+
+#: templates/ayarlar/kullanici_duzenle.html:17
+#: templates/ayarlar/kullanici_duzenle.html:115
+msgid "User Information"
+msgstr "KullanÄ±cÄ± Bilgileri"
+
+#: templates/ayarlar/kullanici_duzenle.html:39
+msgid "First Name"
+msgstr "Ad"
+
+#: templates/ayarlar/kullanici_duzenle.html:45
+msgid "Last Name"
+msgstr "Soyad"
+
+#: templates/ayarlar/kullanici_duzenle.html:70
+msgid "Enter new password to change"
+msgstr "DeÄŸiÅŸtirmek iÃ§in yeni ÅŸifre girin"
+
+#: templates/ayarlar/kullanici_duzenle.html:71
+msgid "Leave blank to keep current password"
+msgstr "BoÅŸ bÄ±rakÄ±rsanÄ±z mevcut ÅŸifre korunur"
+
+#: templates/ayarlar/kullanici_duzenle.html:77
+#: templates/ayarlar/kullanici_duzenle.html:146
+msgid "Module Permissions"
+msgstr "ModÃ¼l Ä°zinleri"
+
+#: templates/ayarlar/kullanici_duzenle.html:81
+msgid "Reports Module"
+msgstr "Raporlar ModÃ¼lÃ¼"
+
+#: templates/ayarlar/kullanici_duzenle.html:87
+msgid "Settings Module"
+msgstr "Ayarlar ModÃ¼lÃ¼"
+
+#: templates/ayarlar/kullanici_duzenle.html:155
+msgid "None"
+msgstr "Yok"
+
+#: templates/ayarlar/kullanici_duzenle.html:165
+msgid "Last Updated"
+msgstr "Son GÃ¼ncelleme"
+
+#~ msgid "Customers"
+#~ msgstr "MÃ¼ÅŸteriler"
+
+#~ msgid "Login to your account"
+#~ msgstr "HesabÄ±nÄ±za giriÅŸ yapÄ±n"
+
+#~ msgid "Select appointment book..."
+#~ msgstr "Defter seÃ§in..."
+
+#~ msgid "Select date"
+#~ msgstr "Tarih seÃ§in"
+
+#~ msgid "Available time slots"
+#~ msgstr "MÃ¼sait saatler"
+
+#~ msgid "Select time slot"
+#~ msgstr "Saat seÃ§in"
+
+#~ msgid "Notes"
+#~ msgstr "Notlar"
+
+#~ msgid "Save Appointment"
+#~ msgstr "Randevuyu Kaydet"
+
+# Common
+#~ msgid "Save"
+#~ msgstr "Kaydet"
+
+#~ msgid "Search"
+#~ msgstr "Ara"
+
+#~ msgid "Filter"
+#~ msgstr "Filtrele"
+
+#~ msgid "Clear"
+#~ msgstr "Temizle"
+
+#~ msgid "Export CSV"
+#~ msgstr "CSV DÄ±ÅŸa Aktar"
+
+#~ msgid "Active Only"
+#~ msgstr "Ä°ÅŸlemler"
+
+msgid "Appointment Operations"
+msgstr "Randevu Ä°ÅŸlemleri"
+
+msgid "Add New Operation"
+msgstr "Yeni Ä°ÅŸlem Ekle"
+
+msgid "Operation Name"
+msgstr "Ä°ÅŸlem AdÄ±"
+
+msgid "Description"
+msgstr "AÃ§Ä±klama"
+
+msgid "Duration (minutes)"
+msgstr "SÃ¼re (dakika)"
+
+msgid "Price"
+msgstr "Fiyat"
+
+msgid "Add Operation"
+msgstr "Ä°ÅŸlem Ekle"
+
+msgid "Operations List"
+msgstr "Ä°ÅŸlemler Listesi"
+
+msgid "Operation"
+msgstr "Ä°ÅŸlem"
+
+msgid "Duration"
+msgstr "SÃ¼re"
+
+msgid "Actions"
+msgstr "Ä°ÅŸlemler"
+
+msgid "min"
+msgstr "dk"
+
+msgid "No operations found."
+msgstr "Ä°ÅŸlem bulunamadÄ±."
+
+msgid "Are you sure you want to delete this operation?"
+msgstr "Bu iÅŸlemi silmek istediÄŸinizden emin misiniz?"
+
+msgid "Select Operation"
+msgstr "Ä°ÅŸlem SeÃ§in"
+
+msgid "Quick Select"
+msgstr "HÄ±zlÄ± SeÃ§im"
+
+msgid "Custom"
+msgstr "Ã–zel"
+
+msgid "This Month"
+msgstr "Bu Ay"
+
+msgid "This Year"
+msgstr "Bu YÄ±l"
+
+msgid "All Statuses"
+msgstr "TÃ¼m Durumlar"
+
+msgid "Start"
+msgstr "BaÅŸlangÄ±Ã§"
+
+msgid "End"
+msgstr "BitiÅŸ"
+
+msgid "Select Book"
+msgstr "Defter SeÃ§in"
+
+msgid "minutes"
+msgstr "dakika"
+
+msgid "Create Appointment"
+msgstr "Randevu OluÅŸtur"
+
+msgid "Available Times"
+msgstr "Uygun Saatler"
+
+msgid "Select date and book first"
+msgstr "Ã–nce tarih ve defter seÃ§in"
+
+msgid "Loading available times"
+msgstr "Uygun saatler yÃ¼kleniyor"
+
+msgid "No available times for this date. Please select another date."
+msgstr "Bu tarih iÃ§in uygun saat bulunmuyor. LÃ¼tfen baÅŸka bir tarih seÃ§in."
+
+msgid "Available"
+msgstr "MÃ¼sait"
+
+msgid "Closed/Busy"
+msgstr "KapalÄ±/Dolu"
+
+msgid "Failed to load slots"
+msgstr "Slotlar yÃ¼klenemedi"
+
+msgid "Customer Surname"
+msgstr "MÃ¼ÅŸteri SoyadÄ±"
+
+msgid "Book Filter"
+msgstr "Defter Filtresi"
+
+msgid "All Books"
+msgstr "Tüm Defterler"
+

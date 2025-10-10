@@ -1,3 +1,729 @@
+#: templates/rapor_musteriler.html
+msgid "0 Appointments"
+msgstr "0 Appointments"
+
+#: templates/rapor_musteriler.html
+msgid "1 Appointment"
+msgstr "1 Appointment"
+
+#: templates/rapor_musteriler.html
+msgid "2-5 Appointments"
+msgstr "2-5 Appointments"
+
+#: templates/rapor_musteriler.html
+msgid "6-10 Appointments"
+msgstr "6-10 Appointments"
+
+#: templates/rapor_musteriler.html
+msgid "10+ Appointments"
+msgstr "10+ Appointments"
+
+#: templates/randevu_ekle.html
+msgid "You cannot make an appointment for a past time. Please select a future time."
+msgstr "You cannot make an appointment for a past time. Please select a future time."
+# User edit reset password
+msgid "Reset Password"
+msgstr "Reset Password"
+
+msgid "Are you sure you want to reset the password to 123?"
+msgstr "Are you sure you want to reset the password to 123?"
+
+#: templates/raporlar.html
+msgid "Social Media"
+msgstr "Social Media"
+
+#: templates/login.html
+msgid "This user is already logged in. Do you want to close the existing session and login again?"
+msgstr "This user is already logged in. Do you want to close the existing session and login again?"
+
+#: templates/login.html
+msgid "Close Session and Login"
+msgstr "Close Session and Login"
+
+#: templates/login.html
+msgid "Cancel"
+msgstr "Cancel"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "User Settings"
+msgstr "User Settings"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Add New User"
+msgstr "Add New User"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Username"
+msgstr "Username"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "First Name"
+msgstr "First Name"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Last Name"
+msgstr "Last Name"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Email"
+msgstr "Email"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Company"
+msgstr "Company"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Select"
+msgstr "Select"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "User Photo (optional)"
+msgstr "User Photo (optional)"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Max. 512KB, will be cropped to square and resized."
+msgstr "Max. 512KB, will be cropped to square and resized."
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Preview"
+msgstr "Preview"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Adjust"
+msgstr "Adjust"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Module Permissions"
+msgstr "Module Permissions"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Reports Module"
+msgstr "Reports Module"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Settings Module"
+msgstr "Settings Module"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Save"
+msgstr "Save"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Users"
+msgstr "Users"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Full Name"
+msgstr "Full Name"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Module Permissions"
+msgstr "Module Permissions"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Actions"
+msgstr "Actions"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Reports"
+msgstr "Reports"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Settings"
+msgstr "Settings"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "None"
+msgstr "None"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Are you sure you want to delete?"
+msgstr "Are you sure you want to delete?"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Adjust Photo"
+msgstr "Adjust Photo"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Drag to position, use wheel to zoom."
+msgstr "Drag to position, use wheel to zoom."
+
+#: templates/ayarlar/kullanicilar.html
+msgid "Apply"
+msgstr "Apply"
+
+#: templates/ayarlar/kullanicilar.html
+msgid "File size exceeds 512KB. Please select a smaller image."
+msgstr "File size exceeds 512KB. Please select a smaller image."
+
+#: templates/ayarlar/kullanici_duzenle.html
+msgid "Edit User"
+msgstr "Edit User"
+
+#: templates/ayarlar/kullanici_duzenle.html
+msgid "User Information"
+msgstr "User Information"
+
+#: templates/ayarlar/firmalar.html
+msgid "Company Settings"
+msgstr "Company Settings"
+
+#: templates/ayarlar/firmalar.html
+msgid "Add New Company"
+msgstr "Add New Company"
+
+#: templates/ayarlar/firmalar.html
+msgid "Company Name"
+msgstr "Company Name"
+
+#: templates/ayarlar/firmalar.html
+msgid "Company Code"
+msgstr "Company Code"
+
+#: templates/ayarlar/firmalar.html
+msgid "Address"
+msgstr "Address"
+
+#: templates/ayarlar/firmalar.html
+msgid "Phone"
+msgstr "Phone"
+
+#: templates/ayarlar/firmalar.html
+msgid "Companies"
+msgstr "Companies"
+
+#: templates/ayarlar/firmalar.html
+msgid "Name"
+msgstr "Name"
+
+#: templates/ayarlar/firmalar.html
+msgid "Code"
+msgstr "Code"
+
+#: templates/ayarlar/firmalar.html
+msgid "Edit Company"
+msgstr "Edit Company"
+
+#: templates/ayarlar/defter.html
+msgid "Edit Category"
+msgstr "Edit Category"
+
+#: app.py
+msgid "Category added successfully"
+msgstr "Category added successfully"
+
+#: app.py
+msgid "Category updated successfully"
+msgstr "Category updated successfully"
+
+#: app.py
+msgid "Category deleted successfully"
+msgstr "Category deleted successfully"
+
+#: app.py
+msgid "Category name is required"
+msgstr "Category name is required"
+
+#: app.py
+msgid "A category with this name already exists"
+msgstr "A category with this name already exists"
+
+#: templates/base.html
+msgid "Mark as read"
+msgstr "Mark as read"
+
+# Settings page translations
+msgid "Settings"
+msgstr "Settings"
+
+msgid "Company Settings"
+msgstr "Company Settings"
+
+msgid "List companies, add new companies or delete them."
+msgstr "List companies, add new companies or delete them."
+
+msgid "Companies"
+msgstr "Companies"
+
+msgid "User Settings"
+msgstr "User Settings"
+
+msgid "Manage users, add new users or delete them."
+msgstr "Manage users, add new users or delete them."
+
+msgid "Users"
+msgstr "Users"
+
+msgid "Appointment Book"
+msgstr "Appointment Book"
+
+msgid "Set working days, hours and slots."
+msgstr "Set working days, hours and slots."
+
+msgid "Book Settings"
+msgstr "Book Settings"
+
+msgid "Appointment References"
+msgstr "Appointment References"
+
+msgid "Manage references to be used instead of appointment titles."
+msgstr "Manage references to be used instead of appointment titles."
+
+msgid "References"
+msgstr "References"
+
+msgid "Appointment Operations"
+msgstr "Appointment Operations"
+
+msgid "Manage operations to be used in appointments."
+msgstr "Manage operations to be used in appointments."
+
+msgid "Operations"
+msgstr "Operations"
+
+msgid "Email Settings"
+msgstr "Email Settings"
+
+msgid "Configure SMTP settings and set up email sending."
+msgstr "Configure SMTP settings and set up email sending."
+
+msgid "SMS Settings"
+msgstr "SMS Settings"
+
+msgid "Configure SMS sending settings and select SMS provider."
+msgstr "Configure SMS sending settings and select SMS provider."
+
+msgid "WhatsApp Settings"
+msgstr "WhatsApp Settings"
+
+msgid "Configure WhatsApp Business API settings and create message templates."
+msgstr "Configure WhatsApp Business API settings and create message templates."
+
+msgid "Back"
+msgstr "Back"
+
+msgid "Select Company:"
+msgstr "Select Company:"
+
+msgid "SMTP Settings"
+msgstr "SMTP Settings"
+
+msgid "SMTP Server"
+msgstr "SMTP Server"
+
+msgid "SMTP Port"
+msgstr "SMTP Port"
+
+msgid "Username"
+msgstr "Username"
+
+msgid "Password"
+msgstr "Password"
+
+msgid "Default Sender Name"
+msgstr "Default Sender Name"
+
+msgid "Default Sender Email"
+msgstr "Default Sender Email"
+
+msgid "Default Subject"
+msgstr "Default Subject"
+
+msgid "Appointment Reminder"
+msgstr "Appointment Reminder"
+
+msgid "Default Email Text"
+msgstr "Default Email Text"
+
+msgid "Hello {CUSTOMER_NAME}, we remind you of your appointment on {APPOINTMENT_DATE}."
+msgstr "Hello {MUSTERI_ADI}, we remind you of your appointment on {RANDEVU_TARIH}."
+
+msgid "Variables: {CUSTOMER_NAME}, {APPOINTMENT_DATE}, {BOOK_NAME}"
+msgstr "Variables: {MUSTERI_ADI}, {RANDEVU_TARIH}, {DEFTER_ADI}"
+
+msgid "Use SSL/TLS"
+msgstr "Use SSL/TLS"
+
+msgid "Active"
+msgstr "Active"
+
+msgid "Update"
+msgstr "Update"
+
+msgid "Delete"
+msgstr "Delete"
+
+msgid "Application password"
+msgstr "Application password"
+
+msgid "Company Name"
+msgstr "Company Name"
+
+msgid "Add Email Setting"
+msgstr "Add Email Setting"
+
+msgid "Help"
+msgstr "Help"
+
+msgid "For Gmail:"
+msgstr "For Gmail:"
+
+msgid "SMTP Server: smtp.gmail.com"
+msgstr "SMTP Server: smtp.gmail.com"
+
+msgid "Port: 587 (TLS) or 465 (SSL)"
+msgstr "Port: 587 (TLS) or 465 (SSL)"
+
+msgid "2-factor authentication must be active"
+msgstr "2-factor authentication must be active"
+
+msgid "Use application password"
+msgstr "Use application password"
+
+msgid "For Outlook:"
+msgstr "For Outlook:"
+
+msgid "SMTP Server: smtp-mail.outlook.com"
+msgstr "SMTP Server: smtp-mail.outlook.com"
+
+msgid "Port: 587"
+msgstr "Port: 587"
+
+msgid "Use SSL/TLS"
+msgstr "Use SSL/TLS"
+
+msgid "For Yahoo:"
+msgstr "For Yahoo:"
+
+msgid "SMTP Server: smtp.mail.yahoo.com"
+msgstr "SMTP Server: smtp.mail.yahoo.com"
+
+msgid "Port: 587 or 465"
+msgstr "Port: 587 or 465"
+
+msgid "Application password required"
+msgstr "Application password required"
+
+# SMS Settings translations
+msgid "SMS Provider Settings"
+msgstr "SMS Provider Settings"
+
+msgid "SMS Provider"
+msgstr "SMS Provider"
+
+msgid "Custom API"
+msgstr "Custom API"
+
+msgid "API URL"
+msgstr "API URL"
+
+msgid "API Key"
+msgstr "API Key"
+
+msgid "API Secret"
+msgstr "API Secret"
+
+msgid "Sender Name"
+msgstr "Sender Name"
+
+msgid "Default SMS Text"
+msgstr "Default SMS Text"
+
+msgid "Send Time"
+msgstr "Send Time"
+
+msgid "Send when appointment is created"
+msgstr "Send when appointment is created"
+
+msgid "Send 24 hours before appointment"
+msgstr "Send 24 hours before appointment"
+
+msgid "Add SMS Setting"
+msgstr "Add SMS Setting"
+
+msgid "Are you sure you want to delete SMS settings?"
+msgstr "Are you sure you want to delete SMS settings?"
+
+msgid "SMS Providers"
+msgstr "SMS Providers"
+
+msgid "Username and password required"
+msgstr "Username and password required"
+
+msgid "Sender name: 11 characters max"
+msgstr "Sender name: 11 characters max"
+
+msgid "API: XML based"
+msgstr "API: XML based"
+
+msgid "API Key and Secret required"
+msgstr "API Key and Secret required"
+
+msgid "Uses REST API"
+msgstr "Uses REST API"
+
+msgid "JSON response format"
+msgstr "JSON response format"
+
+msgid "Uses HTTP API"
+msgstr "Uses HTTP API"
+
+msgid "XML/JSON formats"
+msgstr "XML/JSON formats"
+
+msgid "Enter your own API URL"
+msgstr "Enter your own API URL"
+
+msgid "API Key/Secret optional"
+msgstr "API Key/Secret optional"
+
+msgid "Flexible configuration"
+msgstr "Flexible configuration"
+
+# Appointment Operations translations
+msgid "Add New Operation"
+msgstr "Add New Operation"
+
+msgid "Select"
+msgstr "Select"
+
+msgid "Operation Name"
+msgstr "Operation Name"
+
+msgid "Add Operation"
+msgstr "Add Operation"
+
+msgid "Operations List"
+msgstr "Operations List"
+
+msgid "Operation"
+msgstr "Operation"
+
+msgid "No operations found."
+msgstr "No operations found."
+
+msgid "Are you sure you want to delete this operation?"
+msgstr "Are you sure you want to delete this operation?"
+
+msgid "Back"
+msgstr "Back"
+
+# Appointment References translations
+msgid "Appointment References"
+msgstr "Appointment References"
+
+msgid "Add New Reference"
+msgstr "Add New Reference"
+
+msgid "Reference Name"
+msgstr "Reference Name"
+
+msgid "Registered References"
+msgstr "Registered References"
+
+msgid "Name"
+msgstr "Name"
+
+msgid "Are you sure you want to delete this reference?"
+msgstr "Are you sure you want to delete this reference?"
+
+# Appointment Book Settings translations
+msgid "Appointment Book Settings"
+msgstr "Appointment Book Settings"
+
+msgid "New / Edit"
+msgstr "New / Edit"
+
+msgid "Book Name"
+msgstr "Book Name"
+
+msgid "Default Book"
+msgstr "Default Book"
+
+msgid "Working Days"
+msgstr "Working Days"
+
+msgid "Monday"
+msgstr "Monday"
+
+msgid "Tuesday"
+msgstr "Tuesday"
+
+msgid "Wednesday"
+msgstr "Wednesday"
+
+msgid "Thursday"
+msgstr "Thursday"
+
+msgid "Friday"
+msgstr "Friday"
+
+msgid "Saturday"
+msgstr "Saturday"
+
+msgid "Sunday"
+msgstr "Sunday"
+
+msgid "Start Time"
+msgstr "Start Time"
+
+msgid "End Time"
+msgstr "End Time"
+
+msgid "Slot (min)"
+msgstr "Slot (min)"
+
+msgid "Time Block"
+msgstr "Time Block"
+
+msgid "If you fill this field, the block will be added together with Save."
+msgstr "If you fill this field, the block will be added together with Save."
+
+msgid "Start Date"
+msgstr "Start Date"
+
+msgid "End Date"
+msgstr "End Date"
+
+msgid "Description"
+msgstr "Description"
+
+msgid "e.g. lunch break, event etc."
+msgstr "e.g. lunch break, event etc."
+
+msgid "Registered Settings"
+msgstr "Registered Settings"
+
+msgid "Book"
+msgstr "Book"
+
+msgid "Days"
+msgstr "Days"
+
+msgid "Time"
+msgstr "Time"
+
+msgid "Current Blocks"
+msgstr "Current Blocks"
+
+msgid "Date"
+msgstr "Date"
+
+msgid "All"
+msgstr "All"
+
+msgid "All Day"
+msgstr "All Day"
+
+msgid "Customer Categories"
+msgstr "Customer Categories"
+
+msgid "New Category"
+msgstr "New Category"
+
+msgid "Category Name"
+msgstr "Category Name"
+
+msgid "Color"
+msgstr "Color"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Active"
+msgstr "Active"
+
+msgid "Inactive"
+msgstr "Inactive"
+
+msgid "Edit Category"
+msgstr "Edit Category"
+
+msgid "Are you sure you want to delete this category?"
+msgstr "Are you sure you want to delete this category?"
+
+msgid "First save the book, then fill the block field."
+msgstr "First save the book, then fill the block field."
+
+#: app.py
+msgid "appointment created for"
+msgstr "appointment created for"
+
+#: app.py
+msgid "Appointment moved from"
+msgstr "Appointment moved from"
+
+#: templates/randevu_ekle.html
+msgid "Select appointment book..."
+msgstr "Select appointment book..."
+
+#: templates/randevu_ekle.html
+msgid "Select book first"
+msgstr "Select book first"
+
+#: templates/randevu_ekle.html
+msgid "Select appointment book first"
+msgstr "Select appointment book first"
+
+#: templates/randevu_ekle.html
+msgid "Loading available time slots..."
+msgstr "Loading available time slots..."
+
+#: templates/randevu_ekle.html
+msgid "Selectable"
+msgstr "Selectable"
+
+#: templates/randevu_ekle.html
+msgid "Closed/Full"
+msgstr "Closed/Full"
+
+#: templates/randevu_ekle.html
+msgid "No available time slots for this date. Please choose another date."
+msgstr "No available time slots for this date. Please choose another date."
+
+#: templates/randevu_ekle.html
+msgid "Failed to load slots"
+msgstr "Failed to load slots"
+
+#: templates/randevu_ekle.html
+msgid "Duration (minutes)"
+msgstr "Duration (minutes)"
+
+#: templates/randevu_ekle.html
+msgid "Duration must be multiples of"
+msgstr "Duration must be multiples of"
+
+#: templates/randevu_ekle.html
+msgid "minutes"
+msgstr "minutes"
+
+#: templates/randevu_ekle.html
+msgid "Selected date"
+msgstr "Selected date"
+
+#: templates/ayarlar/whatsapp.html
+msgid "Hello"
+msgstr "Hello"
+
+#: templates/ayarlar/whatsapp.html
+msgid "your appointment has been created for"
+msgstr "your appointment has been created for"
+
+#: templates/ayarlar/whatsapp.html
+msgid "you have an appointment tomorrow at"
+msgstr "you have an appointment tomorrow at"
+
+#: templates/ayarlar/whatsapp.html
+msgid "your appointment on"
+msgstr "your appointment on"
+
+#: templates/ayarlar/whatsapp.html
+msgid "has been cancelled"
+msgstr "has been cancelled"
+
+#: templates/takvim.html
+msgid "Book"
+msgstr "Book"
 # English translations for CRM Project.
 # Copyright (C) 2025 CRM Project
 # This file is distributed under the same license as the CRM project.
@@ -400,7 +1126,7 @@ msgstr "username"
 
 #: templates/randevu_ekle.html:301
 msgid "Gender"
-msgstr ""
+msgstr "Gender"
 
 #: templates/ayarlar/islemler.html:22
 #: templates/ayarlar/kullanici_duzenle.html:57 templates/randevu_ekle.html:303
@@ -409,16 +1135,24 @@ msgstr "Delete"
 
 #: templates/randevu_ekle.html:304
 msgid "Male"
-msgstr "Email"
+msgstr "Male"
 
 #: templates/randevu_ekle.html:305
 msgid "Female"
-msgstr "Email"
+msgstr "Female"
 
 #: templates/randevu_ekle.html:311 templates/rapor_musteriler.html:59
 #: templates/rapor_musteriler.html:112
 msgid "Category"
 msgstr ""
+
+#: templates/rapor_musteriler.html
+msgid "VIP"
+msgstr "VIP"
+
+#: templates/rapor_musteriler.html
+msgid "Normal"
+msgstr "Normal"
 
 #: templates/randevu_ekle.html:315
 msgid "Select Category"
@@ -430,7 +1164,14 @@ msgstr ""
 
 #: templates/randevu_ekle.html:333
 msgid "Customer Notes"
-msgstr "Customer Name"
+msgstr "Customer Notes"
+#: templates/rapor_musteriler.html
+msgid "Customer Count"
+msgstr "Customer Count"
+
+#: templates/rapor_musteriler.html
+msgid "Appointment Count"
+msgstr "Appointment Count"
 
 #: templates/randevu_ekle.html:334
 msgid "Allergies, preferences, important information..."
@@ -587,11 +1328,11 @@ msgstr ""
 
 #: templates/rapor_musteriler.html:86 templates/raporlar.html:26
 msgid "Apply"
-msgstr "April"
+msgstr "Apply"
 
 #: templates/rapor_musteriler.html:89
 msgid "Clear"
-msgstr "Calendar"
+msgstr "Clear"
 
 #: templates/rapor_musteriler.html:100
 msgid "Customer List"
@@ -977,4 +1718,365 @@ msgstr "Are you sure you want to delete this operation?"
 
 msgid "Select Operation"
 msgstr "Select Operation"
+
+msgid "Monthly Customer Growth"
+msgstr "Monthly Customer Growth"
+
+msgid "Weekly Customer Growth (Last 12 Weeks)"
+msgstr "Weekly Customer Growth (Last 12 Weeks)"
+
+msgid "Appointment Frequency Distribution"
+msgstr "Appointment Frequency Distribution"
+
+msgid "Top 10 Customers by Appointment Count"
+msgstr "Top 10 Customers by Appointment Count"
+
+msgid "Min Age"
+msgstr "Min Age"
+
+msgid "Max Age"
+msgstr "Max Age"
+
+msgid "Gender"
+msgstr "Gender"
+
+msgid "Birth Date"
+msgstr "Birth Date"
+
+msgid "City"
+msgstr "City"
+
+msgid "All Cities"
+msgstr "All Cities"
+
+msgid "District"
+msgstr "District"
+
+msgid "All Districts"
+msgstr "All Districts"
+
+msgid "Basic Filters"
+msgstr "Basic Filters"
+
+msgid "Demographic Filters"
+msgstr "Demographic Filters"
+
+msgid "Geographic Filters"
+msgstr "Geographic Filters"
+
+msgid "Customer Detail Report"
+msgstr "Customer Detail Report"
+
+msgid "Search Customer"
+msgstr "Search Customer"
+
+msgid "Enter customer name or phone number"
+msgstr "Enter customer name or phone number"
+
+msgid "Selected Customer"
+msgstr "Selected Customer"
+
+msgid "Generate Report"
+msgstr "Generate Report"
+
+msgid "Detailed analysis for"
+msgstr "Detailed analysis for"
+
+msgid "Customer Information"
+msgstr "Customer Information"
+
+msgid "Not specified"
+msgstr "Not specified"
+
+msgid "Total Appointments"
+msgstr "Total Appointments"
+
+msgid "Completed"
+msgstr "Completed"
+
+msgid "Pending"
+msgstr "Pending"
+
+msgid "Cancelled"
+msgstr "Cancelled"
+
+msgid "Monthly Appointment Distribution"
+msgstr "Monthly Appointment Distribution"
+
+msgid "Appointment Book Distribution"
+msgstr "Appointment Book Distribution"
+
+msgid "Appointment History"
+msgstr "Appointment History"
+
+msgid "Date"
+msgstr "Date"
+
+msgid "Time"
+msgstr "Time"
+
+msgid "Book"
+msgstr "Book"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Reference"
+msgstr "Reference"
+
+msgid "Notes"
+msgstr "Notes"
+
+msgid "No appointments found for this customer."
+msgstr "No appointments found for this customer."
+
+msgid "Appointments"
+msgstr "Appointments"
+
+msgid "Back to Customer Reports"
+msgstr "Back to Customer Reports"
+
+msgid "PDF Report"
+msgstr "PDF Report"
+
+msgid "Excel Report"
+msgstr "Excel Report"
+
+msgid "Peak Hours Report"
+msgstr "Peak Hours Report"
+
+msgid "Peak Hour"
+msgstr "Peak Hour"
+
+msgid "Most Active Hour"
+msgstr "Most Active Hour"
+
+msgid "Capacity Usage"
+msgstr "Capacity Usage"
+
+msgid "Average Daily Usage"
+msgstr "Average Daily Usage"
+
+msgid "Efficiency Rate"
+msgstr "Efficiency Rate"
+
+msgid "Peak Hours Efficiency"
+msgstr "Peak Hours Efficiency"
+
+msgid "Hourly Appointment Distribution"
+msgstr "Hourly Appointment Distribution"
+
+msgid "Capacity Utilization"
+msgstr "Capacity Utilization"
+
+msgid "Weekly Heatmap"
+msgstr "Weekly Heatmap"
+
+msgid "Detailed Hour Analysis"
+msgstr "Detailed Hour Analysis"
+
+msgid "Hour"
+msgstr "Hour"
+
+msgid "Used"
+msgstr "Used"
+
+msgid "Available"
+msgstr "Available"
+
+msgid "Total Appointments"
+msgstr "Total Appointments"
+
+msgid "Very Busy"
+msgstr "Very Busy"
+
+msgid "Busy"
+msgstr "Busy"
+
+msgid "Moderate"
+msgstr "Moderate"
+
+msgid "Quiet"
+msgstr "Quiet"
+
+msgid "Max Daily Capacity"
+msgstr "Max Daily Capacity"
+
+msgid "Book"
+msgstr "Book"
+
+msgid "Weekly Heatmap"
+msgstr "Weekly Heatmap"
+
+msgid "Appointment density by day and hour"
+msgstr "Appointment density by day and hour"
+
+msgid "Empty"
+msgstr "Empty"
+
+msgid "Low"
+msgstr "Low"
+
+msgid "Medium"
+msgstr "Medium"
+
+msgid "High"
+msgstr "High"
+
+msgid "Very High"
+msgstr "Very High"
+
+msgid "Monday"
+msgstr "Monday"
+
+msgid "Tuesday"
+msgstr "Tuesday"
+
+msgid "Wednesday"
+msgstr "Wednesday"
+
+msgid "Thursday"
+msgstr "Thursday"
+
+msgid "Friday"
+msgstr "Friday"
+
+msgid "Saturday"
+msgstr "Saturday"
+
+msgid "Sunday"
+msgstr "Sunday"
+
+# WhatsApp Chat
+msgid "WhatsApp Chat"
+msgstr "WhatsApp Chat"
+
+msgid "WhatsApp"
+msgstr "WhatsApp"
+
+msgid "Refresh"
+msgstr "Refresh"
+
+msgid "Loading WhatsApp Web..."
+msgstr "Loading WhatsApp Web..."
+
+msgid "Please wait while WhatsApp Web loads"
+msgstr "Please wait while WhatsApp Web loads"
+
+msgid "Quick Actions"
+msgstr "Quick Actions"
+
+msgid "Common WhatsApp operations"
+msgstr "Common WhatsApp operations"
+
+msgid "New Chat"
+msgstr "New Chat"
+
+msgid "Customer Support"
+msgstr "Customer Support"
+
+msgid "Contact customers directly"
+msgstr "Contact customers directly"
+
+msgid "View Customers"
+msgstr "View Customers"
+
+msgid "View Appointments"
+msgstr "View Appointments"
+
+msgid "Configure WhatsApp settings"
+msgstr "Configure WhatsApp settings"
+
+msgid "All Settings"
+msgstr "All Settings"
+
+msgid "Please use the new chat button in WhatsApp Web interface"
+msgstr "Please use the new chat button in WhatsApp Web interface"
+
+msgid "Manage your WhatsApp conversations directly from CRM"
+msgstr "Manage your WhatsApp conversations directly from CRM"
+
+msgid "WhatsApp Web requires you to scan the QR code with your phone to connect. Make sure your phone has internet connection."
+msgstr "WhatsApp Web requires you to scan the QR code with your phone to connect. Make sure your phone has internet connection."
+
+msgid "WhatsApp Business API Status"
+msgstr "WhatsApp Business API Status"
+
+msgid "Connected"
+msgstr "Connected"
+
+msgid "Using your company WhatsApp Business API settings"
+msgstr "Using your company WhatsApp Business API settings"
+
+msgid "Test Connection"
+msgstr "Test Connection"
+
+msgid "Send WhatsApp Message"
+msgstr "Send WhatsApp Message"
+
+msgid "Send messages using your WhatsApp Business API"
+msgstr "Send messages using your WhatsApp Business API"
+
+msgid "Select Customer"
+msgstr "Select Customer"
+
+msgid "Phone Number"
+msgstr "Phone Number"
+
+msgid "Message"
+msgstr "Message"
+
+msgid "Type your message here..."
+msgstr "Type your message here..."
+
+msgid "Appointment Created"
+msgstr "Appointment Created"
+
+msgid "Reminder"
+msgstr "Reminder"
+
+msgid "Cancellation"
+msgstr "Cancellation"
+
+msgid "Send Message"
+msgstr "Send Message"
+
+msgid "API Information"
+msgstr "API Information"
+
+msgid "Access Token"
+msgstr "Access Token"
+
+msgid "Phone Number ID"
+msgstr "Phone Number ID"
+
+msgid "Business Account ID"
+msgstr "Business Account ID"
+
+msgid "Not set"
+msgstr "Not set"
+
+msgid "Please fill in all fields"
+msgstr "Please fill in all fields"
+
+msgid "Sending..."
+msgstr "Sending..."
+
+msgid "Message sent successfully!"
+msgstr "Message sent successfully!"
+
+msgid "Error sending message:"
+msgstr "Error sending message:"
+
+msgid "Testing..."
+msgstr "Testing..."
+
+msgid "WhatsApp Business API connection test"
+msgstr "WhatsApp Business API connection test"
+
+msgid "Connection test successful!"
+msgstr "Connection test successful!"
+
+msgid "Connection test failed:"
+msgstr "Connection test failed:"
 

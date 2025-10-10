@@ -2,6 +2,10 @@
 
 {% block title %}{{ _('Customer Report') }} - CRM{% endblock %}
 
+{% block head %}
+<!-- Chart.js base.html'de yüklendi -->
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">{{ _('Customer Report') }}</h1>
@@ -41,45 +45,190 @@
     </div>
 </div>
 
+<!-- Grafikler Bölümü -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Customer Distribution by Gender') }}</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="genderChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Customer Distribution by Age') }}</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="ageChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Customer Distribution by Category') }}</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="categoryChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Customer Distribution by City') }}</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="cityChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Zaman Serisi Analizi -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Monthly Customer Growth') }}</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="monthlyChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Weekly Customer Growth (Last 12 Weeks)') }}</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="weeklyChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Randevu Trendleri -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Appointment Frequency Distribution') }}</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="appointmentFrequencyChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Top 10 Customers by Appointment Count') }}</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="topCustomersChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="card shadow mb-4">
     <div class="card-header py-3">
         <h6 class="m-0 font-weight-bold text-primary">{{ _('Filters') }}</h6>
     </div>
     <div class="card-body">
-        <form class="row g-3" method="GET">
-            <div class="col-md-3">
-                <label class="form-label">{{ _('Start Date') }}</label>
-                <input type="date" class="form-control" name="baslangic" value="{{ filtreler.baslangic }}">
+        <form method="GET">
+            <!-- Temel Filtreler -->
+            <div class="row g-3 mb-3">
+                <div class="col-12">
+                    <h6 class="text-primary mb-2">{{ _('Basic Filters') }}</h6>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ _('Status') }}</label>
+                    <select class="form-select" name="aktif">
+                        <option value="">{{ _('All') }}</option>
+                        <option value="1" {% if filtreler.aktif == '1' %}selected{% endif %}>{{ _('Active') }}</option>
+                        <option value="0" {% if filtreler.aktif == '0' %}selected{% endif %}>{{ _('Inactive') }}</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ _('Category') }}</label>
+                    <select class="form-select" name="kategori_id">
+                        <option value="">{{ _('All Categories') }}</option>
+                        {% for k in kategoriler %}
+                        <option value="{{ k.KategoriID }}" {% if filtreler.kategori_id == k.KategoriID %}selected{% endif %}>{{ k.KategoriAdi }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ _('Contact Information') }}</label>
+                    <select class="form-select" name="iletisim_var">
+                        <option value="">{{ _('Doesn\'t Matter') }}</option>
+                        <option value="telefon" {% if filtreler.iletisim_var == 'telefon' %}selected{% endif %}>{{ _('Has Phone') }}</option>
+                        <option value="email" {% if filtreler.iletisim_var == 'email' %}selected{% endif %}>{{ _('Has Email') }}</option>
+                        <option value="herikisi" {% if filtreler.iletisim_var == 'herikisi' %}selected{% endif %}>{{ _('Has Both') }}</option>
+                    </select>
+                </div>
             </div>
-            <div class="col-md-3">
-                <label class="form-label">{{ _('End Date') }}</label>
-                <input type="date" class="form-control" name="bitis" value="{{ filtreler.bitis }}">
+            
+            <!-- Demografik Filtreler -->
+            <div class="row g-3 mb-3">
+                <div class="col-12">
+                    <h6 class="text-primary mb-2">{{ _('Demographic Filters') }}</h6>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ _('Min Age') }}</label>
+                    <input type="number" class="form-control" name="yas_min" value="{{ filtreler.yas_min }}" min="0" max="120" placeholder="0">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ _('Max Age') }}</label>
+                    <input type="number" class="form-control" name="yas_max" value="{{ filtreler.yas_max }}" min="0" max="120" placeholder="100">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ _('Gender') }}</label>
+                    <select class="form-select" name="cinsiyet">
+                        <option value="">{{ _('All') }}</option>
+                        <option value="Erkek" {% if filtreler.cinsiyet == 'Erkek' %}selected{% endif %}>{{ _('Male') }}</option>
+                        <option value="Kadın" {% if filtreler.cinsiyet == 'Kadın' %}selected{% endif %}>{{ _('Female') }}</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ _('Birth Date') }}</label>
+                    <input type="date" class="form-control" name="dogum_tarihi" value="{{ filtreler.dogum_tarihi }}">
+                </div>
             </div>
-            <div class="col-md-3">
-                <label class="form-label">{{ _('Category') }}</label>
-                <select class="form-select" name="kategori_id">
-                    <option value="">{{ _('All Categories') }}</option>
-                    {% for k in kategoriler %}
-                    <option value="{{ k.KategoriID }}" {% if filtreler.kategori_id == k.KategoriID %}selected{% endif %}>{{ k.KategoriAdi }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">{{ _('Status') }}</label>
-                <select class="form-select" name="aktif">
-                    <option value="">{{ _('All') }}</option>
-                    <option value="1" {% if filtreler.aktif == '1' %}selected{% endif %}>{{ _('Active') }}</option>
-                    <option value="0" {% if filtreler.aktif == '0' %}selected{% endif %}>{{ _('Inactive') }}</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">{{ _('Contact Information') }}</label>
-                <select class="form-select" name="iletisim_var">
-                    <option value="">{{ _('Doesn\'t Matter') }}</option>
-                    <option value="telefon" {% if filtreler.iletisim_var == 'telefon' %}selected{% endif %}>{{ _('Has Phone') }}</option>
-                    <option value="email" {% if filtreler.iletisim_var == 'email' %}selected{% endif %}>{{ _('Has Email') }}</option>
-                    <option value="herikisi" {% if filtreler.iletisim_var == 'herikisi' %}selected{% endif %}>{{ _('Has Both') }}</option>
-                </select>
+            
+            <!-- Coğrafi Filtreler -->
+            <div class="row g-3 mb-3">
+                <div class="col-12">
+                    <h6 class="text-primary mb-2">{{ _('Geographic Filters') }}</h6>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ _('City') }}</label>
+                    <select class="form-select" name="sehir">
+                        <option value="">{{ _('All Cities') }}</option>
+                        {% for sehir in sehir_listesi %}
+                        <option value="{{ sehir }}" {% if filtreler.sehir == sehir %}selected{% endif %}>{{ sehir }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ _('District') }}</label>
+                    <select class="form-select" name="ilce">
+                        <option value="">{{ _('All Districts') }}</option>
+                        {% for ilce in ilce_listesi %}
+                        <option value="{{ ilce }}" {% if filtreler.ilce == ilce %}selected{% endif %}>{{ ilce }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
             <div class="col-md-12">
                 <button type="submit" class="btn btn-primary">
@@ -88,6 +237,12 @@
                 <a href="{{ url_for('rapor_musteriler') }}" class="btn btn-outline-secondary ms-2">
                     {{ _('Clear') }}
                 </a>
+        <button type="button" class="btn btn-info ms-2 d-none d-md-inline-block" data-bs-toggle="modal" data-bs-target="#customerDetailModal" id="customerDetailBtn">
+            <i class="fas fa-user me-1"></i> {{ _('Customer Detail Report') }}
+        </button>
+        <button type="button" class="btn btn-info btn-sm w-100 d-md-none mt-2" data-bs-toggle="modal" data-bs-target="#customerDetailModal" id="customerDetailBtnMobile" style="margin-left: 0 !important;">
+            <i class="fas fa-user me-1"></i> {{ _('Customer Detail Report') }}
+        </button>
             </div>
         </form>
     </div>
@@ -111,7 +266,7 @@
                                 <th>{{ _('Email') }}</th>
                                 <th>{{ _('Category') }}</th>
                                 <th>{{ _('Appointment Count') }}</th>
-                                <th>{{ _('Created') }}</th>
+                                <th>{{ _('Created Date') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -143,10 +298,10 @@
             <div class="card-body">
                 {% if top_musteriler %}
                 <ol class="mb-0">
-                    {% for m, adet in top_musteriler %}
+                    {% for m in top_musteriler %}
                     <li class="mb-2 d-flex justify-content-between align-items-center">
-                        <span>{{ m.tam_adi }}</span>
-                        <span class="badge bg-primary">{{ adet }}</span>
+                        <span>{{ m.ad }} {{ m.soyad }}</span>
+                        <span class="badge bg-primary">{{ m.randevu_sayisi }}</span>
                     </li>
                     {% endfor %}
                 </ol>
@@ -158,6 +313,899 @@
     </div>
 </div>
 
+        <!-- Müşteri Detay Raporu Modal -->
+        <div class="modal fade" id="customerDetailModal" tabindex="-1" aria-labelledby="customerDetailModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="customerDetailModalLabel">{{ _('Customer Detail Report') }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
+                        <form id="customerDetailForm">
+                            <div class="mb-3">
+                                <label for="customerSearch" class="form-label">{{ _('Search Customer') }}</label>
+                                <input type="text" class="form-control" id="customerSearch" placeholder="{{ _('Enter customer name or phone number') }}" autocomplete="off">
+                                <div id="customerSuggestions" class="list-group mt-2" style="display: none; max-height: 200px; overflow-y: auto;"></div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="selectedCustomer" class="form-label">{{ _('Selected Customer') }}</label>
+                                <div id="selectedCustomerInfo" class="alert alert-info" style="display: none;">
+                                    <strong id="selectedCustomerName"></strong><br>
+                                    <small id="selectedCustomerDetails"></small>
+                                </div>
+                                <input type="hidden" id="selectedCustomerId" name="customer_id">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Close') }}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<script>
+// Sayfa yüklendiğinde grafikleri oluştur
+// Genel normalize fonksiyonu (TR karakterler ve boşluklar için)
+function normalize(s) {
+    return (s || '').toString().trim().toLowerCase()
+        .replace(/ı/g,'i').replace(/ğ/g,'g').replace(/ü/g,'u')
+        .replace(/ş/g,'s').replace(/ö/g,'o').replace(/ç/g,'c')
+        .replace(/\s+/g,' ');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOMContentLoaded - Chart.js kontrol ediliyor...');
+    
+    // Chart.js yüklendiğini kontrol et
+    if (typeof Chart === 'undefined') {
+        console.error('Ana sayfa: Chart.js kütüphanesi yüklenemedi!');
+        // Chart.js'i dinamik olarak yükle
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+        script.onload = function() {
+            console.log('Ana sayfa: Chart.js dinamik olarak yüklendi');
+            // Grafikleri başlat
+            createCharts();
+            if (typeof createTimeSeriesCharts === 'function') {
+                createTimeSeriesCharts();
+            }
+            createAppointmentTrendCharts();
+        };
+        script.onerror = function() {
+            console.error('Ana sayfa: Chart.js yüklenemedi');
+        };
+        document.head.appendChild(script);
+        return;
+    }
+    
+    console.log('Ana sayfa: Chart.js yüklendi, grafikler başlatılıyor...');
+    
+    // Grafikleri oluştur
+    try {
+        createCharts();
+        if (typeof createTimeSeriesCharts === 'function') {
+            createTimeSeriesCharts();
+        }
+        createAppointmentTrendCharts();
+    } catch (error) {
+        console.error('Grafik oluşturma hatası:', error);
+    }
+    
+    // Müşteri arama fonksiyonları
+    setupCustomerSearch();
+    
+    // Modal açıldığında arama kutusuna odaklan
+    const modalElement = document.getElementById('customerDetailModal');
+    modalElement.addEventListener('shown.bs.modal', function() {
+        const customerSearch = document.getElementById('customerSearch');
+        if (customerSearch) {
+            customerSearch.focus();
+        }
+    });
+    
+    // Modal kapatıldığında orijinal içeriği geri yükle
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        // Modal içeriğini tamamen sıfırla
+        const modalBody = document.querySelector('#customerDetailModal .modal-body');
+        modalBody.innerHTML = originalModalContent;
+        
+        // Form elemanlarını temizle
+        const customerSearch = document.getElementById('customerSearch');
+        const selectedCustomerInfo = document.getElementById('selectedCustomerInfo');
+        const selectedCustomerId = document.getElementById('selectedCustomerId');
+        
+        if (customerSearch) customerSearch.value = '';
+        if (selectedCustomerInfo) selectedCustomerInfo.style.display = 'none';
+        if (selectedCustomerId) selectedCustomerId.value = '';
+        
+        // Müşteri arama fonksiyonlarını yeniden başlat
+        setTimeout(() => {
+            setupCustomerSearch();
+        }, 100);
+    });
+});
+
+function setupCustomerSearch() {
+    const customerSearch = document.getElementById('customerSearch');
+    const customerSuggestions = document.getElementById('customerSuggestions');
+    const selectedCustomerInfo = document.getElementById('selectedCustomerInfo');
+    const selectedCustomerName = document.getElementById('selectedCustomerName');
+    const selectedCustomerDetails = document.getElementById('selectedCustomerDetails');
+    const selectedCustomerId = document.getElementById('selectedCustomerId');
+    
+    // Elementler bulunamazsa çık
+    if (!customerSearch || !customerSuggestions || !selectedCustomerInfo || 
+        !selectedCustomerName || !selectedCustomerDetails || !selectedCustomerId) {
+        console.log('Modal elemanları bulunamadı, setupCustomerSearch atlanıyor');
+        return;
+    }
+    
+    let searchTimeout;
+    
+    // Önceki event listener'ları temizle
+    customerSearch.removeEventListener('input', customerSearch._inputHandler);
+    customerSearch._inputHandler = function() {
+        const query = this.value.trim();
+        
+        clearTimeout(searchTimeout);
+        
+        if (query.length < 1) {
+            customerSuggestions.style.display = 'none';
+            return;
+        }
+        
+        searchTimeout = setTimeout(() => {
+            searchCustomers(query);
+        }, 150);
+    };
+    
+    customerSearch.addEventListener('input', customerSearch._inputHandler);
+    
+    function searchCustomers(query) {
+        fetch(`/api/musteri-arama?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                displaySuggestions(data);
+            })
+            .catch(error => {
+                console.error('Müşteri arama hatası:', error);
+            });
+    }
+    
+    function displaySuggestions(customers) {
+        customerSuggestions.innerHTML = '';
+        
+        if (customers.length === 0) {
+            customerSuggestions.innerHTML = '<div class="list-group-item text-muted">Müşteri bulunamadı</div>';
+        } else {
+            customers.forEach(customer => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item list-group-item-action';
+                item.innerHTML = `
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">${customer.ad} ${customer.soyad}</h6>
+                        <small>${customer.telefon || 'Telefon yok'}</small>
+                    </div>
+                    <p class="mb-1">${customer.email || 'E-posta yok'}</p>
+                    <small>${customer.sehir || 'Şehir bilgisi yok'}</small>
+                `;
+                item.addEventListener('click', () => selectCustomer(customer));
+                customerSuggestions.appendChild(item);
+            });
+        }
+        
+        customerSuggestions.style.display = 'block';
+    }
+    
+    function selectCustomer(customer) {
+        selectedCustomerId.value = customer.id;
+        selectedCustomerName.textContent = `${customer.ad} ${customer.soyad}`;
+        selectedCustomerDetails.textContent = `Telefon: ${customer.telefon || 'Yok'} | E-posta: ${customer.email || 'Yok'} | Şehir: ${customer.sehir || 'Yok'}`;
+        
+        selectedCustomerInfo.style.display = 'block';
+        customerSuggestions.style.display = 'none';
+        customerSearch.value = '';
+        
+        // Müşteri seçilince otomatik rapor oluştur
+        loadCustomerDetailReport(customer.id);
+    }
+    
+    
+    // Modal dışına tıklandığında önerileri gizle
+    document.addEventListener('click', function(e) {
+        if (!customerSearch.contains(e.target) && !customerSuggestions.contains(e.target)) {
+            customerSuggestions.style.display = 'none';
+        }
+    });
+}
+
+// Orijinal modal içeriği
+const originalModalContent = `
+<form id="customerDetailForm">
+    <div class="mb-3">
+        <label for="customerSearch" class="form-label">{{ _('Search Customer') }}</label>
+        <input type="text" class="form-control" id="customerSearch" placeholder="{{ _('Enter customer name or phone number') }}" autocomplete="off">
+        <div id="customerSuggestions" class="list-group mt-2" style="display: none; max-height: 200px; overflow-y: auto;"></div>
+    </div>
+    <div class="mb-3">
+        <label for="selectedCustomer" class="form-label">{{ _('Selected Customer') }}</label>
+        <div id="selectedCustomerInfo" class="alert alert-info" style="display: none;">
+            <strong id="selectedCustomerName"></strong><br>
+            <small id="selectedCustomerDetails"></small>
+        </div>
+        <input type="hidden" id="selectedCustomerId" name="customer_id">
+    </div>
+</form>`;
+
+// Müşteri detay raporunu modal içinde yükle
+function loadCustomerDetailReport(customerId) {
+    const modalEl = document.getElementById('customerDetailModal');
+    let modalInstance = bootstrap.Modal.getInstance(modalEl);
+    if (!modalInstance) {
+        modalInstance = new bootstrap.Modal(modalEl, { backdrop: true, keyboard: true });
+        modalInstance.show();
+    }
+
+    fetch(`/rapor/musteri-detay-modal/${customerId}`)
+        .then(response => response.text())
+        .then(html => {
+            // Modal içeriğini güncelle
+            const modalBody = document.querySelector('#customerDetailModal .modal-body');
+            modalBody.innerHTML = html;
+            
+            // Modal açık değilse göster
+            const currentInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            currentInstance.show();
+            
+            // Grafikleri başlat - Chart.js yüklenmesini bekle
+            setTimeout(() => {
+                try {
+                    // Chart.js yüklenene kadar bekle
+                    const waitForChart = () => {
+                        if (typeof Chart !== 'undefined') {
+                            console.log('Chart.js yüklendi, grafikler başlatılıyor...');
+                            initializeCustomerDetailCharts();
+                        } else {
+                            console.log('Chart.js bekleniyor...');
+                            setTimeout(waitForChart, 100);
+                        }
+                    };
+                    waitForChart();
+                } catch (error) {
+                    console.error('Modal grafik başlatma hatası:', error);
+                }
+            }, 200);
+        })
+        .catch(error => {
+            console.error('Müşteri detay raporu yüklenirken hata:', error);
+            alert('Rapor yüklenirken bir hata oluştu.');
+        });
+}
+
+// Müşteri detay raporu grafiklerini başlat
+function initializeCustomerDetailCharts() {
+    console.log('initializeCustomerDetailCharts çağrıldı');
+    
+    // Chart.js yüklendiğini kontrol et
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js kütüphanesi yüklenemedi!');
+        return;
+    }
+    
+    console.log('Chart.js yüklendi, grafikler oluşturuluyor...');
+    
+    // Aylık randevu dağılımı grafiği
+    const monthlyCtx = document.getElementById('monthlyAppointmentChart');
+    console.log('monthlyAppointmentChart elementi:', monthlyCtx);
+    if (monthlyCtx) {
+        try {
+            const monthlyData = window.monthlyData || {};
+            const monthlyLabels = Object.keys(monthlyData).sort();
+            const monthlyValues = monthlyLabels.map(label => monthlyData[label]);
+            
+            new Chart(monthlyCtx, {
+            type: 'line',
+            data: {
+                labels: monthlyLabels.length > 0 ? monthlyLabels : ['Veri Yok'],
+                datasets: [{
+                    label: 'Randevular',
+                    data: monthlyValues.length > 0 ? monthlyValues : [0],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Aylık Randevu Dağılımı'
+                    }
+                }
+            }
+        });
+        } catch (error) {
+            console.error('Aylık grafik oluşturma hatası:', error);
+        }
+    }
+    
+    // Defter dağılımı grafiği
+    const bookCtx = document.getElementById('bookDistributionChart');
+    console.log('bookDistributionChart elementi:', bookCtx);
+    if (bookCtx) {
+        try {
+            const bookData = window.bookData || {};
+            const bookLabels = Object.keys(bookData);
+            const bookValues = Object.values(bookData);
+            
+            new Chart(bookCtx, {
+            type: 'doughnut',
+            data: {
+                labels: bookLabels.length > 0 ? bookLabels : ['Veri Yok'],
+                datasets: [{
+                    data: bookValues.length > 0 ? bookValues : [1],
+                    backgroundColor: [
+                        '#FF6384',
+                        '#36A2EB',
+                        '#FFCE56',
+                        '#4BC0C0',
+                        '#9966FF',
+                        '#FF9F40'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Defter Dağılımı'
+                    }
+                }
+            }
+        });
+        } catch (error) {
+            console.error('Defter grafik oluşturma hatası:', error);
+        }
+    }
+}
+
+function createCharts() {
+    // Cinsiyet dağılımı grafiği
+    const genderCtx = document.getElementById('genderChart');
+    if (!genderCtx) {
+        console.error('genderChart elementi bulunamadı');
+        return;
+    }
+    
+    const genderData = {{ gender_data | tojson }};
+    
+    if (Object.keys(genderData).length === 0) {
+        const ctx = genderCtx.getContext('2d');
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#666';
+        ctx.textAlign = 'center';
+        ctx.fillText('Cinsiyet bilgisi bulunamadı', ctx.canvas.width / 2, ctx.canvas.height / 2);
+    } else {
+        // Etiketlere göre renkleri doğru ata (Kadın=pembe, Erkek=mavi)
+        const genderLabelsRaw = Object.keys(genderData);
+        const genderValues = Object.values(genderData);
+        const normalize = (s) => (s || '').toString().trim().toLowerCase()
+            .replace(/ı/g,'i').replace(/ğ/g,'g').replace(/ü/g,'u')
+            .replace(/ş/g,'s').replace(/ö/g,'o').replace(/ç/g,'c');
+        const genderColors = genderLabelsRaw.map(label => {
+            const k = normalize(label);
+            if (k === 'kadin' || k === 'female') return '#FF6384'; // pink for female
+            if (k === 'erkek' || k === 'male') return '#36A2EB';   // blue for male
+            return '#FFCE56'; // neutral for others/unknown
+        });
+
+        // Etiket çevirileri (i18n)
+        const G = { male: '{{ _("Male") }}', female: '{{ _("Female") }}' };
+        const genderLabels = genderLabelsRaw.map(label => {
+            const k = normalize(label);
+            if (k === 'kadin' || k === 'female') return G.female;
+            if (k === 'erkek' || k === 'male') return G.male;
+            return label;
+        });
+
+        new Chart(genderCtx, {
+            type: 'doughnut',
+            data: {
+                labels: genderLabels,
+                datasets: [{
+                    data: genderValues,
+                    backgroundColor: genderColors,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+    // Yaş dağılımı grafiği
+    const ageCtx = document.getElementById('ageChart');
+    if (!ageCtx) {
+        console.error('ageChart elementi bulunamadı');
+        return;
+    }
+    
+    const ageData = {{ age_groups | tojson }};
+    
+    if (Object.values(ageData).every(val => val === 0)) {
+        const ctx = ageCtx.getContext('2d');
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#666';
+        ctx.textAlign = 'center';
+        ctx.fillText('Yaş bilgisi bulunamadı', ctx.canvas.width / 2, ctx.canvas.height / 2);
+    } else {
+        new Chart(ageCtx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(ageData),
+                datasets: [{
+                    label: '{{ _("Customer Count") }}',
+                    data: Object.values(ageData),
+                    backgroundColor: '#36A2EB',
+                    borderColor: '#36A2EB',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            callback: function(value) {
+                                return Number.isInteger(value) ? value : null;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Kategori dağılımı grafiği
+    const categoryCtx = document.getElementById('categoryChart');
+    if (!categoryCtx) {
+        console.error('categoryChart elementi bulunamadı');
+        return;
+    }
+    
+    const categoryData = {{ category_data | tojson }};
+    
+    if (Object.keys(categoryData).length === 0) {
+        const ctx = categoryCtx.getContext('2d');
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#666';
+        ctx.textAlign = 'center';
+        ctx.fillText('Kategori bilgisi bulunamadı', ctx.canvas.width / 2, ctx.canvas.height / 2);
+    } else {
+        // Etiket çevirileri ve normalize: VIP/Normal
+        const categoryLabelsRaw = Object.keys(categoryData);
+        const categoryValues = Object.values(categoryData);
+        const C = { vip: '{{ _("VIP") }}', normal: '{{ _("Normal") }}' };
+        const categoryLabels = categoryLabelsRaw.map(label => {
+            const k = normalize(label);
+            if (k === 'vip' || k === 'vip musteri' || k === 'vip müşteri') return C.vip;
+            if (k === 'normal' || k === 'normal musteri' || k === 'normal müşteri') return C.normal;
+            return label;
+        });
+
+        new Chart(categoryCtx, {
+            type: 'pie',
+            data: {
+                labels: categoryLabels,
+                datasets: [{
+                    data: categoryValues,
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                        '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+    // Şehir dağılımı grafiği
+    const cityCtx = document.getElementById('cityChart');
+    if (!cityCtx) {
+        console.error('cityChart elementi bulunamadı');
+        return;
+    }
+    
+    const cityData = {{ city_data | tojson }};
+    
+    if (Object.keys(cityData).length === 0) {
+        // Veri yoksa mesaj göster
+        const ctx = cityCtx.getContext('2d');
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#666';
+        ctx.textAlign = 'center';
+        ctx.fillText('Şehir bilgisi bulunamadı', ctx.canvas.width / 2, ctx.canvas.height / 2);
+    } else {
+        // Plaka kodlarını şehir isimlerine dönüştür
+        const plakaToSehir = {
+            '01': 'Adana',
+            '02': 'Adıyaman', 
+            '03': 'Afyonkarahisar',
+            '04': 'Ağrı',
+            '05': 'Amasya',
+            '06': 'Ankara',
+            '07': 'Antalya',
+            '08': 'Artvin',
+            '09': 'Aydın',
+            '10': 'Balıkesir',
+            '11': 'Bilecik',
+            '12': 'Bingöl',
+            '13': 'Bitlis',
+            '14': 'Bolu',
+            '15': 'Burdur',
+            '16': 'Bursa',
+            '17': 'Çanakkale',
+            '18': 'Çankırı',
+            '19': 'Çorum',
+            '20': 'Denizli',
+            '21': 'Diyarbakır',
+            '22': 'Edirne',
+            '23': 'Elazığ',
+            '24': 'Erzincan',
+            '25': 'Erzurum',
+            '26': 'Eskişehir',
+            '27': 'Gaziantep',
+            '28': 'Giresun',
+            '29': 'Gümüşhane',
+            '30': 'Hakkari',
+            '31': 'Hatay',
+            '32': 'Isparta',
+            '33': 'Mersin',
+            '34': 'İstanbul',
+            '35': 'İzmir',
+            '36': 'Kars',
+            '37': 'Kastamonu',
+            '38': 'Kayseri',
+            '39': 'Kırklareli',
+            '40': 'Kırşehir',
+            '41': 'Kocaeli',
+            '42': 'Konya',
+            '43': 'Kütahya',
+            '44': 'Malatya',
+            '45': 'Manisa',
+            '46': 'Kahramanmaraş',
+            '47': 'Mardin',
+            '48': 'Muğla',
+            '49': 'Muş',
+            '50': 'Nevşehir',
+            '51': 'Niğde',
+            '52': 'Ordu',
+            '53': 'Rize',
+            '54': 'Sakarya',
+            '55': 'Samsun',
+            '56': 'Siirt',
+            '57': 'Sinop',
+            '58': 'Sivas',
+            '59': 'Tekirdağ',
+            '60': 'Tokat',
+            '61': 'Trabzon',
+            '62': 'Tunceli',
+            '63': 'Şanlıurfa',
+            '64': 'Uşak',
+            '65': 'Van',
+            '66': 'Yozgat',
+            '67': 'Zonguldak',
+            '68': 'Aksaray',
+            '69': 'Bayburt',
+            '70': 'Karaman',
+            '71': 'Kırıkkale',
+            '72': 'Batman',
+            '73': 'Şırnak',
+            '74': 'Bartın',
+            '75': 'Ardahan',
+            '76': 'Iğdır',
+            '77': 'Yalova',
+            '78': 'Karabük',
+            '79': 'Kilis',
+            '80': 'Osmaniye',
+            '81': 'Düzce'
+        };
+        
+        // Plaka kodlarını şehir isimlerine dönüştür
+        const convertedCityData = {};
+        for (const [plaka, count] of Object.entries(cityData)) {
+            const sehirAdi = plakaToSehir[plaka] || plaka; // Eğer plaka kodunda yoksa orijinal değeri kullan
+            convertedCityData[sehirAdi] = count;
+        }
+        
+        // Şehir isimlerini düzgün sırala
+        const sortedCities = Object.keys(convertedCityData).sort();
+        const cityLabels = sortedCities;
+        const cityValues = sortedCities.map(city => convertedCityData[city]);
+        
+        console.log('Orijinal plaka verileri:', cityData);
+        console.log('Dönüştürülmüş şehir verileri:', convertedCityData);
+        console.log('Şehir etiketleri:', cityLabels);
+        
+        new Chart(cityCtx, {
+            type: 'bar',
+            data: {
+                labels: cityLabels,
+                datasets: [{
+                    label: '{{ _("Customer Count") }}',
+                    data: cityValues,
+                    backgroundColor: '#4BC0C0',
+                    borderColor: '#4BC0C0',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true
+                    }
+                }
+            }
+        });
+    }
+}
+
+function createTimeSeriesCharts() {
+    // Aylık müşteri artışı grafiği
+    const monthlyCtx = document.getElementById('monthlyChart');
+    if (!monthlyCtx) {
+        console.error('monthlyChart elementi bulunamadı');
+        return;
+    }
+    
+    const monthlyData = {{ monthly_data | tojson }};
+    
+    if (Object.keys(monthlyData).length === 0) {
+        const ctx = monthlyCtx.getContext('2d');
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#666';
+        ctx.textAlign = 'center';
+        ctx.fillText('Aylık veri bulunamadı', ctx.canvas.width / 2, ctx.canvas.height / 2);
+    } else {
+        // Aylık verileri sırala
+        const sortedMonthlyData = Object.keys(monthlyData).sort();
+        const monthlyLabels = sortedMonthlyData;
+        const monthlyValues = sortedMonthlyData.map(key => monthlyData[key]);
+        
+        new Chart(monthlyCtx, {
+            type: 'line',
+            data: {
+                labels: monthlyLabels,
+                datasets: [{
+                    label: '{{ _("Customer Count") }}',
+                    data: monthlyValues,
+                    borderColor: '#36A2EB',
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            callback: function(value) {
+                                return Number.isInteger(value) ? value : null;
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // Haftalık müşteri artışı grafiği
+    const weeklyCtx = document.getElementById('weeklyChart');
+    if (!weeklyCtx) {
+        console.error('weeklyChart elementi bulunamadı');
+        return;
+    }
+    
+    const weeklyData = {{ weekly_data | tojson }};
+    
+    if (Object.keys(weeklyData).length === 0) {
+        const ctx = weeklyCtx.getContext('2d');
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#666';
+        ctx.textAlign = 'center';
+        ctx.fillText('Haftalık veri bulunamadı', ctx.canvas.width / 2, ctx.canvas.height / 2);
+    } else {
+        // Haftalık verileri sırala (en yeni hafta en sonda)
+        const sortedWeeklyData = Object.keys(weeklyData).sort();
+        const weeklyLabels = sortedWeeklyData.map(label => {
+            const parts = label.split(' - ');
+            return parts[0].substring(5); // Sadece ay-gün kısmını al
+        });
+        const weeklyValues = sortedWeeklyData.map(key => weeklyData[key]);
+        
+        new Chart(weeklyCtx, {
+            type: 'bar',
+            data: {
+                labels: weeklyLabels,
+                datasets: [{
+                    label: '{{ _("Customer Count") }}',
+                    data: weeklyValues,
+                    backgroundColor: '#4BC0C0',
+                    borderColor: '#4BC0C0',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            callback: function(value) {
+                                return Number.isInteger(value) ? value : null;
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true
+                    }
+                }
+            }
+        });
+    }
+}
+
+function createAppointmentTrendCharts() {
+    // Randevu sıklığı dağılımı grafiği
+    const frequencyCtx = document.getElementById('appointmentFrequencyChart');
+    if (!frequencyCtx) {
+        console.error('appointmentFrequencyChart elementi bulunamadı');
+        return;
+    }
+    
+    const frequencyData = {{ randevu_siklik_dagilimi | tojson }};
+    
+    if (Object.keys(frequencyData).length === 0) {
+        const ctx = frequencyCtx.getContext('2d');
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#666';
+        ctx.textAlign = 'center';
+        ctx.fillText('Randevu verisi bulunamadı', ctx.canvas.width / 2, ctx.canvas.height / 2);
+    } else {
+        // Etiketleri dile göre çevir
+        const freqLabelsRaw = Object.keys(frequencyData);
+        const freqValues = Object.values(frequencyData);
+        const freqLabels = freqLabelsRaw.map(label => {
+            const k = normalize(label);
+            if (k === '0 randevu' || k === '0 appointment' || k === '0 appointments') return '{{ _("0 Appointments") }}';
+            if (k === '1 randevu' || k === '1 appointment') return '{{ _("1 Appointment") }}';
+            if (k === '2-5 randevu' || k === '2-5 appointments') return '{{ _("2-5 Appointments") }}';
+            if (k === '6-10 randevu' || k === '6-10 appointments') return '{{ _("6-10 Appointments") }}';
+            if (k === '10+ randevu' || k === '10+ appointments') return '{{ _("10+ Appointments") }}';
+            return label;
+        });
+
+        new Chart(frequencyCtx, {
+            type: 'doughnut',
+            data: {
+                labels: freqLabels,
+                datasets: [{
+                    data: freqValues,
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+    // En çok randevu alan müşteriler grafiği
+    const topCustomersCtx = document.getElementById('topCustomersChart');
+    if (!topCustomersCtx) {
+        console.error('topCustomersChart elementi bulunamadı');
+        return;
+    }
+    
+    const topCustomersData = {{ en_cok_randevu_alan | tojson }};
+    
+    if (topCustomersData.length === 0) {
+        const ctx = topCustomersCtx.getContext('2d');
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#666';
+        ctx.textAlign = 'center';
+        ctx.fillText('Randevu verisi bulunamadı', ctx.canvas.width / 2, ctx.canvas.height / 2);
+    } else {
+        const customerLabels = topCustomersData.map(customer => customer.musteri_adi);
+        const appointmentCounts = topCustomersData.map(customer => customer.randevu_sayisi);
+        
+        new Chart(topCustomersCtx, {
+            type: 'bar',
+            data: {
+                labels: customerLabels,
+                datasets: [{
+                    label: '{{ _("Appointment Count") }}',
+                    data: appointmentCounts,
+                    backgroundColor: '#FF6384',
+                    borderColor: '#FF6384',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true
+                    }
+                }
+            }
+        });
+    }
+}
+</script>
  
 {% endblock %}
 

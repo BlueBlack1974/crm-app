@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}CRM'ye Hoş Geldiniz{% endblock %}
+
+{% block content %}
+<div class="py-5">
+  <div class="text-center mb-4">
+    <h1 class="display-5 fw-bold">Daha Akıllı CRM ile Daha Hızlı Büyüyün</h1>
+    <p class="lead text-muted">Randevu, raporlama ve müşteri içgörülerini tek yerde toplayan modern çözümler.</p>
+    <div class="d-flex justify-content-center gap-2 mt-3">
+      <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">Hemen Başla</a>
+      <a href="#features" class="btn btn-outline-secondary btn-lg">Özellikleri Gör</a>
+    </div>
+  </div>
+  <div class="text-center mb-5">
+    <img src="{{ url_for('static', filename='img/hero.jpg') }}"
+         alt="CRM Kahraman Görsel"
+         class="img-fluid rounded shadow"
+         loading="lazy"
+         onerror="this.onerror=function(){this.onerror=null; this.src='{{ url_for('static', filename='img/hero.svg') }}';}; this.src='https://images.unsplash.com/photo-1551836022-4b4a1ae0f04d?q=80&w=1600&auto=format&fit=crop';">
+  </div>
+
+  <div id="features" class="row g-4 mb-5">
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title"><i class="fas fa-calendar-check me-2 text-primary"></i>Hızlı Randevu</h5>
+          <p class="card-text text-muted">Güçlü takvim görünümleri ve kapasiteye duyarlı planlama ile randevuları oluşturun, yönetin, takip edin.</p>
+          <img src="{{ url_for('static', filename='img/feature-calendar.jpg') }}"
+               alt="Takvim ve Randevu"
+               class="img-fluid rounded mt-2"
+               loading="lazy"
+               onerror="this.onerror=function(){this.onerror=null; this.src='{{ url_for('static', filename='img/feature-calendar.svg') }}';}; this.src='https://images.unsplash.com/photo-1517430816045-df4b7de11d1d?q=80&w=1200&auto=format&fit=crop';">
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title"><i class="fas fa-chart-bar me-2 text-success"></i>Etkili Raporlar</h5>
+          <p class="card-text text-muted">Yoğun saatler, ısı haritaları, performans KPI’ları ve çok daha fazlasıyla veriye dayalı kararlar alın.</p>
+          <img src="{{ url_for('static', filename='img/feature-reports.jpg') }}"
+               alt="Raporlar ve Grafikler"
+               class="img-fluid rounded mt-2"
+               loading="lazy"
+               onerror="this.onerror=function(){this.onerror=null; this.src='{{ url_for('static', filename='img/feature-reports.svg') }}';}; this.src='https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?q=80&w=1200&auto=format&fit=crop';">
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title"><i class="fas fa-users me-2 text-warning"></i>Müşteri Memnuniyeti</h5>
+          <p class="card-text text-muted">Tekil müşteri görünümü, hatırlatmalar ve içgörülerle memnuniyeti artırın; müşterileriniz geri gelsin.</p>
+          <img src="{{ url_for('static', filename='img/feature-customers.jpg') }}"
+               alt="Müşteri Memnuniyeti ve İlişkiler"
+               class="img-fluid rounded mt-2"
+               loading="lazy"
+               onerror="this.onerror=function(){this.onerror=null; this.src='{{ url_for('static', filename='img/feature-customers.svg') }}';}; this.src='https://images.unsplash.com/photo-1521790797524-b2497295b8a0?q=80&w=1200&auto=format&fit=crop';">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-light rounded-3 p-4 p-md-5 mb-5">
+    <div class="row align-items-center">
+      <div class="col-md-7">
+        <h3 class="mb-3">Neden Bizi Tercih Ediyorlar?</h3>
+        <ul class="mb-0 text-muted">
+          <li class="mb-2">Akıllı slot yönetimi ve mola desteği ile ışık hızında planlama</li>
+          <li class="mb-2">Zengin analitik: yoğun saatler, verimlilik, kapasite kullanımı</li>
+          <li class="mb-2">Her cihazda kusursuz çalışan modern ve hızlı arayüz</li>
+          <li class="mb-2">Güvenli, yetki bazlı erişim ve ince ayarlı izinler</li>
+        </ul>
+      </div>
+      <div class="col-md-5 text-center">
+        <i class="fas fa-rocket fa-4x text-primary"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modüller - Örnek Görseller -->
+  <div class="mb-5">
+    <h3 class="text-center mb-4">Modüller</h3>
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="card h-100">
+          <img src="{{ url_for('static', filename='img/modules/appointments.jpg') }}" class="card-img-top" alt="Randevular"
+               onerror="this.onerror=null; this.src='{{ url_for('static', filename='img/modules/appointments.svg') }}'">
+          <div class="card-body">
+            <h5 class="card-title">Randevular</h5>
+            <p class="card-text text-muted">Günlük ve haftalık görünümle hızlı randevu yönetimi.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100">
+          <img src="{{ url_for('static', filename='img/modules/calendar.jpg') }}" class="card-img-top" alt="Takvim"
+               onerror="this.onerror=null; this.src='{{ url_for('static', filename='img/modules/calendar.svg') }}'">
+          <div class="card-body">
+            <h5 class="card-title">Takvim</h5>
+            <p class="card-text text-muted">Defter bazlı çalışma saatleri ve slot yönetimi.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100">
+          <img src="{{ url_for('static', filename='img/modules/reports.jpg') }}" class="card-img-top" alt="Raporlar"
+               onerror="this.onerror=null; this.src='{{ url_for('static', filename='img/modules/reports.svg') }}'">
+          <div class="card-body">
+            <h5 class="card-title">Raporlar</h5>
+            <p class="card-text text-muted">Yoğun saatler, ısı haritası, performans ve daha fazlası.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100">
+          <img src="{{ url_for('static', filename='img/modules/customers.jpg') }}" class="card-img-top" alt="Müşteriler"
+               onerror="this.onerror=null; this.src='{{ url_for('static', filename='img/modules/customers.svg') }}'">
+          <div class="card-body">
+            <h5 class="card-title">Müşteriler</h5>
+            <p class="card-text text-muted">Tekil müşteri görünümü ve detay raporları.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kullanıcı yorumları bölümü kaldırıldı -->
+
+  <div class="text-center">
+    <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">Ücretsiz Başla</a>
+    <p class="text-muted mt-2">Kredi kartı gerekmez</p>
+  </div>
+</div>
+{% endblock %}
+
+

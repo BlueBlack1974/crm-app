@@ -90,6 +90,7 @@ class Randevu(db.Model):
     RandevuTarihi = db.Column(db.DateTime, nullable=False)
     RandevuSuresi = db.Column(db.Integer, default=60)  # dakika cinsinden
     MusteriAdi = db.Column(db.NVARCHAR(100))
+    MusteriSoyadi = db.Column(db.NVARCHAR(100))
     MusteriTelefon = db.Column(db.NVARCHAR(20))
     MusteriEmail = db.Column(db.NVARCHAR(100))
     Durum = db.Column(db.NVARCHAR(20), default='Beklemede')  # Beklemede, Onaylandi, Iptal, Tamamlandi
