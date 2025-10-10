@@ -4507,12 +4507,13 @@ def takvim():
     if not defter_id and view_type == 'week' and defterler:
         defter_id = defterler[0].AyarID
     
-    # Randevuları getir
+    # Randevuları getir (iptal edilen randevular hariç)
     if session.get('is_admin', False):
         query = Randevu.query.filter(
             Randevu.FirmaID == session['firma_id'],
             Randevu.RandevuTarihi >= start_date,
-            Randevu.RandevuTarihi < end_date
+            Randevu.RandevuTarihi < end_date,
+            Randevu.Durum != 'iptal'  # İptal edilen randevuları hariç tut
         )
         if defter_id:
             query = query.filter(Randevu.DefterID == defter_id)
@@ -4523,7 +4524,8 @@ def takvim():
             RandevuYetki.GoruntulemeYetkisi == True,
             Randevu.FirmaID == session['firma_id'],
             Randevu.RandevuTarihi >= start_date,
-            Randevu.RandevuTarihi < end_date
+            Randevu.RandevuTarihi < end_date,
+            Randevu.Durum != 'iptal'  # İptal edilen randevuları hariç tut
         )
         if defter_id:
             query = query.filter(Randevu.DefterID == defter_id)
@@ -4775,14 +4777,12 @@ def api_slots():
     existing = Randevu.query.filter(
         Randevu.FirmaID == firma_id,
         Randevu.RandevuTarihi >= day_start,
-        Randevu.RandevuTarihi < day_end
+        Randevu.RandevuTarihi < day_end,
+        Randevu.Durum != 'iptal'  # İptal edilen randevuları hariç tut
     ).all()
 
     def is_overlapping(slot_start: datetime, slot_end: datetime) -> bool:
         for r in existing:
-            # İptal edilen randevuları hariç tut
-            if r.Durum == 'Iptal':
-                continue
             r_start = r.RandevuTarihi
             r_end = r_start + timedelta(minutes=(r.RandevuSuresi or 60))
             if r_start < slot_end and slot_start < r_end:
