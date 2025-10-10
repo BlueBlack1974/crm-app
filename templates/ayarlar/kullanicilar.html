@@ -202,6 +202,16 @@ if (fotoBtn) {
   fotoBtn.addEventListener('click', function() {
     fotoInput.click();
   });
+  
+  // Çeviri kontrolü
+  const currentLang = document.documentElement.lang || 'tr';
+  if (currentLang === 'en') {
+    fotoBtn.textContent = 'Browse';
+    fotoDisplay.placeholder = 'Choose file...';
+  } else {
+    fotoBtn.textContent = 'Gözat';
+    fotoDisplay.placeholder = 'Dosya seçin...';
+  }
 }
 
 if (fotoInput) {
