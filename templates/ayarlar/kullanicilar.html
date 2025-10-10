@@ -138,6 +138,12 @@
 .avatar-frame { width: 320px; height: 320px; border-radius: 50%; overflow: hidden; margin: 0 auto; position: relative; background: #f8f9fa; border: 2px dashed #dee2e6; }
 .avatar-frame img { position: absolute; top: 0; left: 0; user-select: none; -webkit-user-drag: none; cursor: grab; transform-origin: 0 0; }
 .avatar-helper { text-align: center; font-size: .9rem; color: #6c757d; }
+
+/* Modal z-index fix */
+#avatarModal { z-index: 1060 !important; }
+#avatarModal .modal-dialog { z-index: 1061 !important; }
+#avatarModal .modal-content { z-index: 1062 !important; }
+.modal-backdrop { z-index: 1055 !important; }
 </style>
 <div class="modal fade" id="avatarModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
@@ -229,8 +235,21 @@ if (openCropBtn) {
       posY = (frameH - ih * imgScale) / 2;
       avatarImg.style.transform = `translate(${posX}px, ${posY}px) scale(${imgScale})`;
     };
-    const modal = new bootstrap.Modal(avatarModalEl);
+    const modal = new bootstrap.Modal(avatarModalEl, {
+      backdrop: true,
+      keyboard: true,
+      focus: true
+    });
     modal.show();
+    
+    // Z-index'i zorla ayarla
+    setTimeout(() => {
+      avatarModalEl.style.zIndex = '1060';
+      const backdrop = document.querySelector('.modal-backdrop');
+      if (backdrop) {
+        backdrop.style.zIndex = '1055';
+      }
+    }, 100);
   });
 }
 
@@ -265,8 +284,36 @@ document.getElementById('applyAvatar')?.addEventListener('click', function(){
     previewImg.src = dataURL;
     const modalInstance = bootstrap.Modal.getInstance(avatarModalEl);
     modalInstance?.hide();
+    
+    // Z-index'i temizle
+    setTimeout(() => {
+      avatarModalEl.style.zIndex = '';
+      const backdrop = document.querySelector('.modal-backdrop');
+      if (backdrop) {
+        backdrop.style.zIndex = '';
+      }
+    }, 100);
   };
   img.src = avatarImg.src;
+});
+
+// Modal event listeners
+avatarModalEl.addEventListener('shown.bs.modal', function() {
+  // Modal açıldığında z-index'i zorla ayarla
+  this.style.zIndex = '1060';
+  const backdrop = document.querySelector('.modal-backdrop');
+  if (backdrop) {
+    backdrop.style.zIndex = '1055';
+  }
+});
+
+avatarModalEl.addEventListener('hidden.bs.modal', function() {
+  // Modal kapandığında z-index'i temizle
+  this.style.zIndex = '';
+  const backdrop = document.querySelector('.modal-backdrop');
+  if (backdrop) {
+    backdrop.style.zIndex = '';
+  }
 });
 </script>
 {% endblock %}
