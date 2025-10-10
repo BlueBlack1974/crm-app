@@ -231,8 +231,8 @@
                             <tr>
                                 <td>{{ kategori.KategoriAdi }}</td>
                                 <td>
-                                    <span class="badge" style="background-color: {{ kategori.Renk }}; color: white">
-                                        {{ kategori.Renk }}
+                                    <span class="badge kategori-renk" data-renk="{{ kategori.Renk or '#007bff' }}" style="color: white">
+                                        {{ kategori.Renk or '#007bff' }}
                                     </span>
                                 </td>
                                 <td>{{ kategori.Aciklama or '-' }}</td>
@@ -417,6 +417,17 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+});
+
+// Kategori renklerini ayarla
+document.addEventListener('DOMContentLoaded', function() {
+    const kategoriRenkler = document.querySelectorAll('.kategori-renk');
+    kategoriRenkler.forEach(function(element) {
+        const renk = element.getAttribute('data-renk');
+        if (renk) {
+            element.style.backgroundColor = renk;
+        }
+    });
 });
 </script>
 {% endblock %}
