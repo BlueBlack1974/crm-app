@@ -143,7 +143,7 @@
 #avatarModal { z-index: 1060 !important; }
 #avatarModal .modal-dialog { z-index: 1061 !important; }
 #avatarModal .modal-content { z-index: 1062 !important; }
-.modal-backdrop { z-index: 1055 !important; }
+.modal-backdrop { display: none !important; }
 </style>
 <div class="modal fade" id="avatarModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
@@ -236,7 +236,7 @@ if (openCropBtn) {
       avatarImg.style.transform = `translate(${posX}px, ${posY}px) scale(${imgScale})`;
     };
     const modal = new bootstrap.Modal(avatarModalEl, {
-      backdrop: true,
+      backdrop: false,
       keyboard: true,
       focus: true
     });
@@ -245,10 +245,6 @@ if (openCropBtn) {
     // Z-index'i zorla ayarla
     setTimeout(() => {
       avatarModalEl.style.zIndex = '1060';
-      const backdrop = document.querySelector('.modal-backdrop');
-      if (backdrop) {
-        backdrop.style.zIndex = '1055';
-      }
     }, 100);
   });
 }
@@ -288,10 +284,6 @@ document.getElementById('applyAvatar')?.addEventListener('click', function(){
     // Z-index'i temizle
     setTimeout(() => {
       avatarModalEl.style.zIndex = '';
-      const backdrop = document.querySelector('.modal-backdrop');
-      if (backdrop) {
-        backdrop.style.zIndex = '';
-      }
     }, 100);
   };
   img.src = avatarImg.src;
@@ -301,19 +293,11 @@ document.getElementById('applyAvatar')?.addEventListener('click', function(){
 avatarModalEl.addEventListener('shown.bs.modal', function() {
   // Modal açıldığında z-index'i zorla ayarla
   this.style.zIndex = '1060';
-  const backdrop = document.querySelector('.modal-backdrop');
-  if (backdrop) {
-    backdrop.style.zIndex = '1055';
-  }
 });
 
 avatarModalEl.addEventListener('hidden.bs.modal', function() {
   // Modal kapandığında z-index'i temizle
   this.style.zIndex = '';
-  const backdrop = document.querySelector('.modal-backdrop');
-  if (backdrop) {
-    backdrop.style.zIndex = '';
-  }
 });
 </script>
 {% endblock %}
