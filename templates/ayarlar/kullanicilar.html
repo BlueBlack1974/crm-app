@@ -142,7 +142,23 @@
 /* Modal z-index fix */
 #avatarModal { z-index: 1060 !important; }
 #avatarModal .modal-dialog { z-index: 1061 !important; }
-#avatarModal .modal-content { z-index: 1062 !important; }
+#avatarModal .modal-content { 
+  z-index: 1062 !important; 
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
+}
+#avatarModal .modal-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: 12px 12px 0 0 !important;
+}
+#avatarModal .modal-footer {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: 0 0 12px 12px !important;
+}
 .modal-backdrop { display: none !important; }
 </style>
 <div class="modal fade" id="avatarModal" tabindex="-1" aria-hidden="true">
