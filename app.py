@@ -4513,7 +4513,7 @@ def takvim():
             Randevu.FirmaID == session['firma_id'],
             Randevu.RandevuTarihi >= start_date,
             Randevu.RandevuTarihi < end_date,
-            Randevu.Durum != 'iptal'  # İptal edilen randevuları hariç tut
+            Randevu.Durum != 'Iptal'  # İptal edilen randevuları hariç tut
         )
         if defter_id:
             query = query.filter(Randevu.DefterID == defter_id)
@@ -4525,7 +4525,7 @@ def takvim():
             Randevu.FirmaID == session['firma_id'],
             Randevu.RandevuTarihi >= start_date,
             Randevu.RandevuTarihi < end_date,
-            Randevu.Durum != 'iptal'  # İptal edilen randevuları hariç tut
+            Randevu.Durum != 'Iptal'  # İptal edilen randevuları hariç tut
         )
         if defter_id:
             query = query.filter(Randevu.DefterID == defter_id)
