@@ -172,28 +172,43 @@
                         (function() {
                             const defterSelect = document.getElementById('defter_id');
                             const islemSelect = document.getElementById('islem_id');
+                            
+                            // İşlemleri yükle fonksiyonu
+                            async function loadIslemler(defterId) {
+                                // Temizle
+                                islemSelect.innerHTML = '';
+                                const opt = document.createElement('option');
+                                opt.value = '';
+                                opt.textContent = gettext('Select Operation');
+                                islemSelect.appendChild(opt);
+                                
+                                if (!defterId) return;
+                                
+                                try {
+                                    const resp = await fetch(`/api/islemler?defter_id=${defterId}`);
+                                    const data = await resp.json();
+                                    data.forEach(i => {
+                                        const o = document.createElement('option');
+                                        o.value = i.IslemID;
+                                        o.textContent = i.IslemAdi;
+                                        islemSelect.appendChild(o);
+                                    });
+                                } catch (e) {
+                                    console.error('İşlemler alınamadı', e);
+                                }
+                            }
+                            
                             if (defterSelect && islemSelect) {
-                                defterSelect.addEventListener('change', async function() {
-                                    const defterId = this.value;
-                                    // Temizle
-                                    islemSelect.innerHTML = '';
-                                    const opt = document.createElement('option');
-                                    opt.value = '';
-                                    opt.textContent = gettext('Select Operation');
-                                    islemSelect.appendChild(opt);
-                                    if (!defterId) return;
-                                    try {
-                                        const resp = await fetch(`/api/islemler?defter_id=${defterId}`);
-                                        const data = await resp.json();
-                                        data.forEach(i => {
-                                            const o = document.createElement('option');
-                                            o.value = i.IslemID;
-                                            o.textContent = i.IslemAdi;
-                                            islemSelect.appendChild(o);
-                                        });
-                                        // no-op
-                                    } catch (e) {
-                                        console.error('İşlemler alınamadı', e);
+                                // Defter değiştiğinde işlemleri yükle
+                                defterSelect.addEventListener('change', function() {
+                                    loadIslemler(this.value);
+                                });
+                                
+                                // Sayfa yüklendiğinde varsayılan defter seçiliyse işlemleri yükle
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    const defaultDefterId = defterSelect.value;
+                                    if (defaultDefterId) {
+                                        loadIslemler(defaultDefterId);
                                     }
                                 });
                             }
