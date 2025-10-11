@@ -4032,13 +4032,16 @@ def randevu_duzenle(randevu_id):
     # GET request - formu doldur
     referanslar = RandevuReferans.query.filter_by(FirmaID=session['firma_id'], Aktif=True).order_by(RandevuReferans.Ad).all()
     
-    # Randevu defteri ayarlarını al (minimum süre için)
-    defter_ayar = RandevuDefterAyar.query.filter_by(
-        FirmaID=session['firma_id'], 
-        Aktif=True
-    ).first()
+    # Randevunun defteri ayarlarını al (minimum süre için)
+    defter_ayar = None
+    if randevu.DefterID:
+        defter_ayar = RandevuDefterAyar.query.filter_by(
+            AyarID=randevu.DefterID,
+            FirmaID=session['firma_id'], 
+            Aktif=True
+        ).first()
     
-    # Minimum süre: defter ayarındaki slot dakikası, yoksa varsayılan 30 dakika
+    # Minimum süre: randevunun defter ayarındaki slot dakikası, yoksa varsayılan 30 dakika
     min_sure = defter_ayar.SlotDakika if defter_ayar else 30
     
     return render_template('randevu_duzenle.html', 
@@ -4594,16 +4597,17 @@ def takvim():
         # Admin kullanıcılar tüm defterleri görebilir
         defterler = RandevuDefterAyar.query.filter_by(FirmaID=session['firma_id'], Aktif=True).all()
     else:
-        # Normal kullanıcılar sadece yetkili oldukları randevuların defterlerini görebilir
+        # Normal kullanıcılar: Aynı deftere randevu alabilen kullanıcılar, o defterdeki tüm randevuları görebilir
+        # Kullanıcının randevu aldığı defterleri bul
         from sqlalchemy import distinct
-        yetkili_defter_ids = db.session.query(distinct(Randevu.DefterID)).join(RandevuYetki).filter(
-            RandevuYetki.KullaniciID == session['user_id'],
-            RandevuYetki.GoruntulemeYetkisi == True,
-            Randevu.FirmaID == session['firma_id']
+        kullanici_defter_ids = db.session.query(distinct(Randevu.DefterID)).filter(
+            Randevu.OlusturanKullaniciID == session['user_id'],
+            Randevu.FirmaID == session['firma_id'],
+            Randevu.DefterID.isnot(None)
         ).all()
         
-        # Yetkili defter ID'lerini liste olarak al
-        defter_id_list = [defter_id[0] for defter_id in yetkili_defter_ids if defter_id[0] is not None]
+        # Kullanıcının randevu aldığı defter ID'lerini liste olarak al
+        defter_id_list = [defter_id[0] for defter_id in kullanici_defter_ids if defter_id[0] is not None]
         
         if defter_id_list:
             defterler = RandevuDefterAyar.query.filter(
@@ -4612,7 +4616,7 @@ def takvim():
                 RandevuDefterAyar.Aktif == True
             ).all()
         else:
-            # Eğer hiç yetkili defter yoksa boş liste
+            # Eğer hiç randevu alınmamışsa boş liste
             defterler = []
     
     # Eğer defter seçilmemişse:
@@ -4623,6 +4627,7 @@ def takvim():
     
     # Randevuları getir (iptal edilen randevular hariç) - işlem bilgisi ile birlikte
     if session.get('is_admin', False):
+        # Admin: Tüm randevuları görebilir
         query = db.session.query(Randevu, RandevuIslem).outerjoin(RandevuIslem, Randevu.IslemID == RandevuIslem.IslemID).filter(
             Randevu.FirmaID == session['firma_id'],
             Randevu.RandevuTarihi >= start_date,
@@ -4638,22 +4643,26 @@ def takvim():
             randevu.islem_adi = islem.IslemAdi if islem else None
             randevular.append(randevu)
     else:
-        query = db.session.query(Randevu, RandevuIslem).join(RandevuYetki).outerjoin(RandevuIslem, Randevu.IslemID == RandevuIslem.IslemID).filter(
-            RandevuYetki.KullaniciID == session['user_id'],
-            RandevuYetki.GoruntulemeYetkisi == True,
-            Randevu.FirmaID == session['firma_id'],
-            Randevu.RandevuTarihi >= start_date,
-            Randevu.RandevuTarihi < end_date,
-            Randevu.Durum != 'Iptal'  # İptal edilen randevuları hariç tut
-        )
-        if defter_id:
-            query = query.filter(Randevu.DefterID == defter_id)
-        results = query.order_by(Randevu.RandevuTarihi).all()
-        # Randevu ve işlem bilgilerini birleştir
-        randevular = []
-        for randevu, islem in results:
-            randevu.islem_adi = islem.IslemAdi if islem else None
-            randevular.append(randevu)
+        # Normal kullanıcı: Aynı deftere randevu alabilen kullanıcılar, o defterdeki tüm randevuları görebilir
+        if defter_id_list:  # Kullanıcının randevu aldığı defterler varsa
+            query = db.session.query(Randevu, RandevuIslem).outerjoin(RandevuIslem, Randevu.IslemID == RandevuIslem.IslemID).filter(
+                Randevu.FirmaID == session['firma_id'],
+                Randevu.RandevuTarihi >= start_date,
+                Randevu.RandevuTarihi < end_date,
+                Randevu.Durum != 'Iptal',  # İptal edilen randevuları hariç tut
+                Randevu.DefterID.in_(defter_id_list)  # Sadece kullanıcının randevu aldığı defterler
+            )
+            if defter_id:
+                query = query.filter(Randevu.DefterID == defter_id)
+            results = query.order_by(Randevu.RandevuTarihi).all()
+            # Randevu ve işlem bilgilerini birleştir
+            randevular = []
+            for randevu, islem in results:
+                randevu.islem_adi = islem.IslemAdi if islem else None
+                randevular.append(randevu)
+        else:
+            # Kullanıcının hiç randevu aldığı defter yoksa boş liste
+            randevular = []
     
     # Haftalık görünüm için başlık ve gezinme verileri
     week_start_str = start_date.strftime('%Y-%m-%d') if view_type == 'week' else None
