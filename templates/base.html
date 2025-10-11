@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}CRM - Randevu Defteri{% endblock %}</title>
+    <title>{% block title %}CRMtia - Randevu Defteri{% endblock %}</title>
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
@@ -73,7 +73,7 @@
                 <i class="fas fa-bars"></i>
             </button>
             <div class="d-flex flex-column align-items-end text-end">
-                <span class="navbar-brand mb-0 h1 p-0">CRM</span>
+                <span class="navbar-brand mb-0 h1 p-0">CRMtia</span>
                 <small class="text-white-50">{{ session.get('firma_adi', '') }}</small>
             </div>
         </div>
@@ -84,7 +84,7 @@
         <a href="{{ url_for('dashboard') }}" class="d-flex align-items-center mb-1 mb-md-0 me-md-auto text-white text-decoration-none flex-column align-items-start">
             <div class="d-flex align-items-center">
                 <i class="fas fa-calendar-alt me-2"></i>
-                <span class="fs-4">CRM</span>
+                <span class="fs-4">CRMtia</span>
             </div>
             <img src="{{ url_for('static', filename='uploads/users/user_' ~ session.user_id ~ '.jpg') }}" 
                  alt="Kullanıcı Fotoğrafı"

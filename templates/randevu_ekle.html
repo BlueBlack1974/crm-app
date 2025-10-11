@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('New Appointment') }} - CRM{% endblock %}
+{% block title %}{{ _('New Appointment') }} - CRMtia{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -527,7 +527,7 @@
         
         // İşlem seçildiğinde sadece slotları yenile
         document.getElementById('islem_id').addEventListener('change', function() {
-            clearSelection();
+            // İşlem değiştiğinde slot seçimini koru, sadece slotları yenile
             loadSlots();
         });
         
@@ -1032,6 +1032,8 @@
             }
             
             formatTelefon(telefonInput);
+            // Telefon validation'ını çalıştır
+            validateTelefon(telefonInput);
         }
         
         // E-posta adresini parçala ve doldur
@@ -1041,6 +1043,8 @@
                 document.getElementById('musteri_email_kullanici').value = emailParts[0];
                 document.getElementById('musteri_email_domain').value = emailParts[1];
                 updateEmailField();
+                // E-posta validation'ını çalıştır
+                validateEmail();
             }
         }
         
@@ -1084,7 +1088,24 @@
                             console.error('İlçe yükleme hatası:', error);
                         });
                 }
-            }, 500);
+            }, 1000); // Timeout süresini artırdık
+        }
+        
+        // İlçe bilgisini doğrudan set et (fallback)
+        if (musteri.ilce) {
+            setTimeout(() => {
+                const ilceSelect = document.getElementById('musteri_ilce');
+                if (ilceSelect) {
+                    // İlçe seçenekleri arasında arama yap
+                    for (let i = 0; i < ilceSelect.options.length; i++) {
+                        if (ilceSelect.options[i].value === musteri.ilce || 
+                            ilceSelect.options[i].textContent === musteri.ilce) {
+                            ilceSelect.value = musteri.ilce;
+                            break;
+                        }
+                    }
+                }
+            }, 1500); // Daha uzun timeout
         }
         
         if (musteri.adres) {
@@ -1105,6 +1126,15 @@
         if (musteri.notlar) {
             document.getElementById('musteri_notlar').value = musteri.notlar;
         }
+        
+        // Form validation'ını kontrol et ve submit butonunu aktif et
+        setTimeout(() => {
+            const formValid = validateForm();
+            const submitBtn = document.getElementById('submitBtn');
+            if (formValid && submitBtn) {
+                submitBtn.disabled = false;
+            }
+        }, 100);
         
         // Alanları düzenlenebilir bırak - kullanıcı isterse değiştirebilsin
         // const musteriForm = document.getElementById('musteriForm');
