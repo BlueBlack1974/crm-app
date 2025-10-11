@@ -175,35 +175,52 @@
                             
                             // İşlemleri yükle fonksiyonu
                             async function loadIslemler(defterId) {
+                                console.log('loadIslemler çağrıldı, defterId:', defterId);
+                                
                                 // Temizle
                                 islemSelect.innerHTML = '';
                                 const opt = document.createElement('option');
                                 opt.value = '';
-                                opt.textContent = gettext('Select Operation');
+                                opt.textContent = 'İşlem Seçin';
                                 islemSelect.appendChild(opt);
                                 
-                                if (!defterId) return;
+                                if (!defterId) {
+                                    console.log('Defter ID boş, işlemler yüklenmeyecek');
+                                    return;
+                                }
                                 
                                 try {
+                                    console.log('API isteği gönderiliyor:', `/api/islemler?defter_id=${defterId}`);
                                     const resp = await fetch(`/api/islemler?defter_id=${defterId}`);
                                     const data = await resp.json();
+                                    console.log('API yanıtı:', data);
+                                    
                                     data.forEach(i => {
                                         const o = document.createElement('option');
                                         o.value = i.IslemID;
                                         o.textContent = i.IslemAdi;
                                         islemSelect.appendChild(o);
                                     });
+                                    
+                                    console.log('İşlemler yüklendi, toplam:', data.length);
                                 } catch (e) {
                                     console.error('İşlemler alınamadı', e);
                                 }
                             }
                             
                             if (defterSelect && islemSelect) {
+                                console.log('Defter ve işlem select elementleri bulundu');
+                                
                                 // Defter değiştiğinde işlemleri yükle
                                 defterSelect.addEventListener('change', function() {
+                                    console.log('Defter değişti, yeni değer:', this.value);
                                     loadIslemler(this.value);
                                 });
                                 
+                            } else {
+                                console.error('Defter veya işlem select elementi bulunamadı');
+                                console.log('defterSelect:', defterSelect);
+                                console.log('islemSelect:', islemSelect);
                             }
                         })();
                     </script>
