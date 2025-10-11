@@ -51,18 +51,20 @@
     .appointment-item {
         background: #007bff;
         color: white;
-        padding: 4px 8px;
+        padding: 6px 10px;
         margin: 2px 0;
         border-radius: 4px;
         font-size: 0.8rem;
         font-weight: 500;
         cursor: move;
         position: relative;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
         max-width: 100%;
         box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        min-height: 40px;
+        line-height: 1.2;
     }
     
     .appointment-item.dragging {
@@ -124,17 +126,18 @@
         left: 2px;
         right: 2px;
         border-radius: 3px;
-        padding: 2px 4px;
+        padding: 4px 6px;
         font-size: 0.7rem;
         font-weight: 500;
         cursor: move;
         border: 1px solid rgba(255,255,255,0.3);
         color: white;
         box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        min-height: 20px;
+        overflow: visible;
+        text-overflow: unset;
+        white-space: normal;
+        min-height: 30px;
+        line-height: 1.2;
         max-height: 35px;
     }
     
@@ -344,7 +347,10 @@
                                     {% if randevu.MusteriEmail %}<strong>{{ _('Email') }}:</strong> {{ randevu.MusteriEmail }}<br/>{% endif %}
                                     {% if randevu.RandevuAciklamasi %}<strong>{{ _('Description') }}:</strong> {{ randevu.RandevuAciklamasi }}{% endif %}"
                              style="cursor: move;">
-                            {{ randevu.RandevuTarihi.strftime('%H:%M') }} {{ _title_disp_m }}
+                            <div>{{ randevu.RandevuTarihi.strftime('%H:%M') }} {{ randevu.MusteriAdi }} {{ randevu.MusteriSoyadi or '' }}{% if randevu.RandevuBaslik and randevu.RandevuBaslik != 'Yok' %} ({{ randevu.RandevuBaslik }}){% endif %}</div>
+                            {% if randevu.islem_adi %}
+                            <div class="small text-muted">{{ randevu.islem_adi }}</div>
+                            {% endif %}
                         </div>
                     {% endif %}
                 {% endfor %}
@@ -452,7 +458,10 @@
                                         {% if randevu.MusteriEmail %}<strong>{{ _('Email') }}:</strong> {{ randevu.MusteriEmail }}<br/>{% endif %}
                                         {% if randevu.RandevuAciklamasi %}<strong>{{ _('Description') }}:</strong> {{ randevu.RandevuAciklamasi }}{% endif %}"
                                  style="cursor: move; height: {{ height_px }}px;">
-                                {{ randevu.RandevuTarihi.strftime('%H:%M') }} {{ _title_disp }}
+                                <div>{{ randevu.RandevuTarihi.strftime('%H:%M') }} {{ randevu.MusteriAdi }} {{ randevu.MusteriSoyadi or '' }}{% if randevu.RandevuBaslik and randevu.RandevuBaslik != 'Yok' %} ({{ randevu.RandevuBaslik }}){% endif %}</div>
+                                {% if randevu.islem_adi %}
+                                <div class="small text-muted">{{ randevu.islem_adi }}</div>
+                                {% endif %}
                             </div>
                         {% endif %}
                     {% endfor %}

@@ -4537,9 +4537,9 @@ def takvim():
     if not defter_id and view_type == 'week' and defterler:
         defter_id = defterler[0].AyarID
     
-    # Randevuları getir (iptal edilen randevular hariç)
+    # Randevuları getir (iptal edilen randevular hariç) - işlem bilgisi ile birlikte
     if session.get('is_admin', False):
-        query = Randevu.query.filter(
+        query = db.session.query(Randevu, RandevuIslem).outerjoin(RandevuIslem, Randevu.IslemID == RandevuIslem.IslemID).filter(
             Randevu.FirmaID == session['firma_id'],
             Randevu.RandevuTarihi >= start_date,
             Randevu.RandevuTarihi < end_date,
@@ -4547,9 +4547,14 @@ def takvim():
         )
         if defter_id:
             query = query.filter(Randevu.DefterID == defter_id)
-        randevular = query.order_by(Randevu.RandevuTarihi).all()
+        results = query.order_by(Randevu.RandevuTarihi).all()
+        # Randevu ve işlem bilgilerini birleştir
+        randevular = []
+        for randevu, islem in results:
+            randevu.islem_adi = islem.IslemAdi if islem else None
+            randevular.append(randevu)
     else:
-        query = db.session.query(Randevu).join(RandevuYetki).filter(
+        query = db.session.query(Randevu, RandevuIslem).join(RandevuYetki).outerjoin(RandevuIslem, Randevu.IslemID == RandevuIslem.IslemID).filter(
             RandevuYetki.KullaniciID == session['user_id'],
             RandevuYetki.GoruntulemeYetkisi == True,
             Randevu.FirmaID == session['firma_id'],
@@ -4559,7 +4564,12 @@ def takvim():
         )
         if defter_id:
             query = query.filter(Randevu.DefterID == defter_id)
-        randevular = query.order_by(Randevu.RandevuTarihi).all()
+        results = query.order_by(Randevu.RandevuTarihi).all()
+        # Randevu ve işlem bilgilerini birleştir
+        randevular = []
+        for randevu, islem in results:
+            randevu.islem_adi = islem.IslemAdi if islem else None
+            randevular.append(randevu)
     
     # Haftalık görünüm için başlık ve gezinme verileri
     week_start_str = start_date.strftime('%Y-%m-%d') if view_type == 'week' else None
@@ -4567,7 +4577,26 @@ def takvim():
     next_week_start = (start_date + timedelta(days=7)).strftime('%Y-%m-%d') if view_type == 'week' else None
     if view_type == 'week':
         week_end_display = (end_date - timedelta(days=1))
-        week_range_title = f"{start_date.strftime('%d %b %Y')} - {week_end_display.strftime('%d %b %Y')}"
+        # Dil kontrolü
+        current_lang = session.get('language', 'tr')
+        if current_lang == 'en':
+            # İngilizce ay isimleri
+            english_months = {
+                1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr', 5: 'May', 6: 'Jun',
+                7: 'Jul', 8: 'Aug', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dec'
+            }
+            start_month = english_months[start_date.month]
+            end_month = english_months[week_end_display.month]
+        else:
+            # Türkçe ay isimleri
+            turkish_months = {
+                1: 'Oca', 2: 'Şub', 3: 'Mar', 4: 'Nis', 5: 'May', 6: 'Haz',
+                7: 'Tem', 8: 'Ağu', 9: 'Eyl', 10: 'Eki', 11: 'Kas', 12: 'Ara'
+            }
+            start_month = turkish_months[start_date.month]
+            end_month = turkish_months[week_end_display.month]
+        
+        week_range_title = f"{start_date.day} {start_month} {start_date.year} - {week_end_display.day} {end_month} {week_end_display.year}"
     else:
         week_range_title = None
 

@@ -338,10 +338,10 @@
                                         <input type="tel" class="form-control" id="musteri_telefon" name="musteri_telefon" 
                                                placeholder="536 555 66 44"
                                                pattern="[0-9\s]{10,15}" 
-                                               title="Geçerli bir telefon numarası girin (örn: 536 555 66 44)">
+                                               title="{{ _('Enter a valid phone number (e.g.: 536 555 66 44)') }}">
                                     </div>
                                     <div class="invalid-feedback" id="telefon-error">
-                                        Geçerli bir telefon numarası girin (örn: 536 555 66 44)
+                                        {{ _('Enter a valid phone number (e.g.: 536 555 66 44)') }}
                                     </div>
                                 </div>
                             </div>
@@ -359,7 +359,7 @@
                                         <input type="hidden" id="musteri_email" name="musteri_email">
                                     </div>
                                     <div class="invalid-feedback" id="email-error">
-                                        Geçerli bir e-posta adresi girin
+                                        {{ _('Enter a valid email address') }}
                                     </div>
                                 </div>
                             </div>
@@ -1187,11 +1187,16 @@
         }
         
         // Türkiye telefon numarası kontrolü (10 haneli, 5 ile başlamalı)
+        const currentLang = document.documentElement.lang || 'tr';
         if (cleanValue.length === 10 && cleanValue.startsWith('5') && /^[0-9]+$/.test(cleanValue)) {
-            setValidationSuccess(input.id, 'Geçerli telefon numarası');
+            const successMessage = currentLang === 'en' ? 'Valid phone number' : 'Geçerli telefon numarası';
+            setValidationSuccess(input.id, successMessage);
             return true;
         } else {
-            setValidationError(input.id, 'Geçerli bir telefon numarası girin (örn: 536 555 66 44)');
+            const errorMessage = currentLang === 'en' 
+                ? 'Enter a valid phone number (e.g.: 536 555 66 44)'
+                : 'Geçerli bir telefon numarası girin (örn: 536 555 66 44)';
+            setValidationError(input.id, errorMessage);
             return false;
         }
     }
@@ -1220,17 +1225,21 @@
             return true;
         }
         
+        const currentLang = document.documentElement.lang || 'tr';
         if (kullanici && domain) {
             const fullEmail = kullanici + '@' + domain;
             if (emailRegex.test(fullEmail)) {
-                setValidationSuccess('musteri_email', 'Geçerli e-posta adresi');
+                const successMessage = currentLang === 'en' ? 'Valid email address' : 'Geçerli e-posta adresi';
+                setValidationSuccess('musteri_email', successMessage);
                 return true;
             } else {
-                setValidationError('musteri_email', 'Geçerli bir e-posta adresi girin');
+                const errorMessage = currentLang === 'en' ? 'Enter a valid email address' : 'Geçerli bir e-posta adresi girin';
+                setValidationError('musteri_email', errorMessage);
                 return false;
             }
         } else {
-            setValidationError('musteri_email', 'E-posta kullanıcı adı ve domain gerekli');
+            const errorMessage = currentLang === 'en' ? 'Email username and domain required' : 'E-posta kullanıcı adı ve domain gerekli';
+            setValidationError('musteri_email', errorMessage);
             return false;
         }
     }
@@ -1445,7 +1454,11 @@
             form.addEventListener('submit', function(e) {
                 if (!validateForm()) {
                     e.preventDefault();
-                    alert('Lütfen geçerli telefon numarası ve e-posta adresi girin.');
+                    const currentLang = document.documentElement.lang || 'tr';
+                    const errorMessage = currentLang === 'en' 
+                        ? 'Please enter valid phone number and email address.'
+                        : 'Lütfen geçerli telefon numarası ve e-posta adresi girin.';
+                    alert(errorMessage);
                     return false;
                 }
             });

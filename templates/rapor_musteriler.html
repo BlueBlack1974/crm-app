@@ -580,7 +580,11 @@ function loadCustomerDetailReport(customerId) {
         })
         .catch(error => {
             console.error('Müşteri detay raporu yüklenirken hata:', error);
-            alert('Rapor yüklenirken bir hata oluştu.');
+            const currentLang = document.documentElement.lang || 'tr';
+            const errorMessage = currentLang === 'en' 
+                ? 'An error occurred while loading the report.'
+                : 'Rapor yüklenirken bir hata oluştu.';
+            alert(errorMessage);
         });
 }
 
