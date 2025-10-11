@@ -4956,8 +4956,10 @@ def api_slot_check():
         }), 200
         
     except Exception as e:
+        import traceback
         print(f"Slot kontrol hatası: {e}")
-        return jsonify({"success": False, "message": "Sunucu hatası"}), 500
+        print(f"Traceback: {traceback.format_exc()}")
+        return jsonify({"success": False, "message": f"Sunucu hatası: {str(e)}"}), 500
 
 # JSON API: Defter blokları (listele/ekle/sil) - randevu ekranından inline yönetim için
 @app.route('/api/defter_bloklar', methods=['GET'])

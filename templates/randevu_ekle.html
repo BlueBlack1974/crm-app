@@ -700,7 +700,7 @@
         })
         .catch(error => {
             console.error('Slot kontrol hatası:', error);
-            statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle text-warning"></i> Kontrol edilemedi';
+            statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle text-warning"></i> Kontrol edilemedi: ' + error.message;
             statusDiv.className = 'small text-warning mt-1';
         });
     }
