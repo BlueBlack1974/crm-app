@@ -90,10 +90,11 @@
                     <label for="defter_id" class="form-label">{{ _('Appointment Book') }} *</label>
                     {% if defter_ayarlar %}
                         <select class="form-select" id="defter_id" name="defter_id" required>
-                            <option value="" selected>{{ _('Select appointment book...') }}</option>
+                            <option value="">{{ _('Select appointment book...') }}</option>
                             {% for defter in defter_ayarlar %}
                                 <option value="{{ defter.AyarID }}" 
-                                        data-slot-dakika="{{ defter.SlotDakika }}">
+                                        data-slot-dakika="{{ defter.SlotDakika }}"
+                                        {% if defter.AyarID == varsayilan_defter.AyarID %}selected{% endif %}>
                                     {{ defter.DefterAdi }} ({{ defter.SlotDakika }} dk)
                                 </option>
                             {% endfor %}
@@ -209,6 +210,25 @@
                                     const defaultDefterId = defterSelect.value;
                                     if (defaultDefterId) {
                                         loadIslemler(defaultDefterId);
+                                        
+                                        // Varsayılan defter seçiliyse step2'yi göster
+                                        const step2 = document.getElementById('step2');
+                                        if (step2) {
+                                            step2.style.display = 'block';
+                                            step2.classList.remove('calendar-disabled');
+                                        }
+                                        
+                                        // Bugünün tarihini ata
+                                        const tarihInput = document.getElementById('tarih_gun');
+                                        if (tarihInput && !tarihInput.value) {
+                                            const today = new Date().toISOString().split('T')[0];
+                                            tarihInput.value = today;
+                                        }
+                                        
+                                        // Slotları yükle
+                                        if (typeof loadSlots === 'function') {
+                                            loadSlots();
+                                        }
                                     }
                                 });
                             }

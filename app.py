@@ -4373,17 +4373,11 @@ def api_islemler():
     firma_id = session.get('firma_id')
     defter_id = request.args.get('defter_id', type=int)
     
-    print(f"API İşlemler - Firma ID: {firma_id}, Defter ID: {defter_id}")
-    
     q = RandevuIslem.query.filter_by(FirmaID=firma_id, Aktif=True)
     if defter_id:
         q = q.filter((RandevuIslem.DefterID == defter_id) | (RandevuIslem.DefterID.is_(None)))
     
     items = q.order_by(RandevuIslem.IslemAdi).all()
-    
-    print(f"Bulunan işlem sayısı: {len(items)}")
-    for item in items:
-        print(f"  - {item.IslemAdi} (DefterID: {item.DefterID})")
     
     return jsonify([
         {
