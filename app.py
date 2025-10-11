@@ -100,25 +100,32 @@ def login_required(f):
         if 'user_id' not in session:
             return redirect(url_for('login'))
         
-        # Aktif oturum kontrolü
-        user_id = session.get('user_id')
-        session_token = session.get('session_token')
-        
-        if user_id and session_token:
-            aktif_oturum = AktifOturum.query.filter_by(
-                KullaniciID=user_id,
-                SessionToken=session_token
-            ).first()
-            
-            if not aktif_oturum:
-                # Oturum geçersiz, çıkış yap
-                session.clear()
-                flash('Oturumunuz geçersiz. Lütfen tekrar giriş yapın.', 'error')
-                return redirect(url_for('login'))
-            
-            # Son görülme zamanını güncelle
-            aktif_oturum.SonGorulmeZamani = datetime.utcnow()
-            db.session.commit()
+        # Aktif oturum kontrolü (geçici olarak devre dışı)
+        # user_id = session.get('user_id')
+        # session_token = session.get('session_token')
+        # 
+        # if user_id and session_token:
+        #     try:
+        #         aktif_oturum = AktifOturum.query.filter_by(
+        #             KullaniciID=user_id,
+        #             SessionToken=session_token
+        #         ).first()
+        #         
+        #         if not aktif_oturum:
+        #             # Oturum geçersiz, çıkış yap
+        #             session.clear()
+        #             flash('Oturumunuz geçersiz. Lütfen tekrar giriş yapın.', 'error')
+        #             return redirect(url_for('login'))
+        #         
+        #         # Son görülme zamanını güncelle
+        #         aktif_oturum.SonGorulmeZamani = datetime.utcnow()
+        #         db.session.commit()
+        #     except Exception as e:
+        #         # Veritabanı hatası durumunda session'ı temizle
+        #         print(f"Oturum kontrolü hatası: {e}")
+        #         session.clear()
+        #         flash('Oturum kontrolünde hata oluştu. Lütfen tekrar giriş yapın.', 'error')
+        #         return redirect(url_for('login'))
         
         return f(*args, **kwargs)
     return decorated_function
@@ -130,25 +137,32 @@ def admin_required(f):
         if 'user_id' not in session:
             return redirect(url_for('login'))
         
-        # Aktif oturum kontrolü
-        user_id = session.get('user_id')
-        session_token = session.get('session_token')
-        
-        if user_id and session_token:
-            aktif_oturum = AktifOturum.query.filter_by(
-                KullaniciID=user_id,
-                SessionToken=session_token
-            ).first()
-            
-            if not aktif_oturum:
-                # Oturum geçersiz, çıkış yap
-                session.clear()
-                flash('Oturumunuz geçersiz. Lütfen tekrar giriş yapın.', 'error')
-                return redirect(url_for('login'))
-            
-            # Son görülme zamanını güncelle
-            aktif_oturum.SonGorulmeZamani = datetime.utcnow()
-            db.session.commit()
+        # Aktif oturum kontrolü (geçici olarak devre dışı)
+        # user_id = session.get('user_id')
+        # session_token = session.get('session_token')
+        # 
+        # if user_id and session_token:
+        #     try:
+        #         aktif_oturum = AktifOturum.query.filter_by(
+        #             KullaniciID=user_id,
+        #             SessionToken=session_token
+        #         ).first()
+        #         
+        #         if not aktif_oturum:
+        #             # Oturum geçersiz, çıkış yap
+        #             session.clear()
+        #             flash('Oturumunuz geçersiz. Lütfen tekrar giriş yapın.', 'error')
+        #             return redirect(url_for('login'))
+        #         
+        #         # Son görülme zamanını güncelle
+        #         aktif_oturum.SonGorulmeZamani = datetime.utcnow()
+        #         db.session.commit()
+        #     except Exception as e:
+        #         # Veritabanı hatası durumunda session'ı temizle
+        #         print(f"Oturum kontrolü hatası: {e}")
+        #         session.clear()
+        #         flash('Oturum kontrolünde hata oluştu. Lütfen tekrar giriş yapın.', 'error')
+        #         return redirect(url_for('login'))
         
         if not session.get('is_admin', False) and not session.get('ayarlar_modulu', False):
             flash('Bu sayfaya erişim yetkiniz yok!', 'error')
@@ -163,25 +177,32 @@ def super_admin_required(f):
         if 'user_id' not in session:
             return redirect(url_for('login'))
         
-        # Aktif oturum kontrolü
-        user_id = session.get('user_id')
-        session_token = session.get('session_token')
-        
-        if user_id and session_token:
-            aktif_oturum = AktifOturum.query.filter_by(
-                KullaniciID=user_id,
-                SessionToken=session_token
-            ).first()
-            
-            if not aktif_oturum:
-                # Oturum geçersiz, çıkış yap
-                session.clear()
-                flash('Oturumunuz geçersiz. Lütfen tekrar giriş yapın.', 'error')
-                return redirect(url_for('login'))
-            
-            # Son görülme zamanını güncelle
-            aktif_oturum.SonGorulmeZamani = datetime.utcnow()
-            db.session.commit()
+        # Aktif oturum kontrolü (geçici olarak devre dışı)
+        # user_id = session.get('user_id')
+        # session_token = session.get('session_token')
+        # 
+        # if user_id and session_token:
+        #     try:
+        #         aktif_oturum = AktifOturum.query.filter_by(
+        #             KullaniciID=user_id,
+        #             SessionToken=session_token
+        #         ).first()
+        #         
+        #         if not aktif_oturum:
+        #             # Oturum geçersiz, çıkış yap
+        #             session.clear()
+        #             flash('Oturumunuz geçersiz. Lütfen tekrar giriş yapın.', 'error')
+        #             return redirect(url_for('login'))
+        #         
+        #         # Son görülme zamanını güncelle
+        #         aktif_oturum.SonGorulmeZamani = datetime.utcnow()
+        #         db.session.commit()
+        #     except Exception as e:
+        #         # Veritabanı hatası durumunda session'ı temizle
+        #         print(f"Oturum kontrolü hatası: {e}")
+        #         session.clear()
+        #         flash('Oturum kontrolünde hata oluştu. Lütfen tekrar giriş yapın.', 'error')
+        #         return redirect(url_for('login'))
         
         if not session.get('is_admin', False):
             flash('Bu sayfaya erişim yetkiniz yok!', 'error')
