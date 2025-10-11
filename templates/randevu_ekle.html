@@ -488,7 +488,15 @@
             document.getElementById('step2').style.display = 'block';
             document.getElementById('step3').style.display = 'none';
         });
-        document.getElementById('sure').addEventListener('change', () => { clearSelection(); loadSlots(); });
+        document.getElementById('sure').addEventListener('change', () => { 
+            clearSelection(); 
+            loadSlots(); 
+            // Eğer saat seçiliyse, yeni süre ile kontrol et
+            const selectedTime = document.getElementById('saat').value;
+            if (selectedTime) {
+                checkSlotAvailability(selectedTime);
+            }
+        });
         document.getElementById('prevDay').addEventListener('click', () => shiftDay(-1));
         document.getElementById('nextDay').addEventListener('click', () => shiftDay(1));
         
@@ -632,8 +640,69 @@
         document.getElementById('step3').style.display = 'block';
         document.getElementById('submitBtn').disabled = false;
         
+        // Real-time slot kontrolü
+        checkSlotAvailability(time);
+        
         // Scroll to step3
         document.getElementById('step3').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    function checkSlotAvailability(time) {
+        const date = document.getElementById('tarih_gun').value;
+        const defterId = document.getElementById('defter_id').value;
+        const sure = document.getElementById('sure').value || 60;
+        
+        if (!date || !defterId || !time) return;
+        
+        // Status div'i oluştur veya bul
+        let statusDiv = document.getElementById('slotStatus');
+        if (!statusDiv) {
+            statusDiv = document.createElement('div');
+            statusDiv.id = 'slotStatus';
+            statusDiv.className = 'small mt-1';
+            document.getElementById('selectedInfo').parentNode.appendChild(statusDiv);
+        }
+        
+        // Loading göstergesi
+        statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin text-info"></i> Kontrol ediliyor...';
+        statusDiv.className = 'small text-info mt-1';
+        
+        // API'ye istek gönder
+        fetch('/api/slot/check', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                tarih: date,
+                saat: time,
+                defter_id: parseInt(defterId),
+                sure: parseInt(sure)
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.available) {
+                statusDiv.innerHTML = '<i class="fas fa-check-circle text-success"></i> Slot müsait';
+                statusDiv.className = 'small text-success mt-1';
+                document.getElementById('submitBtn').disabled = false;
+            } else {
+                statusDiv.innerHTML = '<i class="fas fa-times-circle text-danger"></i> ' + (data.message || 'Slot müsait değil');
+                statusDiv.className = 'small text-danger mt-1';
+                document.getElementById('submitBtn').disabled = true;
+                
+                // Çakışan randevu bilgisi varsa göster
+                if (data.conflicting_appointment) {
+                    const conflict = data.conflicting_appointment;
+                    statusDiv.innerHTML += `<br><small class="text-muted">Çakışan: ${conflict.customer} (${conflict.start}-${conflict.end})</small>`;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Slot kontrol hatası:', error);
+            statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle text-warning"></i> Kontrol edilemedi';
+            statusDiv.className = 'small text-warning mt-1';
+        });
     }
 
     // Müşteri arama sistemi

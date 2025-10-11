@@ -4004,19 +4004,23 @@ def randevu_ekle():
             flash(f'Randevu süresi {defter_ayar.SlotDakika} dakikanın katları olmalı', 'error')
             return redirect(url_for('randevu_ekle'))
 
-        # Çakışan randevu ve blok kontrolü
+        # Çakışan randevu ve blok kontrolü - Optimistic Locking ile güçlendirilmiş
         randevu_bas = randevu_dt
         randevu_bit = randevu_dt + timedelta(minutes=randevu_suresi)
 
-        # 1) Mevcut randevularla çakışma (Python tarafında kontrol)
+        # 1) Mevcut randevularla çakışma kontrolü (Optimistic Locking)
         day_start_chk = datetime(randevu_dt.year, randevu_dt.month, randevu_dt.day, 0, 0)
         day_end_chk = day_start_chk + timedelta(days=1)
+        
+        # İlk kontrol - genel çakışma
         existing_for_defter = Randevu.query.filter(
             Randevu.FirmaID == session['firma_id'],
             Randevu.DefterID == defter_id,
             Randevu.RandevuTarihi >= day_start_chk,
-            Randevu.RandevuTarihi < day_end_chk
+            Randevu.RandevuTarihi < day_end_chk,
+            Randevu.Durum != 'Iptal'  # İptal edilen randevuları hariç tut
         ).all()
+        
         for r in existing_for_defter:
             r_start = r.RandevuTarihi
             r_dur = r.RandevuSuresi or 60
@@ -4136,6 +4140,24 @@ def randevu_ekle():
             db.session.flush()  # ID'yi almak için
             musteri_id = musteri.MusteriID
 
+        # OPTIMISTIC LOCKING: Randevu oluşturmadan hemen önce son kontrol
+        # Bu, eş zamanlı randevu oluşturma girişimlerini engeller
+        final_check = Randevu.query.filter(
+            Randevu.FirmaID == session['firma_id'],
+            Randevu.DefterID == defter_id,
+            Randevu.RandevuTarihi >= day_start_chk,
+            Randevu.RandevuTarihi < day_end_chk,
+            Randevu.Durum != 'Iptal'
+        ).all()
+        
+        for r in final_check:
+            r_start = r.RandevuTarihi
+            r_dur = r.RandevuSuresi or 60
+            r_end = r_start + timedelta(minutes=int(r_dur))
+            if r_start < randevu_bit and randevu_bas < r_end:
+                flash('Bu slot başka bir kullanıcı tarafından rezerve edildi. Lütfen başka bir saat seçin.', 'error')
+                return redirect(url_for('randevu_ekle'))
+
         randevu = Randevu(
             RandevuBaslik=(ref.Ad if ref else 'Yok'),
             RandevuAciklamasi=request.form['aciklama'],
@@ -4152,8 +4174,13 @@ def randevu_ekle():
             DefterID=defter_id  # Defter ID'sini ekle
         )
         
-        db.session.add(randevu)
-        db.session.commit()
+        try:
+            db.session.add(randevu)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            flash('Randevu oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.', 'error')
+            return redirect(url_for('randevu_ekle'))
 
         # SMS: randevu olusturuldugunda gonder
         try:
@@ -4607,15 +4634,16 @@ def api_randevu_tasi():
     except Exception as e:
         print(f"Slot yuvarlama hatası: {e}")
 
-    # Çakışma kontrolü (aynı defter için)
+    # Çakışma kontrolü (aynı defter için) - Optimistic Locking ile güçlendirilmiş
     randevu_suresi = randevu.RandevuSuresi or 60
     bitis_tarihi = yeni_dt + timedelta(minutes=randevu_suresi)
     
-    # Mevcut randevuları kontrol et
+    # Mevcut randevuları kontrol et (iptal edilenleri hariç tut)
     mevcut_randevular = Randevu.query.filter(
         Randevu.FirmaID == session['firma_id'],
         Randevu.DefterID == randevu.DefterID,
-        Randevu.RandevuID != randevu_id
+        Randevu.RandevuID != randevu_id,
+        Randevu.Durum != 'Iptal'  # İptal edilen randevuları hariç tut
     ).all()
     
     cakisan = None
@@ -4631,12 +4659,16 @@ def api_randevu_tasi():
     if cakisan:
         return jsonify({"success": False, "message": "Bu saatte başka randevu var"}), 400
     
-    # Tarihi güncelle
+    # Tarihi güncelle - Optimistic Locking ile korumalı
     try:
         eski_tarih = randevu.RandevuTarihi
         randevu.RandevuTarihi = yeni_dt
         db.session.commit()
         print(f"Randevu {randevu_id} başarıyla taşındı")
+    except Exception as e:
+        db.session.rollback()
+        print(f"Randevu taşıma hatası: {e}")
+        return jsonify({"success": False, "message": "Randevu taşınırken bir hata oluştu"}), 500
 
         # Bildirim: randevu taşındı (olusturana bildirim)
         try:
@@ -4802,6 +4834,130 @@ def api_slots():
         cur += timedelta(minutes=slot_dk)
 
     return jsonify({"success": True, "slots": slots})
+
+# API: Slot müsaitlik kontrolü (Real-time UI feedback için)
+@app.route('/api/slot/check', methods=['POST'])
+@login_required
+def api_slot_check():
+    """Belirli bir slot'un müsait olup olmadığını kontrol eder"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "message": "Geçersiz veri"}), 400
+        
+        tarih_str = data.get('tarih')
+        saat_str = data.get('saat')
+        defter_id = data.get('defter_id', type=int)
+        randevu_suresi = data.get('sure', 60, type=int)
+        exclude_randevu_id = data.get('exclude_randevu_id', type=int)  # Düzenleme sırasında kendi randevusunu hariç tut
+        
+        if not tarih_str or not saat_str or not defter_id:
+            return jsonify({"success": False, "message": "Eksik parametreler"}), 400
+        
+        # Tarih/saat parse et
+        try:
+            randevu_dt = datetime.strptime(f"{tarih_str} {saat_str}", '%Y-%m-%d %H:%M')
+        except ValueError:
+            return jsonify({"success": False, "message": "Geçersiz tarih/saat formatı"}), 400
+        
+        # Geçmiş tarih kontrolü
+        if randevu_dt < datetime.now():
+            return jsonify({"success": False, "available": False, "message": "Geçmiş tarih/saat"}), 200
+        
+        # Defter kontrolü
+        defter_ayar = RandevuDefterAyar.query.filter_by(
+            AyarID=defter_id, 
+            FirmaID=session['firma_id'], 
+            Aktif=True
+        ).first()
+        if not defter_ayar:
+            return jsonify({"success": False, "message": "Defter bulunamadı"}), 400
+        
+        # Süre validation
+        if randevu_suresi % defter_ayar.SlotDakika != 0:
+            return jsonify({"success": False, "available": False, "message": f"Süre {defter_ayar.SlotDakika} dakikanın katları olmalı"}), 200
+        
+        # Çakışma kontrolü
+        randevu_bas = randevu_dt
+        randevu_bit = randevu_dt + timedelta(minutes=randevu_suresi)
+        
+        day_start = datetime(randevu_dt.year, randevu_dt.month, randevu_dt.day, 0, 0)
+        day_end = day_start + timedelta(days=1)
+        
+        # Mevcut randevuları kontrol et
+        query = Randevu.query.filter(
+            Randevu.FirmaID == session['firma_id'],
+            Randevu.DefterID == defter_id,
+            Randevu.RandevuTarihi >= day_start,
+            Randevu.RandevuTarihi < day_end,
+            Randevu.Durum != 'Iptal'
+        )
+        
+        if exclude_randevu_id:
+            query = query.filter(Randevu.RandevuID != exclude_randevu_id)
+        
+        existing_randevular = query.all()
+        
+        for r in existing_randevular:
+            r_start = r.RandevuTarihi
+            r_dur = r.RandevuSuresi or 60
+            r_end = r_start + timedelta(minutes=int(r_dur))
+            if r_start < randevu_bit and randevu_bas < r_end:
+                return jsonify({
+                    "success": True, 
+                    "available": False, 
+                    "message": "Bu saatte mevcut randevu var",
+                    "conflicting_appointment": {
+                        "id": r.RandevuID,
+                        "title": r.RandevuBaslik,
+                        "start": r_start.strftime('%H:%M'),
+                        "end": r_end.strftime('%H:%M'),
+                        "customer": f"{r.MusteriAdi} {r.MusteriSoyadi or ''}".strip()
+                    }
+                }), 200
+        
+        # Blok kontrolü
+        from sqlalchemy import or_
+        gun = randevu_dt.date()
+        bloklar = db.session.query(RandevuDefterBlok).filter(
+            RandevuDefterBlok.FirmaID == session['firma_id'],
+            RandevuDefterBlok.Aktif == True,
+            RandevuDefterBlok.BaslangicTarih <= gun,
+            or_(RandevuDefterBlok.BitisTarih == None, RandevuDefterBlok.BitisTarih >= gun),
+            or_(RandevuDefterBlok.DefterID == None, RandevuDefterBlok.DefterID == defter_id)
+        ).all()
+        
+        def is_blocked_interval(bas: datetime, bit: datetime) -> bool:
+            for b in bloklar:
+                if not b.SaatBaslangic or not b.SaatBitis:
+                    return True
+                try:
+                    bh, bm = map(int, b.SaatBaslangic.split(':'))
+                    ehh, emm = map(int, b.SaatBitis.split(':'))
+                except:
+                    continue
+                b_start = datetime(gun.year, gun.month, gun.day, bh, bm)
+                b_end = datetime(gun.year, gun.month, gun.day, ehh, emm)
+                if b_start < bit and bas < b_end:
+                    return True
+            return False
+        
+        if is_blocked_interval(randevu_bas, randevu_bit):
+            return jsonify({
+                "success": True, 
+                "available": False, 
+                "message": "Bu saat aralığı bloklu"
+            }), 200
+        
+        return jsonify({
+            "success": True, 
+            "available": True, 
+            "message": "Slot müsait"
+        }), 200
+        
+    except Exception as e:
+        print(f"Slot kontrol hatası: {e}")
+        return jsonify({"success": False, "message": "Sunucu hatası"}), 500
 
 # JSON API: Defter blokları (listele/ekle/sil) - randevu ekranından inline yönetim için
 @app.route('/api/defter_bloklar', methods=['GET'])
