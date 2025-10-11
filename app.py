@@ -4847,9 +4847,9 @@ def api_slot_check():
         
         tarih_str = data.get('tarih')
         saat_str = data.get('saat')
-        defter_id = data.get('defter_id', type=int)
-        randevu_suresi = data.get('sure', 60, type=int)
-        exclude_randevu_id = data.get('exclude_randevu_id', type=int)  # Düzenleme sırasında kendi randevusunu hariç tut
+        defter_id = int(data.get('defter_id', 0))
+        randevu_suresi = int(data.get('sure', 60))
+        exclude_randevu_id = int(data.get('exclude_randevu_id', 0)) if data.get('exclude_randevu_id') else None  # Düzenleme sırasında kendi randevusunu hariç tut
         
         if not tarih_str or not saat_str or not defter_id:
             return jsonify({"success": False, "message": "Eksik parametreler"}), 400
