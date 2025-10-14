@@ -6,13 +6,16 @@
     <title>{% block title %}CRMtia - Randevu Defteri{% endblock %}</title>
     
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/favicon.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='img/favicon-16x16.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="48x48" href="{{ url_for('static', filename='img/favicon-48x48.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='img/favicon-256x256.png') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
     
     <!-- Critical resource preloading -->
     {% if request.endpoint == 'index' %}
-    <link rel="preload" href="{{ url_for('static', filename='img/CRMTIA-Logo.png') }}" as="image" type="image/png">
+    <link rel="preload" href="{{ url_for('static', filename='img/hero.jpg') }}" as="image" type="image/jpeg">
     {% endif %}
     
     <!-- Bootstrap CSS -->
@@ -70,13 +73,7 @@
                 <i class="fas fa-bars"></i>
             </button>
             <div class="d-flex flex-column align-items-end text-end">
-                <div class="d-flex align-items-center gap-2">
-                    <img src="{{ url_for('static', filename='img/favicon-C.png') }}" 
-                         alt="CRMtia Logo" 
-                         style="width: 24px; height: 24px;"
-                         class="rounded">
-                    <span class="navbar-brand mb-0 h1 p-0">CRMtia</span>
-                </div>
+                <span class="navbar-brand mb-0 h1 p-0">CRMtia</span>
                 <small class="text-white-50">{{ session.get('firma_adi', '') }}</small>
             </div>
         </div>
@@ -86,10 +83,7 @@
     <nav class="sidebar d-none d-md-flex position-fixed flex-column p-3" style="width: 250px;">
         <a href="{{ url_for('dashboard') }}" class="d-flex align-items-center mb-1 mb-md-0 me-md-auto text-white text-decoration-none flex-column align-items-start">
             <div class="d-flex align-items-center">
-                <img src="{{ url_for('static', filename='img/favicon-C.png') }}" 
-                     alt="CRMtia Logo" 
-                     style="width: 40px; height: 40px;"
-                     class="rounded me-2">
+                <i class="fas fa-calendar-alt me-2"></i>
                 <span class="fs-4">CRMtia</span>
             </div>
             <img src="{{ url_for('static', filename='uploads/users/user_' ~ session.user_id ~ '.jpg') }}" 
