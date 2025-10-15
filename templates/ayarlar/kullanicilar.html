@@ -72,6 +72,12 @@
                                 {{ _('Settings Module') }}
                             </label>
                         </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="log_modulu" id="log_modulu">
+                            <label class="form-check-label" for="log_modulu">
+                                {{ _('Logs Module') }}
+                            </label>
+                        </div>
                     </div>
                     <div class="text-end">
                         <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>{{ _('Save') }}</button>
@@ -106,9 +112,12 @@
                                         <span class="badge bg-success me-1">{{ _('Reports') }}</span>
                                     {% endif %}
                                     {% if u.AyarlarModulu %}
-                                        <span class="badge bg-primary">{{ _('Settings') }}</span>
+                                        <span class="badge bg-primary me-1">{{ _('Settings') }}</span>
                                     {% endif %}
-                                    {% if not u.RaporlarModulu and not u.AyarlarModulu %}
+                                    {% if u.LogModulu %}
+                                        <span class="badge bg-info">{{ _('Logs') }}</span>
+                                    {% endif %}
+                                    {% if not u.RaporlarModulu and not u.AyarlarModulu and not u.LogModulu %}
                                         <span class="text-muted">{{ _('None') }}</span>
                                     {% endif %}
                                 </td>

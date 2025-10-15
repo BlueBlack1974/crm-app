@@ -611,8 +611,15 @@ function loadModalSlots() {
     
     container.innerHTML = '<div class="text-muted small">{{ _("Loading available times") }}...</div>';
     console.log('Loading slots for date:', date, 'defter_id:', defterId);
-    fetch(`/api/slots?date=${date}&defter_id=${defterId}&all=1`)
+    fetch(`/api/slots?date=${date}&defter_id=${defterId}&all=1`, {
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
         .then(r => {
+            if (r.status === 401) {
+                alert('{{ _("Session expired. Please login again.") }}');
+                return Promise.reject(new Error('Unauthorized'));
+            }
             console.log('API response status:', r.status);
             return r.json();
         })

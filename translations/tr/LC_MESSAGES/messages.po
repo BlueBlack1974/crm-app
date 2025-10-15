@@ -2060,6 +2060,114 @@ msgstr "Müşteri Adı"
 msgid "Date"
 msgstr "Tarih"
 
+# Logs page translations
+msgid "Logs"
+msgstr "Loglar"
+
+msgid "All Actions"
+msgstr "Tüm İşlemler"
+
+
+msgid "Create"
+msgstr "Oluştur"
+
+msgid "Update"
+msgstr "Güncelle"
+
+msgid "Delete"
+msgstr "Sil"
+
+msgid "View"
+msgstr "Görüntüle"
+
+msgid "Cancel"
+msgstr "İptal"
+
+msgid "All Tables"
+msgstr "Tüm Tablolar"
+
+msgid "Appointment"
+msgstr "Randevu"
+
+msgid "Customer"
+msgstr "Müşteri"
+
+msgid "User"
+msgstr "Kullanıcı"
+
+msgid "System"
+msgstr "Sistem"
+
+msgid "Start Date"
+msgstr "Başlangıç Tarihi"
+
+msgid "End Date"
+msgstr "Bitiş Tarihi"
+
+msgid "Action"
+msgstr "İşlem"
+
+msgid "Table"
+msgstr "Tablo"
+
+msgid "Record ID"
+msgstr "Kayıt ID"
+
+msgid "Detail"
+msgstr "Detay"
+
+msgid "IP Address"
+msgstr "IP Adresi"
+
+msgid "Data"
+msgstr "Veri"
+
+msgid "Log Data"
+msgstr "Log Verisi"
+
+msgid "No logs found"
+msgstr "Log bulunamadı"
+
+msgid "Export to CSV"
+msgstr "CSV Olarak Dışa Aktar"
+
+msgid "Old Data"
+msgstr "Eski Veri"
+
+msgid "New Data"
+msgstr "Yeni Veri"
+
+msgid "Error loading log data"
+msgstr "Log verisi yüklenirken hata oluştu"
+
+msgid "User Activity Logs"
+msgstr "Kullanıcı Aktivite Logları"
+
+msgid "User"
+msgstr "Kullanıcı"
+
+msgid "Action Type"
+msgstr "İşlem Tipi"
+
+msgid "All Users"
+msgstr "Tüm Kullanıcılar"
+
+
+msgid "CREATE"
+msgstr "OLUŞTUR"
+
+msgid "UPDATE"
+msgstr "GÜNCELLE"
+
+msgid "DELETE"
+msgstr "SİL"
+
+msgid "VIEW"
+msgstr "GÖRÜNTÜLE"
+
+msgid "CANCEL"
+msgstr "İPTAL"
+
 msgid "Time"
 msgstr "Saat"
 

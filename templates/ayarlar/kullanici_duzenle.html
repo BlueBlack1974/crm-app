@@ -115,6 +115,12 @@
                                 {{ _('Settings Module') }}
                             </label>
                         </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="log_modulu" id="log_modulu" {% if kullanici.LogModulu %}checked{% endif %}>
+                            <label class="form-check-label" for="log_modulu">
+                                {{ _('Logs Module') }}
+                            </label>
+                        </div>
                     </div>
                     
                     <div class="mb-3">
@@ -180,9 +186,12 @@
                                 <span class="badge bg-success me-1">{{ _('Reports') }}</span>
                             {% endif %}
                             {% if kullanici.AyarlarModulu %}
-                                <span class="badge bg-primary">{{ _('Settings') }}</span>
+                                <span class="badge bg-primary me-1">{{ _('Settings') }}</span>
                             {% endif %}
-                            {% if not kullanici.RaporlarModulu and not kullanici.AyarlarModulu %}
+                            {% if kullanici.LogModulu %}
+                                <span class="badge bg-info">{{ _('Logs') }}</span>
+                            {% endif %}
+                            {% if not kullanici.RaporlarModulu and not kullanici.AyarlarModulu and not kullanici.LogModulu %}
                                 <span class="text-muted">{{ _('None') }}</span>
                             {% endif %}
                         </p>

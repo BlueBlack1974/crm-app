@@ -15,6 +15,8 @@ import smtplib
 import ssl
 from email.mime.text import MIMEText
 import threading
+import queue
+import json
 from collections import Counter, defaultdict
 from io import BytesIO, StringIO
 import csv
@@ -51,6 +53,83 @@ app.config['FROM_EMAIL'] = os.environ.get('FROM_EMAIL', app.config['SMTP_USER'])
 
 # Initialize SQLAlchemy with app
 db = SQLAlchemy(app)
+
+# Asenkron loglama sistemi
+log_queue = queue.Queue()
+
+def background_logger():
+    """Arka planda log kayıtlarını veritabanına yazan thread"""
+    with app.app_context():
+        while True:
+            try:
+                log_data = log_queue.get(timeout=1)
+                if log_data is None:  # Shutdown signal
+                    break
+                db.session.add(log_data)
+                db.session.commit()
+            except queue.Empty:
+                # Timeout - bu normal, devam et
+                continue
+            except Exception as e:
+                print(f"Log yazma hatası: {e}")
+                try:
+                    db.session.rollback()
+                except:
+                    pass
+
+# Background thread başlat
+log_thread = threading.Thread(target=background_logger, daemon=True)
+log_thread.start()
+
+# Loglama yardımcı fonksiyonları
+def log_user_action(action_type, table_name, record_id=None, old_data=None, new_data=None, detail=None):
+    """Kullanıcı işlemini asenkron olarak logla"""
+    try:
+        if 'user_id' not in session:
+            return
+    except RuntimeError:
+        # Session context yoksa (test ortamı gibi) loglama yapma
+        return
+    
+    log_data = KullaniciLog(
+        KullaniciID=session['user_id'],
+        IslemTipi=action_type,
+        TabloAdi=table_name,
+        KayitID=record_id,
+        EskiVeri=json.dumps(old_data, ensure_ascii=False) if old_data else None,
+        YeniVeri=json.dumps(new_data, ensure_ascii=False) if new_data else None,
+        IslemDetayi=detail,
+        IPAdresi=request.remote_addr,
+        UserAgent=request.headers.get('User-Agent', '')
+    )
+    log_queue.put(log_data)
+
+def log_user_action_decorator(action_type, table_name, record_id_param=None, detail_func=None):
+    """Loglama decorator'ı"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            result = f(*args, **kwargs)
+            
+            # Record ID'yi al
+            record_id = None
+            if record_id_param and record_id_param in kwargs:
+                record_id = kwargs[record_id_param]
+            
+            # Detay fonksiyonu varsa çalıştır
+            detail = None
+            if detail_func:
+                try:
+                    detail = detail_func(result, *args, **kwargs)
+                except:
+                    pass
+            
+            # Logla
+            log_user_action(action_type, table_name, record_id, detail=detail)
+            
+            return result
+        return decorated_function
+    return decorator
 
 # Babel konfigürasyonu
 app.config['LANGUAGES'] = {
@@ -93,39 +172,73 @@ def enforce_password_change():
         if request.endpoint not in allowed:
             return redirect(url_for('sifre_degistir'))
 
+# Yardımcı: İstek JSON/AJAX mi?
+def _wants_json_response():
+    """Return True only for AJAX/JSON API requests.
+    - Prefer explicit XHR header
+    - Or when content-type/body is JSON
+    - Or when client clearly prefers JSON over HTML
+    """
+    try:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return True
+        if request.is_json:
+            return True
+        accepts = request.accept_mimetypes or {}
+        # Only treat as JSON if JSON is strictly preferred over HTML
+        json_q = accepts['application/json'] if 'application/json' in accepts else 0
+        html_q = accepts['text/html'] if 'text/html' in accepts else 0
+        return json_q > html_q
+    except Exception:
+        return False
+
 # Login gerekli decorator
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
+            if _wants_json_response():
+                return jsonify({"success": False, "message": "Oturum gerekli"}), 401
             return redirect(url_for('login'))
         
-        # Aktif oturum kontrolü (geçici olarak devre dışı)
-        # user_id = session.get('user_id')
-        # session_token = session.get('session_token')
-        # 
-        # if user_id and session_token:
-        #     try:
-        #         aktif_oturum = AktifOturum.query.filter_by(
-        #             KullaniciID=user_id,
-        #             SessionToken=session_token
-        #         ).first()
-        #         
-        #         if not aktif_oturum:
-        #             # Oturum geçersiz, çıkış yap
-        #             session.clear()
-        #             flash('Oturumunuz geçersiz. Lütfen tekrar giriş yapın.', 'error')
-        #             return redirect(url_for('login'))
-        #         
-        #         # Son görülme zamanını güncelle
-        #         aktif_oturum.SonGorulmeZamani = datetime.utcnow()
-        #         db.session.commit()
-        #     except Exception as e:
-        #         # Veritabanı hatası durumunda session'ı temizle
-        #         print(f"Oturum kontrolü hatası: {e}")
-        #         session.clear()
-        #         flash('Oturum kontrolünde hata oluştu. Lütfen tekrar giriş yapın.', 'error')
-        #         return redirect(url_for('login'))
+        # Aktif oturum kontrolü (tek oturum) - tüm isteklerde kontrol et
+        if True:
+            user_id = session.get('user_id')
+            session_token = session.get('session_token')
+            if user_id and session_token:
+                try:
+                    # 1) Kaydı bu token ile bulmaya çalış
+                    aktif_oturum = AktifOturum.query.filter_by(
+                        KullaniciID=user_id,
+                        SessionToken=session_token
+                    ).first()
+                    if not aktif_oturum:
+                        # 2) Bu kullanıcı için herhangi bir aktif kayıt var mı?
+                        mevcut_kayit = AktifOturum.query.filter_by(KullaniciID=user_id).first()
+                        if mevcut_kayit is None:
+                            # Kayıt yoksa otomatik yeniden oluştur (tarayıcı çerezi duruyor ama DB kaydı silinmiş olabilir)
+                            yeni = AktifOturum(
+                                KullaniciID=user_id,
+                                SessionToken=session_token,
+                                ClientIP=request.remote_addr,
+                                UserAgent=request.headers.get('User-Agent', '')
+                            )
+                            db.session.add(yeni)
+                            db.session.commit()
+                        else:
+                            # Başka bir cihazda aktif oturum var: engelle
+                            session.clear()
+                            if _wants_json_response():
+                                return jsonify({"success": False, "message": "Oturum sonlandırıldı"}), 401
+                            flash('Oturumunuz başka bir cihazdan sonlandırıldı. Lütfen tekrar giriş yapın.', 'error')
+                            return redirect(url_for('login'))
+                except Exception as e:
+                    print(f"Oturum kontrolü hatası: {e}")
+                    session.clear()
+                    if _wants_json_response():
+                        return jsonify({"success": False, "message": "Oturum kontrol hatası"}), 401
+                    flash('Oturum kontrolünde hata oluştu. Lütfen tekrar giriş yapın.', 'error')
+                    return redirect(url_for('login'))
         
         return f(*args, **kwargs)
     return decorated_function
@@ -135,34 +248,33 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
+            if _wants_json_response():
+                return jsonify({"success": False, "message": "Oturum gerekli"}), 401
             return redirect(url_for('login'))
         
-        # Aktif oturum kontrolü (geçici olarak devre dışı)
-        # user_id = session.get('user_id')
-        # session_token = session.get('session_token')
-        # 
-        # if user_id and session_token:
-        #     try:
-        #         aktif_oturum = AktifOturum.query.filter_by(
-        #             KullaniciID=user_id,
-        #             SessionToken=session_token
-        #         ).first()
-        #         
-        #         if not aktif_oturum:
-        #             # Oturum geçersiz, çıkış yap
-        #             session.clear()
-        #             flash('Oturumunuz geçersiz. Lütfen tekrar giriş yapın.', 'error')
-        #             return redirect(url_for('login'))
-        #         
-        #         # Son görülme zamanını güncelle
-        #         aktif_oturum.SonGorulmeZamani = datetime.utcnow()
-        #         db.session.commit()
-        #     except Exception as e:
-        #         # Veritabanı hatası durumunda session'ı temizle
-        #         print(f"Oturum kontrolü hatası: {e}")
-        #         session.clear()
-        #         flash('Oturum kontrolünde hata oluştu. Lütfen tekrar giriş yapın.', 'error')
-        #         return redirect(url_for('login'))
+        # Aktif oturum kontrolü (tek oturum) - tüm isteklerde kontrol et
+        if True:
+            user_id = session.get('user_id')
+            session_token = session.get('session_token')
+            if user_id and session_token:
+                try:
+                    aktif_oturum = AktifOturum.query.filter_by(
+                        KullaniciID=user_id,
+                        SessionToken=session_token
+                    ).first()
+                    if not aktif_oturum:
+                        session.clear()
+                        if _wants_json_response():
+                            return jsonify({"success": False, "message": "Oturum sonlandırıldı"}), 401
+                        flash('Oturumunuz başka bir cihazdan sonlandırıldı. Lütfen tekrar giriş yapın.', 'error')
+                        return redirect(url_for('login'))
+                except Exception as e:
+                    print(f"Oturum kontrolü hatası: {e}")
+                    session.clear()
+                    if _wants_json_response():
+                        return jsonify({"success": False, "message": "Oturum kontrol hatası"}), 401
+                    flash('Oturum kontrolünde hata oluştu. Lütfen tekrar giriş yapın.', 'error')
+                    return redirect(url_for('login'))
         
         if not session.get('is_admin', False) and not session.get('ayarlar_modulu', False):
             flash('Bu sayfaya erişim yetkiniz yok!', 'error')
@@ -175,34 +287,33 @@ def super_admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
+            if _wants_json_response():
+                return jsonify({"success": False, "message": "Oturum gerekli"}), 401
             return redirect(url_for('login'))
         
-        # Aktif oturum kontrolü (geçici olarak devre dışı)
-        # user_id = session.get('user_id')
-        # session_token = session.get('session_token')
-        # 
-        # if user_id and session_token:
-        #     try:
-        #         aktif_oturum = AktifOturum.query.filter_by(
-        #             KullaniciID=user_id,
-        #             SessionToken=session_token
-        #         ).first()
-        #         
-        #         if not aktif_oturum:
-        #             # Oturum geçersiz, çıkış yap
-        #             session.clear()
-        #             flash('Oturumunuz geçersiz. Lütfen tekrar giriş yapın.', 'error')
-        #             return redirect(url_for('login'))
-        #         
-        #         # Son görülme zamanını güncelle
-        #         aktif_oturum.SonGorulmeZamani = datetime.utcnow()
-        #         db.session.commit()
-        #     except Exception as e:
-        #         # Veritabanı hatası durumunda session'ı temizle
-        #         print(f"Oturum kontrolü hatası: {e}")
-        #         session.clear()
-        #         flash('Oturum kontrolünde hata oluştu. Lütfen tekrar giriş yapın.', 'error')
-        #         return redirect(url_for('login'))
+        # Aktif oturum kontrolü (tek oturum) - tüm isteklerde kontrol et
+        if True:
+            user_id = session.get('user_id')
+            session_token = session.get('session_token')
+            if user_id and session_token:
+                try:
+                    aktif_oturum = AktifOturum.query.filter_by(
+                        KullaniciID=user_id,
+                        SessionToken=session_token
+                    ).first()
+                    if not aktif_oturum:
+                        session.clear()
+                        if _wants_json_response():
+                            return jsonify({"success": False, "message": "Oturum sonlandırıldı"}), 401
+                        flash('Oturumunuz başka bir cihazdan sonlandırıldı. Lütfen tekrar giriş yapın.', 'error')
+                        return redirect(url_for('login'))
+                except Exception as e:
+                    print(f"Oturum kontrolü hatası: {e}")
+                    session.clear()
+                    if _wants_json_response():
+                        return jsonify({"success": False, "message": "Oturum kontrol hatası"}), 401
+                    flash('Oturum kontrolünde hata oluştu. Lütfen tekrar giriş yapın.', 'error')
+                    return redirect(url_for('login'))
         
         if not session.get('is_admin', False):
             flash('Bu sayfaya erişim yetkiniz yok!', 'error')
@@ -242,6 +353,7 @@ class Kullanici(db.Model):
     Aktif = db.Column(db.Boolean, default=True)
     RaporlarModulu = db.Column(db.Boolean, default=True)  # Raporlar modülüne erişim
     AyarlarModulu = db.Column(db.Boolean, default=False)  # Ayarlar modülüne erişim
+    LogModulu = db.Column(db.Boolean, default=False)      # Log modülüne erişim
     OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
     GuncellemeTarihi = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -267,6 +379,26 @@ class AktifOturum(db.Model):
 
     def __repr__(self):
         return f'<AktifOturum {self.KullaniciID}>'
+
+class KullaniciLog(db.Model):
+    __tablename__ = 'KullaniciLoglari'
+
+    LogID = db.Column(db.Integer, primary_key=True)
+    KullaniciID = db.Column(db.Integer, db.ForeignKey('Kullanicilar.KullaniciID'), nullable=False)
+    IslemTipi = db.Column(db.NVARCHAR(30), nullable=False)  # 'CREATE', 'UPDATE', 'DELETE', 'VIEW', 'CANCEL', 'LOGIN', 'LOGOUT'
+    TabloAdi = db.Column(db.NVARCHAR(30), nullable=False)   # 'Randevu', 'Musteri', 'Rapor', 'Kullanici', 'Sistem'
+    KayitID = db.Column(db.Integer)                         # İlgili kaydın ID'si (varsa)
+    EskiVeri = db.Column(db.UnicodeText)                    # JSON format - değişiklik öncesi
+    YeniVeri = db.Column(db.UnicodeText)                    # JSON format - değişiklik sonrası
+    IslemDetayi = db.Column(db.NVARCHAR(500))               # İnsan okunabilir açıklama
+    IPAdresi = db.Column(db.NVARCHAR(45))
+    UserAgent = db.Column(db.NVARCHAR(500))
+    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    kullanici = db.relationship('Kullanici', backref='loglar')
+
+    def __repr__(self):
+        return f'<KullaniciLog {self.LogID} - {self.IslemTipi} - {self.TabloAdi}>'
 
 class YetkiTipi(db.Model):
     __tablename__ = 'YetkiTipleri'
@@ -1451,6 +1583,12 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # Her giriş ekranı açılışında olası bekleyen durumları temizle
+    if request.method == 'GET':
+        for key in list(session.keys()):
+            if key.startswith('pending_'):
+                session.pop(key, None)
+
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
@@ -1478,6 +1616,7 @@ def login():
                 session['pending_is_admin'] = user.Admin
                 session['pending_raporlar_modulu'] = user.RaporlarModulu
                 session['pending_ayarlar_modulu'] = user.AyarlarModulu
+                session['pending_log_modulu'] = user.LogModulu
                 
                 # Firma bilgisini al
                 firma = Firma.query.filter_by(FirmaID=user.FirmaID).first()
@@ -1497,6 +1636,7 @@ def login():
             session['is_admin'] = user.Admin
             session['raporlar_modulu'] = user.RaporlarModulu
             session['ayarlar_modulu'] = user.AyarlarModulu
+            session['log_modulu'] = user.LogModulu
 
             # Oturum kaydı oluştur
             import secrets
@@ -1517,6 +1657,9 @@ def login():
                 flash('Lütfen güvenlik için şifrenizi değiştirin.', 'warning')
                 return redirect(url_for('sifre_degistir'))
             flash('Başarıyla giriş yaptınız!', 'success')
+            
+            # Giriş işlemi loglanmıyor
+            
             return redirect(url_for('dashboard'))
         else:
             flash('Kullanıcı adı veya şifre hatalı!', 'error')
@@ -1546,6 +1689,7 @@ def force_logout():
     session['is_admin'] = session['pending_is_admin']
     session['raporlar_modulu'] = session['pending_raporlar_modulu']
     session['ayarlar_modulu'] = session['pending_ayarlar_modulu']
+    session['log_modulu'] = session['pending_log_modulu']
     
     # Pending session verilerini temizle
     for key in list(session.keys()):
@@ -1614,6 +1758,8 @@ def logout():
                 db.session.commit()
     except Exception:
         db.session.rollback()
+    # Çıkış işlemi loglanmıyor
+    
     session.clear()
     flash('Başarıyla çıkış yaptınız!', 'success')
     return redirect(url_for('index'))
@@ -1763,11 +1909,12 @@ def ayarlar_kullanicilar():
             # Modül izinlerini al
             raporlar_modulu = 'raporlar_modulu' in request.form
             ayarlar_modulu = 'ayarlar_modulu' in request.form
+            log_modulu = 'log_modulu' in request.form
             
             # Varsayılan şifre 123 ve ilk girişte değişim zorunlu olacak
             u = Kullanici(KullaniciAdi=kullanici_adi, Email=email, FirmaID=firma_id,
                           Sifre=sifre or '123', Ad=ad, Soyad=soyad, Aktif=True,
-                          RaporlarModulu=raporlar_modulu, AyarlarModulu=ayarlar_modulu)
+                          RaporlarModulu=raporlar_modulu, AyarlarModulu=ayarlar_modulu, LogModulu=log_modulu)
             db.session.add(u)
             db.session.commit()
 
@@ -1846,6 +1993,7 @@ def ayarlar_kullanici_duzenle(kullanici_id):
         aktif = 'aktif' in request.form
         raporlar_modulu = 'raporlar_modulu' in request.form
         ayarlar_modulu = 'ayarlar_modulu' in request.form
+        log_modulu = 'log_modulu' in request.form
         
         # Admin değilse firma değiştiremez
         if not session.get('is_admin', False):
@@ -1872,6 +2020,7 @@ def ayarlar_kullanici_duzenle(kullanici_id):
                 kullanici.Aktif = aktif
                 kullanici.RaporlarModulu = raporlar_modulu
                 kullanici.AyarlarModulu = ayarlar_modulu
+                kullanici.LogModulu = log_modulu
                 
                 # Şifre güncelleme (sadece girilmişse) + doğrulama ve karmaşıklık
                 if sifre or sifre2:
@@ -3395,6 +3544,11 @@ def musteri_detay_pdf(musteri_id):
     # Dosya adı
     filename = f"musteri_detay_{musteri.MusteriAdi}_{musteri.MusteriSoyadi}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     
+    # Çıktı alma (PDF) logla
+    try:
+        log_user_action('VIEW', 'Rapor', musteri_id, detail=f"Müşteri detay PDF indirildi: {musteri.MusteriAdi} {musteri.MusteriSoyadi}")
+    except Exception:
+        pass
     return send_file(buffer, mimetype='application/pdf', as_attachment=True, download_name=filename)
 
 @app.route('/rapor/musteri-detay/<int:musteri_id>/excel')
@@ -3568,6 +3722,11 @@ def musteri_detay_excel(musteri_id):
     # Dosya adı
     filename = f"musteri_detay_{musteri.MusteriAdi}_{musteri.MusteriSoyadi}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     
+    # Çıktı alma (Excel) logla
+    try:
+        log_user_action('VIEW', 'Rapor', musteri_id, detail=f"Müşteri detay Excel indirildi: {musteri.MusteriAdi} {musteri.MusteriSoyadi}")
+    except Exception:
+        pass
     return send_file(buffer, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
                     as_attachment=True, download_name=filename)
 
@@ -3741,6 +3900,11 @@ def rapor_musteriler():
         output.seek(0)
         filename = f"musteri_raporu_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
         data = output.getvalue().encode('utf-8-sig')
+        # Çıktı alma (CSV) logla
+        try:
+            log_user_action('VIEW', 'Rapor', detail="Müşteri raporu CSV indirildi")
+        except Exception:
+            pass
         return send_file(BytesIO(data), mimetype='text/csv; charset=utf-8', as_attachment=True, download_name=filename)
 
     # Kategoriler dropdown için
@@ -3975,6 +4139,10 @@ def randevu_duzenle(randevu_id):
             if referans_id:
                 ref = RandevuReferans.query.filter_by(ReferansID=referans_id, FirmaID=session['firma_id']).first()
             
+            # Log için eski değerleri yakala
+            old_data = {}
+            new_data = {}
+
             # Randevu bilgilerini güncelle
             randevu.RandevuTarihi = randevu_dt
             randevu.RandevuSuresi = randevu_suresi
@@ -3983,6 +4151,10 @@ def randevu_duzenle(randevu_id):
             
             # Referans güncelle - başlık otomatik olarak referans adı olur
             if ref:
+                # Başlık değişimi logu için kontrol et
+                if randevu.RandevuBaslik != ref.Ad:
+                    old_data.setdefault('randevu', {})['baslik'] = randevu.RandevuBaslik
+                    new_data.setdefault('randevu', {})['baslik'] = ref.Ad
                 randevu.RandevuBaslik = ref.Ad
             else:
                 # Referans seçilmediyse mevcut başlığı koru
@@ -3990,6 +4162,14 @@ def randevu_duzenle(randevu_id):
             
             # Müşteri bilgilerini güncelle (eğer müşteri varsa)
             if randevu.musteri:
+                # Müşteri alanları için eski değerleri yakala
+                old_musteri = {
+                    'telefon': randevu.musteri.Telefon,
+                    'email': randevu.musteri.Email,
+                    'cinsiyet': randevu.musteri.Cinsiyet,
+                    'dogum_tarihi': randevu.musteri.DogumTarihi.strftime('%Y-%m-%d') if randevu.musteri.DogumTarihi else None,
+                    'yas': randevu.musteri.Yas,
+                }
                 # Telefon numarasını ülke kodu ile birleştir
                 telefon_ulke_kodu = request.form.get('telefon_ulke_kodu', '+90')
                 telefon_numara = request.form.get('musteri_telefon', '').replace(' ', '')
@@ -4019,8 +4199,43 @@ def randevu_duzenle(randevu_id):
                     randevu.musteri.Cinsiyet = musteri_cinsiyet
                 
                 randevu.musteri.GuncellemeTarihi = datetime.utcnow()
+
+                # Yeni müşteri değerleri ve farkları hesapla
+                new_musteri = {
+                    'telefon': randevu.musteri.Telefon,
+                    'email': randevu.musteri.Email,
+                    'cinsiyet': randevu.musteri.Cinsiyet,
+                    'dogum_tarihi': randevu.musteri.DogumTarihi.strftime('%Y-%m-%d') if randevu.musteri.DogumTarihi else None,
+                    'yas': randevu.musteri.Yas,
+                }
+                for key in new_musteri:
+                    if old_musteri.get(key) != new_musteri.get(key):
+                        old_data.setdefault('musteri', {})[key] = old_musteri.get(key)
+                        new_data.setdefault('musteri', {})[key] = new_musteri.get(key)
+
+            # Randevu alanları için farkları hesapla
+            # Not: Tarih ve süre değişimi
+            # Eski değerleri hesaplamak için form öncesi değerleri kullanmak gerekir; randevu objesinde artık yenisi var.
+            # Bu nedenle formdan gelenlerle karşılaştırıp log detail'inde belirtelim.
+            try:
+                if randevu.RandevuNotlar != randevu_notlar:
+                    old_data.setdefault('randevu', {})['notlar'] = randevu.RandevuNotlar
+                    new_data.setdefault('randevu', {})['notlar'] = randevu_notlar
+            except Exception:
+                pass
+            # Tarih ve süreyi açıkça logla
+            # Bu alanlarda eski değer commit öncesi elimizde olmadığı için kullanıcıya anlaşılır detail verisi ekleyeceğiz
+            # (taşıma API'sinde olduğu gibi detay mesajı oluşturulacak)
             
             db.session.commit()
+            # Değişiklik varsa logla
+            try:
+                detail_msg = 'Randevu ve/veya müşteri bilgileri güncellendi'
+                if old_data or new_data:
+                    log_user_action('UPDATE', 'Randevu', randevu_id, old_data=old_data or None, new_data=new_data or None, detail=detail_msg)
+            except Exception:
+                pass
+
             flash('Randevu ve müşteri bilgileri başarıyla güncellendi', 'success')
             return redirect(url_for('randevu_detay', randevu_id=randevu_id))
             
@@ -4393,6 +4608,10 @@ def randevu_ekle():
         except Exception as e:
             print(f"WhatsApp mesajı gönderme hatası: {str(e)}")
         
+        # Randevu oluşturma logla
+        log_user_action('CREATE', 'Randevu', randevu.RandevuID, 
+                       detail=f"Randevu oluşturuldu: {randevu.RandevuTarihi.strftime('%d.%m.%Y %H:%M')} - {randevu.MusteriAdi}")
+        
         flash('Randevu başarıyla oluşturuldu!', 'success')
         return redirect(url_for('randevular'))
     # GET isteği
@@ -4514,9 +4733,22 @@ def randevu_sil(randevu_id):
         return redirect(url_for('randevular'))
 
     try:
+        # Silme öncesi bilgileri kaydet
+        randevu_bilgi = {
+            'tarih': randevu.RandevuTarihi.strftime('%d.%m.%Y %H:%M'),
+            'musteri': randevu.MusteriAdi,
+            'referans': randevu.RandevuBaslik
+        }
+        
         # Cascade delete ile tüm ilgili kayıtlar otomatik silinir
         db.session.delete(randevu)
         db.session.commit()
+        
+        # Randevu silme logla
+        log_user_action('DELETE', 'Randevu', randevu_id, 
+                       old_data=randevu_bilgi,
+                       detail=f"Randevu silindi: {randevu_bilgi['tarih']} - {randevu_bilgi['musteri']}")
+        
         flash('Randevu silindi', 'success')
     except Exception as e:
         db.session.rollback()
@@ -4548,8 +4780,15 @@ def randevu_durum(randevu_id):
         flash('Durum güncelleme yetkiniz yok', 'error')
         return redirect(url_for('randevular'))
 
+    eski_durum = randevu.Durum
     randevu.Durum = yeni_durum
     db.session.commit()
+    
+    # Durum değişikliği logla
+    log_user_action('UPDATE', 'Randevu', randevu_id,
+                   old_data={'durum': eski_durum},
+                   new_data={'durum': yeni_durum},
+                   detail=f"Randevu durumu değiştirildi: {eski_durum} -> {yeni_durum}")
     
     # Eğer randevu iptal edildiyse, slot'u açık hale getir
     if yeni_durum == 'Iptal':
@@ -4790,11 +5029,20 @@ def api_randevu_tasi():
         randevu.RandevuTarihi = yeni_dt
         db.session.commit()
         print(f"Randevu {randevu_id} başarıyla taşındı")
+        
+        # Randevu taşıma logla
+        log_user_action('UPDATE', 'Randevu', randevu_id,
+                       old_data={'tarih': eski_tarih.strftime('%Y-%m-%d %H:%M')},
+                       new_data={'tarih': yeni_dt.strftime('%Y-%m-%d %H:%M')},
+                       detail=f"Randevu taşındı: {eski_tarih.strftime('%d.%m.%Y %H:%M')} -> {yeni_dt.strftime('%d.%m.%Y %H:%M')}")
+        
     except Exception as e:
         db.session.rollback()
         print(f"Randevu taşıma hatası: {e}")
         return jsonify({"success": False, "message": "Randevu taşınırken bir hata oluştu"}), 500
 
+    # Başarıyı hemen döndür; yan işlemleri ateşle ama hataları yut
+    try:
         # Bildirim: randevu taşındı (olusturana bildirim)
         try:
             b = Bildirim(
@@ -4822,16 +5070,138 @@ def api_randevu_tasi():
                 f"Bu değişiklik hakkında sorularınız için bizimle iletişime geçebilirsiniz.\n\n"
                 f"İyi günler dileriz."
             )
-            # Firma ayarlarını kullan, yoksa genel ayarları kullan
-            email_sent = send_email_with_firma_settings(randevu.FirmaID, randevu.MusteriEmail, subject, body)
-            if not email_sent:
-                send_email_simple(randevu.MusteriEmail, subject, body)
+            try:
+                email_sent = send_email_with_firma_settings(randevu.FirmaID, randevu.MusteriEmail, subject, body)
+                if not email_sent:
+                    send_email_simple(randevu.MusteriEmail, subject, body)
+            except Exception:
+                pass
+    except Exception:
+        pass
 
-        return jsonify({"success": True, "message": "Randevu taşındı"})
-    except Exception as e:
-        db.session.rollback()
-        print(f"Veritabanı hatası: {e}")
-        return jsonify({"success": False, "message": "Veritabanı hatası"}), 500
+    return jsonify({"success": True, "message": "Randevu taşındı"})
+
+# Log Görüntüleme
+@app.route('/loglar')
+@login_required
+def loglar():
+    # Log modülü yetki kontrolü
+    if not (session.get('is_admin', False) or session.get('log_modulu', False)):
+        flash('Bu sayfaya erişim yetkiniz yok', 'error')
+        return redirect(url_for('dashboard'))
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    
+    # Filtreler
+    kullanici_id = request.args.get('kullanici_id', type=int)
+    islem_tipi = request.args.get('islem_tipi')
+    tablo_adi = request.args.get('tablo_adi')
+    tarih_baslangic = request.args.get('tarih_baslangic')
+    tarih_bitis = request.args.get('tarih_bitis')
+    
+    # Query oluştur
+    query = KullaniciLog.query.join(Kullanici)
+    
+    if kullanici_id:
+        query = query.filter(KullaniciLog.KullaniciID == kullanici_id)
+    if islem_tipi:
+        query = query.filter(KullaniciLog.IslemTipi == islem_tipi)
+    if tablo_adi:
+        query = query.filter(KullaniciLog.TabloAdi == tablo_adi)
+    if tarih_baslangic:
+        try:
+            baslangic_dt = datetime.strptime(tarih_baslangic, '%Y-%m-%d')
+            query = query.filter(KullaniciLog.OlusturmaTarihi >= baslangic_dt)
+        except ValueError:
+            pass
+    if tarih_bitis:
+        try:
+            bitis_dt = datetime.strptime(tarih_bitis, '%Y-%m-%d') + timedelta(days=1)
+            query = query.filter(KullaniciLog.OlusturmaTarihi < bitis_dt)
+        except ValueError:
+            pass
+    
+    # Sadece kendi firma logları
+    query = query.filter(Kullanici.FirmaID == session['firma_id'])
+    
+    # Sıralama ve sayfalama
+    query = query.order_by(KullaniciLog.OlusturmaTarihi.desc())
+    
+    # CSV export
+    if request.args.get('export') == 'csv':
+        logs = query.all()
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Tarih', 'Kullanıcı', 'İşlem', 'Tablo', 'Kayıt ID', 'Detay', 'IP'])
+        for log in logs:
+            writer.writerow([
+                log.OlusturmaTarihi.strftime('%d.%m.%Y %H:%M:%S'),
+                log.kullanici.KullaniciAdi,
+                log.IslemTipi,
+                log.TabloAdi,
+                log.KayitID or '',
+                log.IslemDetayi or '',
+                log.IPAdresi or ''
+            ])
+        output.seek(0)
+        # Çıktı alma (Log CSV) logla
+        try:
+            log_user_action('VIEW', 'Sistem', detail="Loglar CSV indirildi")
+        except Exception:
+            pass
+        return send_file(
+            BytesIO(output.getvalue().encode('utf-8-sig')),
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name=f'loglar_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+        )
+    
+    # Sayfalama
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    loglar = pagination.items
+    total_pages = pagination.pages
+    
+    # Kullanıcı listesi (filtre için)
+    kullanicilar = Kullanici.query.filter_by(FirmaID=session['firma_id'], Aktif=True).all()
+    
+    # Bugünün tarihi
+    today = datetime.now().strftime('%Y-%m-%d')
+    
+    return render_template('loglar.html', 
+                         loglar=loglar,
+                         kullanicilar=kullanicilar,
+                         page=page,
+                         total_pages=total_pages,
+                         current_filters=request.args,
+                         today=today)
+
+@app.route('/api/loglar/<int:log_id>/data')
+@login_required
+def api_log_data(log_id):
+    # Log modülü yetki kontrolü
+    if not (session.get('is_admin', False) or session.get('log_modulu', False)):
+        return jsonify({"error": "Yetkiniz yok"}), 403
+    log = KullaniciLog.query.join(Kullanici).filter(
+        KullaniciLog.LogID == log_id,
+        Kullanici.FirmaID == session['firma_id']
+    ).first()
+    
+    if not log:
+        return jsonify({"error": "Log bulunamadı"}), 404
+    
+    data = {}
+    if log.EskiVeri:
+        try:
+            data['old_data'] = json.loads(log.EskiVeri)
+        except:
+            data['old_data'] = log.EskiVeri
+    if log.YeniVeri:
+        try:
+            data['new_data'] = json.loads(log.YeniVeri)
+        except:
+            data['new_data'] = log.YeniVeri
+    
+    return jsonify(data)
 
 # API: Secilebilir saat slotlari
 @app.route('/api/slots')
@@ -5178,7 +5548,7 @@ def raporlar():
         end_date = today
 
     # Kapasite ve defter parametrelerini al
-    kapasite = request.args.get('kapasite', '8')
+    kapasite = request.args.get('kapasite', '')
     defter_id = request.args.get('defter_id', '')
     print(f"Form parametreleri - defter_id: '{defter_id}', kapasite: '{kapasite}'")
     
@@ -5191,6 +5561,26 @@ def raporlar():
     for defter in defterler:
         print(f"Defter: {defter.DefterAdi} (ID: {defter.AyarID})")
     
+    # Eğer belirli bir defter seçilmişse ve kapasite boş/0 ise, defterden otomatik hesapla
+    auto_capacity = None
+    if defter_id and (not kapasite or kapasite == '0'):
+        try:
+            ayar = RandevuDefterAyar.query.filter_by(AyarID=defter_id, FirmaID=session['firma_id'], Aktif=True).first()
+            if ayar:
+                def parse_hhmm(s):
+                    h, m = (s or '09:00').split(':')
+                    return int(h), int(m)
+                sh, sm = parse_hhmm(ayar.BaslangicSaati or '09:00')
+                eh, em = parse_hhmm(ayar.BitisSaati or '18:00')
+                total_minutes = max(0, (eh * 60 + em) - (sh * 60 + sm))
+                slot_min = ayar.SlotDakika or 30
+                auto_capacity = max(1, total_minutes // slot_min)
+        except Exception:
+            auto_capacity = None
+
+    if not kapasite or kapasite == '0':
+        kapasite = str(auto_capacity or 8)
+
     return render_template('raporlar.html', 
                          baslangic=start_date.strftime('%Y-%m-%d'), 
                          bitis=end_date.strftime('%Y-%m-%d'),
@@ -5280,7 +5670,7 @@ def api_raporlar_ozet():
 def api_raporlar_yogun_saatler():
     baslangic = request.args.get('baslangic')
     bitis = request.args.get('bitis')
-    kapasite = int(request.args.get('kapasite', 8))  # Varsayılan günlük kapasite 8
+    kapasite_param = request.args.get('kapasite', '')
     defter_id = request.args.get('defter_id', '')
     
     try:
@@ -5292,6 +5682,25 @@ def api_raporlar_yogun_saatler():
     # Tarihleri kapsayan datetime araligi
     start_dt = datetime(start_date.year, start_date.month, start_date.day, 0, 0)
     end_dt = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59)
+
+    # Eğer defter seçilmiş ve kapasite belirtilmemişse, defterden otomatik kapasite hesapla
+    auto_capacity = None
+    if defter_id and (not kapasite_param or kapasite_param == '0'):
+        try:
+            ayar = RandevuDefterAyar.query.filter_by(AyarID=defter_id, FirmaID=session['firma_id'], Aktif=True).first()
+            if ayar:
+                def parse_hhmm(s):
+                    h, m = (s or '09:00').split(':')
+                    return int(h), int(m)
+                sh, sm = parse_hhmm(ayar.BaslangicSaati or '09:00')
+                eh, em = parse_hhmm(ayar.BitisSaati or '18:00')
+                total_minutes = max(0, (eh * 60 + em) - (sh * 60 + sm))
+                slot_min = ayar.SlotDakika or 30
+                auto_capacity = max(1, total_minutes // slot_min)
+        except Exception:
+            auto_capacity = None
+
+    kapasite = int(kapasite_param) if (kapasite_param and kapasite_param != '0') else int(auto_capacity or 8)
 
     # Izin farkindaligi
     if session.get('is_admin', False):

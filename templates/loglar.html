@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('User Logs') }} - CRMtia{% endblock %}
+
+{% block extra_css %}
+<style>
+    .log-table {
+        font-size: 0.9rem;
+    }
+    .log-badge {
+        font-size: 0.75rem;
+    }
+    .log-detail {
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .log-data {
+        font-family: monospace;
+        font-size: 0.8rem;
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+    }
+    
+    /* Modal içeriğini daha belirgin yap - sadece gölge */
+    .modal-content {
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        border: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ _('User Activity Logs') }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="exportLogs()">
+                <i class="fas fa-download me-1"></i>{{ _('Export') }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Filtreler -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label for="kullanici_id" class="form-label">{{ _('User') }}</label>
+                <select class="form-select" id="kullanici_id" name="kullanici_id">
+                    <option value="">{{ _('All Users') }}</option>
+                    {% for kullanici in kullanicilar %}
+                    <option value="{{ kullanici.KullaniciID }}" {% if request.args.get('kullanici_id')|int == kullanici.KullaniciID %}selected{% endif %}>
+                        {{ kullanici.KullaniciAdi }} ({{ kullanici.Ad }} {{ kullanici.Soyad }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="islem_tipi" class="form-label">{{ _('Action Type') }}</label>
+                <select class="form-select" id="islem_tipi" name="islem_tipi">
+                    <option value="">{{ _('All Actions') }}</option>
+                    <option value="CREATE" {% if request.args.get('islem_tipi') == 'CREATE' %}selected{% endif %}>{{ _('Create') }}</option>
+                    <option value="UPDATE" {% if request.args.get('islem_tipi') == 'UPDATE' %}selected{% endif %}>{{ _('Update') }}</option>
+                    <option value="DELETE" {% if request.args.get('islem_tipi') == 'DELETE' %}selected{% endif %}>{{ _('Delete') }}</option>
+                    <option value="VIEW" {% if request.args.get('islem_tipi') == 'VIEW' %}selected{% endif %}>{{ _('View') }}</option>
+                    <option value="CANCEL" {% if request.args.get('islem_tipi') == 'CANCEL' %}selected{% endif %}>{{ _('Cancel') }}</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="tablo_adi" class="form-label">{{ _('Table') }}</label>
+                <select class="form-select" id="tablo_adi" name="tablo_adi">
+                    <option value="">{{ _('All Tables') }}</option>
+                    <option value="Randevu" {% if request.args.get('tablo_adi') == 'Randevu' %}selected{% endif %}>{{ _('Appointment') }}</option>
+                    <option value="Musteri" {% if request.args.get('tablo_adi') == 'Musteri' %}selected{% endif %}>{{ _('Customer') }}</option>
+                    <option value="Kullanici" {% if request.args.get('tablo_adi') == 'Kullanici' %}selected{% endif %}>{{ _('User') }}</option>
+                    <option value="Sistem" {% if request.args.get('tablo_adi') == 'Sistem' %}selected{% endif %}>{{ _('System') }}</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="tarih_baslangic" class="form-label">{{ _('Start Date') }}</label>
+                <input type="date" class="form-control" id="tarih_baslangic" name="tarih_baslangic" 
+                       value="{{ request.args.get('tarih_baslangic', today) }}">
+            </div>
+            <div class="col-md-2">
+                <label for="tarih_bitis" class="form-label">{{ _('End Date') }}</label>
+                <input type="date" class="form-control" id="tarih_bitis" name="tarih_bitis" 
+                       value="{{ request.args.get('tarih_bitis', today) }}">
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">&nbsp;</label>
+                <div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <a href="{{ url_for('loglar') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Log Tablosu -->
+<div class="card">
+    <div class="card-body">
+        {% if loglar %}
+        <div class="table-responsive">
+            <table class="table table-hover log-table">
+                <thead>
+                    <tr>
+                        <th>{{ _('Date') }}</th>
+                        <th>{{ _('User') }}</th>
+                        <th>{{ _('Action') }}</th>
+                        <th>{{ _('Table') }}</th>
+                        <th>{{ _('Record ID') }}</th>
+                        <th>{{ _('Detail') }}</th>
+                        <th>{{ _('IP Address') }}</th>
+                        <th>{{ _('Data') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in loglar %}
+                    <tr>
+                        <td>
+                            <small class="text-muted">
+                                {{ log.OlusturmaTarihi.strftime('%d.%m.%Y %H:%M:%S') }}
+                            </small>
+                        </td>
+                        <td>
+                            <strong>{{ log.kullanici.KullaniciAdi }}</strong><br>
+                            <small class="text-muted">{{ log.kullanici.Ad }} {{ log.kullanici.Soyad }}</small>
+                        </td>
+                        <td>
+                            {% set badge_class = {
+                                'CREATE': 'bg-primary',
+                                'UPDATE': 'bg-warning',
+                                'DELETE': 'bg-danger',
+                                'VIEW': 'bg-info',
+                                'CANCEL': 'bg-dark'
+                            } %}
+                            <span class="badge log-badge {{ badge_class.get(log.IslemTipi, 'bg-light text-dark') }}">
+                                {{ _(log.IslemTipi) }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark log-badge">{{ log.TabloAdi }}</span>
+                        </td>
+                        <td>
+                            {% if log.KayitID %}
+                            <code>{{ log.KayitID }}</code>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="log-detail" title="{{ log.IslemDetayi or '' }}">
+                                {{ log.IslemDetayi or '-' }}
+                            </div>
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ log.IPAdresi or '-' }}</small>
+                        </td>
+                        <td>
+                            {% if log.EskiVeri or log.YeniVeri %}
+                            <button class="btn btn-sm btn-outline-info" onclick="showLogData({{ log.LogID }})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Sayfalama -->
+        {% if total_pages > 1 %}
+        <nav aria-label="Log pagination">
+            <ul class="pagination justify-content-center">
+                {% if page > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('loglar', page=page-1, **request.args) }}">{{ _('Previous') }}</a>
+                </li>
+                {% endif %}
+                
+                {% for p in range(max(1, page-2), min(total_pages+1, page+3)) %}
+                <li class="page-item {% if p == page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('loglar', page=p, **request.args) }}">{{ p }}</a>
+                </li>
+                {% endfor %}
+                
+                {% if page < total_pages %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('loglar', page=page+1, **request.args) }}">{{ _('Next') }}</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">{{ _('No logs found') }}</h5>
+            <p class="text-muted">{{ _('Try adjusting your filters') }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Log Data Modal -->
+<div class="modal fade" id="logDataModal" tabindex="-1" data-bs-backdrop="false" data-bs-keyboard="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('Log Data') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="logDataContent"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showLogData(logId) {
+    // Bu fonksiyon AJAX ile log detaylarını getirecek
+    fetch(`/api/loglar/${logId}/data`)
+        .then(response => response.json())
+        .then(data => {
+            let content = '';
+            if (data.old_data) {
+                content += '<h6>{{ _("Old Data") }}:</h6>';
+                content += '<pre class="log-data">' + JSON.stringify(data.old_data, null, 2) + '</pre>';
+            }
+            if (data.new_data) {
+                content += '<h6>{{ _("New Data") }}:</h6>';
+                content += '<pre class="log-data">' + JSON.stringify(data.new_data, null, 2) + '</pre>';
+            }
+            document.getElementById('logDataContent').innerHTML = content;
+            new bootstrap.Modal(document.getElementById('logDataModal')).show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('{{ _("Error loading log data") }}');
+        });
+}
+
+function exportLogs() {
+    const params = new URLSearchParams(window.location.search);
+    params.set('export', 'csv');
+    window.location.href = '{{ url_for("loglar") }}?' + params.toString();
+}
+</script>
+{% endblock %}

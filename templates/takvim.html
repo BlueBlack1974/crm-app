@@ -560,7 +560,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     randevu_id: parseInt(randevuId),
                     yeni_tarih: newDateTime
@@ -568,6 +570,15 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(response => {
                 console.log('Response status:', response.status);
+                if (response.status === 401) {
+                    alert('{{ _("Session expired. Please login again.") }}');
+                    window.location.href = '{{ url_for('login') }}';
+                    return Promise.reject(new Error('Unauthorized'));
+                }
+                const ct = response.headers.get('content-type') || '';
+                if (!ct.includes('application/json')) {
+                    return response.text().then(t => { throw new Error('Non-JSON response: ' + response.status); });
+                }
                 return response.json();
             })
             .then(data => {

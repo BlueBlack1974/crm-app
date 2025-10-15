@@ -83,7 +83,7 @@
     <nav class="sidebar d-none d-md-flex position-fixed flex-column p-3" style="width: 250px;">
         <a href="{{ url_for('dashboard') }}" class="d-flex align-items-center mb-1 mb-md-0 me-md-auto text-white text-decoration-none flex-column align-items-start">
             <div class="d-flex align-items-center">
-                <i class="fas fa-calendar-alt me-2"></i>
+                <img src="{{ url_for('static', filename='img/favicon.png') }}" alt="CRMtia Icon" class="me-2" style="width: 24px; height: 24px; filter: none; box-shadow: none;">
                 <span class="fs-4">CRMtia</span>
             </div>
             <img src="{{ url_for('static', filename='uploads/users/user_' ~ session.user_id ~ '.jpg') }}" 
@@ -142,6 +142,14 @@
                         </li>
                     </ul>
                 </div>
+            </li>
+            {% endif %}
+            {% if session.is_admin or session.log_modulu %}
+            <li>
+                <a href="{{ url_for('loglar') }}" class="nav-link {% if request.endpoint == 'loglar' %}active{% endif %}">
+                    <i class="fas fa-clipboard-list me-2"></i>
+                    {{ _('Logs') }}
+                </a>
             </li>
             {% endif %}
             {% if session.is_admin or session.ayarlar_modulu %}
@@ -354,9 +362,43 @@
         }
     }
     if ({{ 'true' if session.user_id else 'false' }}) {
-        fetchNotifications();
-        setInterval(fetchNotifications, 15000);
-        
+        // Dinamik aralık: görünürken hızlı, gizliyken yavaş
+        let pollTimer = null;
+        const ACTIVE_INTERVAL_MS = 15000;
+        const HIDDEN_INTERVAL_MS = 60000;
+
+        function clearPollTimer() {
+            if (pollTimer) {
+                clearTimeout(pollTimer);
+                pollTimer = null;
+            }
+        }
+
+        async function pollOnceAndSchedule() {
+            try { await fetchNotifications(); } catch(e) {}
+            clearPollTimer();
+            const next = document.hidden ? HIDDEN_INTERVAL_MS : ACTIVE_INTERVAL_MS;
+            pollTimer = setTimeout(pollOnceAndSchedule, next);
+        }
+
+        // İlk çağrı ve planlama
+        pollOnceAndSchedule();
+
+        // Sekme görünürlüğü/fokus değişince aralığı yeniden ayarla
+        document.addEventListener('visibilitychange', () => {
+            // görünür olduğunda hızlıca güncelle
+            if (!document.hidden) { pollOnceAndSchedule(); }
+        });
+        window.addEventListener('focus', () => { pollOnceAndSchedule(); });
+        window.addEventListener('blur', () => { pollOnceAndSchedule(); });
+
+        // Çanağa gelince anlık yenile (kullanıcı etkileşimi)
+        const bell = document.getElementById('notifBell');
+        if (bell) {
+            bell.addEventListener('mouseenter', () => { fetchNotifications(); });
+            bell.addEventListener('click', () => { fetchNotifications(); });
+        }
+
         // Tarayıcı kapanma algılama - oturum temizleme
         let isPageUnloading = false;
         
