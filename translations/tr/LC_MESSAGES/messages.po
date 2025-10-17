@@ -49,6 +49,142 @@ msgstr "Bu kullanıcı zaten giriş yapmış. Mevcut oturumu kapatıp yeni giri�
 msgid "Close Session and Login"
 msgstr "Oturumu Kapat ve Giriş Yap"
 
+#: templates/todos.html
+msgid "Todo List"
+msgstr "Yapılacaklar Listesi"
+
+#: templates/todos.html
+msgid "New Todo"
+msgstr "Yeni Görev"
+
+#: templates/todos.html
+msgid "Total Todos"
+msgstr "Toplam Görev"
+
+#: templates/todos.html
+msgid "In Progress"
+msgstr "Devam Ediyor"
+
+#: templates/todos.html
+msgid "Upcoming Reminders"
+msgstr "Yaklaşan Hatırlatmalar"
+
+#: templates/todos.html
+msgid "All"
+msgstr "Tümü"
+
+#: templates/todos.html
+msgid "No todos found"
+msgstr "Görev bulunamadı"
+
+#: templates/todos.html
+msgid "Create your first todo to get started!"
+msgstr "Başlamak için ilk görevinizi oluşturun!"
+
+#: templates/todos.html
+msgid "Create Todo"
+msgstr "Görev Oluştur"
+
+#: templates/todos.html
+msgid "Title"
+msgstr "Başlık"
+
+#: templates/todos.html
+msgid "Description"
+msgstr "Açıklama"
+
+#: templates/todos.html
+msgid "Priority"
+msgstr "Öncelik"
+
+#: templates/todos.html
+msgid "Low"
+msgstr "Düşük"
+
+#: templates/todos.html
+msgid "Medium"
+msgstr "Orta"
+
+#: templates/todos.html
+msgid "High"
+msgstr "Yüksek"
+
+#: templates/todos.html
+msgid "Status"
+msgstr "Durum"
+
+#: templates/todos.html
+msgid "Due Date"
+msgstr "Bitiş Tarihi"
+
+#: templates/todos.html
+msgid "Reminder Date"
+msgstr "Hatırlatma Tarihi"
+
+#: templates/todos.html
+msgid "Cancel"
+msgstr "İptal"
+
+#: templates/todos.html
+msgid "Save"
+msgstr "Kaydet"
+
+#: templates/todos.html
+msgid "Edit"
+msgstr "Düzenle"
+
+#: templates/todos.html
+msgid "Delete"
+msgstr "Sil"
+
+#: templates/todos.html
+msgid "Are you sure you want to delete this todo?"
+msgstr "Bu görevi silmek istediğinizden emin misiniz?"
+
+#: templates/todos.html
+msgid "Edit Todo"
+msgstr "Görev Düzenle"
+
+#: templates/dashboard.html
+msgid "My Todos"
+msgstr "Görevlerim"
+
+#: templates/dashboard.html
+msgid "View All"
+msgstr "Tümünü Gör"
+
+#: templates/dashboard.html
+msgid "Mark as Completed"
+msgstr "Tamamlandı Olarak İşaretle"
+
+#: templates/dashboard.html
+msgid "No todos yet"
+msgstr "Henüz görev yok"
+
+#: templates/dashboard.html
+msgid "Create First Todo"
+msgstr "İlk Görevi Oluştur"
+
+#: templates/dashboard.html
+msgid "Todo Statistics"
+msgstr "Görev İstatistikleri"
+
+#: templates/dashboard.html
+msgid "Total"
+msgstr "Toplam"
+
+#: templates/dashboard.html
+msgid "Quick Add Todo"
+msgstr "Hızlı Görev Ekle"
+
+#: templates/dashboard.html
+msgid "Add Todo"
+msgstr "Görev Ekle"
+
+#: templates/base.html
+msgid "Todos"
+msgstr "Görevler"
+
 #: templates/ayarlar/kullanicilar.html
 msgid "User Settings"
 msgstr "Kullanıcı Ayarları"
@@ -917,6 +1053,21 @@ msgstr "Randevu Bilgileri"
 #: templates/randevu_ekle.html:134 templates/randevular.html:64
 msgid "Reference"
 msgstr "Referans"
+
+msgid "Record Info"
+msgstr "Kayıt Bilgisi"
+
+msgid "CSV Format"
+msgstr "CSV Formatı"
+
+msgid "Excel Format"
+msgstr "Excel Formatı"
+
+msgid "PDF Format"
+msgstr "PDF Formatı"
+
+msgid "Export"
+msgstr "Dışa Aktar"
 #: templates/ayarlar/islemler.html:75 templates/randevu_detay.html:37
 #: templates/randevular.html:68
 msgid "Duration"
@@ -1271,6 +1422,21 @@ msgstr "Durum"
 
 msgid "Reference"
 msgstr "Referans"
+
+msgid "Record Info"
+msgstr "Kayıt Bilgisi"
+
+msgid "CSV Format"
+msgstr "CSV Formatı"
+
+msgid "Excel Format"
+msgstr "Excel Formatı"
+
+msgid "PDF Format"
+msgstr "PDF Formatı"
+
+msgid "Export"
+msgstr "Dışa Aktar"
 
 msgid "Notes"
 msgstr "Notlar"
@@ -2176,3 +2342,18 @@ msgstr "Defter"
 
 msgid "Reference"
 msgstr "Referans"
+
+msgid "Record Info"
+msgstr "Kayıt Bilgisi"
+
+msgid "CSV Format"
+msgstr "CSV Formatı"
+
+msgid "Excel Format"
+msgstr "Excel Formatı"
+
+msgid "PDF Format"
+msgstr "PDF Formatı"
+
+msgid "Export"
+msgstr "Dışa Aktar"

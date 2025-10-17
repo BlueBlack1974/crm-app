@@ -37,9 +37,16 @@
     <h1 class="h2">{{ _('User Activity Logs') }}</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="exportLogs()">
-                <i class="fas fa-download me-1"></i>{{ _('Export') }}
-            </button>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-download me-1"></i>{{ _('Export') }}
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+                    <li><a class="dropdown-item" href="#" onclick="exportLogs('csv')"><i class="fas fa-file-csv me-2"></i>{{ _('CSV Format') }}</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportLogs('excel')"><i class="fas fa-file-excel me-2"></i>{{ _('Excel Format') }}</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportLogs('pdf')"><i class="fas fa-file-pdf me-2"></i>{{ _('PDF Format') }}</a></li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
@@ -117,7 +124,7 @@
                         <th>{{ _('User') }}</th>
                         <th>{{ _('Action') }}</th>
                         <th>{{ _('Table') }}</th>
-                        <th>{{ _('Record ID') }}</th>
+                        <th>{{ _('Record Info') }}</th>
                         <th>{{ _('Detail') }}</th>
                         <th>{{ _('IP Address') }}</th>
                         <th>{{ _('Data') }}</th>
@@ -151,8 +158,10 @@
                             <span class="badge bg-light text-dark log-badge">{{ log.TabloAdi }}</span>
                         </td>
                         <td>
-                            {% if log.KayitID %}
-                            <code>{{ log.KayitID }}</code>
+                            {% if log.record_info %}
+                            <div class="log-detail" title="{{ log.record_info }}">
+                                {{ log.record_info }}
+                            </div>
                             {% else %}
                             <span class="text-muted">-</span>
                             {% endif %}
@@ -256,9 +265,9 @@ function showLogData(logId) {
         });
 }
 
-function exportLogs() {
+function exportLogs(format) {
     const params = new URLSearchParams(window.location.search);
-    params.set('export', 'csv');
+    params.set('export', format);
     window.location.href = '{{ url_for("loglar") }}?' + params.toString();
 }
 </script>

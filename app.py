@@ -17,6 +17,7 @@ from email.mime.text import MIMEText
 import threading
 import queue
 import json
+import time
 from collections import Counter, defaultdict
 from io import BytesIO, StringIO
 import csv
@@ -130,6 +131,65 @@ def log_user_action_decorator(action_type, table_name, record_id_param=None, det
             return result
         return decorated_function
     return decorator
+
+def get_record_info(log):
+    """Log için record bilgisini hazırla"""
+    try:
+        if not log.KayitID:
+            return None
+            
+        if log.TabloAdi == 'Randevu':
+            randevu = Randevu.query.filter_by(RandevuID=log.KayitID, FirmaID=log.kullanici.FirmaID).first()
+            if randevu:
+                tarih_str = randevu.RandevuTarihi.strftime('%d.%m.%Y %H:%M')
+                musteri_adi = f"{randevu.MusteriAdi or ''} {randevu.MusteriSoyadi or ''}".strip()
+                if musteri_adi:
+                    return f"{tarih_str} - {musteri_adi} ({randevu.RandevuBaslik})"
+                else:
+                    return f"{tarih_str} - {randevu.RandevuBaslik}"
+            else:
+                return f"ID: {log.KayitID}"
+                
+        elif log.TabloAdi == 'Musteri':
+            musteri = Musteri.query.filter_by(MusteriID=log.KayitID, FirmaID=log.kullanici.FirmaID).first()
+            if musteri:
+                musteri_adi = f"{musteri.Ad or ''} {musteri.Soyad or ''}".strip()
+                if musteri_adi and musteri.Telefon:
+                    return f"{musteri_adi} ({musteri.Telefon})"
+                elif musteri_adi:
+                    return musteri_adi
+                elif musteri.Telefon:
+                    return musteri.Telefon
+                else:
+                    return f"ID: {log.KayitID}"
+            else:
+                return f"ID: {log.KayitID}"
+                
+        elif log.TabloAdi == 'Kullanici':
+            kullanici = Kullanici.query.filter_by(KullaniciID=log.KayitID, FirmaID=log.kullanici.FirmaID).first()
+            if kullanici:
+                kullanici_adi = f"{kullanici.Ad or ''} {kullanici.Soyad or ''}".strip()
+                if kullanici_adi:
+                    return f"{kullanici_adi} ({kullanici.KullaniciAdi})"
+                else:
+                    return kullanici.KullaniciAdi
+            else:
+                return f"ID: {log.KayitID}"
+                
+        elif log.TabloAdi == 'Sistem':
+            # Sistem logları için detay bilgisini kullan
+            if log.IslemDetayi:
+                return log.IslemDetayi[:50] + "..." if len(log.IslemDetayi) > 50 else log.IslemDetayi
+            else:
+                return "Sistem İşlemi"
+                
+        else:
+            # Diğer tablolar için sadece ID göster
+            return f"ID: {log.KayitID}"
+            
+    except Exception:
+        # Hata durumunda sadece ID göster
+        return f"ID: {log.KayitID}" if log.KayitID else None
 
 # Babel konfigürasyonu
 app.config['LANGUAGES'] = {
@@ -737,6 +797,27 @@ class Musteri(db.Model):
 
     def __repr__(self):
         return f'<Musteri {self.MusteriID} {self.tam_adi}>'
+
+class Todo(db.Model):
+    __tablename__ = 'Todos'
+    
+    TodoID = db.Column(db.Integer, primary_key=True)
+    KullaniciID = db.Column(db.Integer, db.ForeignKey('Kullanicilar.KullaniciID'), nullable=False)
+    Baslik = db.Column(db.NVARCHAR(200), nullable=False)
+    Aciklama = db.Column(db.Text)
+    Oncelik = db.Column(db.Enum('Düşük', 'Orta', 'Yüksek', name='oncelik_enum'), default='Orta')
+    Durum = db.Column(db.Enum('Beklemede', 'Devam Ediyor', 'Tamamlandı', name='durum_enum'), default='Beklemede')
+    BitisTarihi = db.Column(db.DateTime)
+    HatirlatmaTarihi = db.Column(db.DateTime)
+    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    GuncellemeTarihi = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    TamamlanmaTarihi = db.Column(db.DateTime)
+    
+    # İlişkiler
+    kullanici = db.relationship('Kullanici', backref='todos', lazy=True)
+    
+    def __repr__(self):
+        return f'<Todo {self.Baslik}>'
 
 # E-posta gonderim yardimcisi
 def send_email_simple(to_email: str, subject: str, body: str) -> bool:
@@ -1779,9 +1860,40 @@ def dashboard():
             Randevu.FirmaID == session['firma_id']
         ).order_by(Randevu.RandevuTarihi.desc()).limit(10).all()
     
+    # Todo verilerini getir
+    user_todos = Todo.query.filter_by(KullaniciID=session['user_id']).order_by(
+        Todo.Oncelik.desc(), Todo.OlusturmaTarihi.desc()
+    ).limit(5).all()
+    
+    # Todo istatistikleri
+    toplam_todo = Todo.query.filter_by(KullaniciID=session['user_id']).count()
+    tamamlanan_todo = Todo.query.filter_by(KullaniciID=session['user_id'], Durum='Tamamlandı').count()
+    beklemede_todo = Todo.query.filter_by(KullaniciID=session['user_id'], Durum='Beklemede').count()
+    devam_eden_todo = Todo.query.filter_by(KullaniciID=session['user_id'], Durum='Devam Ediyor').count()
+    
+    # Yaklaşan hatırlatmalar (bugünden itibaren 3 gün)
+    bugun = datetime.now().date()
+    uc_gun_sonra = bugun + timedelta(days=3)
+    yaklasan_todos = Todo.query.filter(
+        Todo.KullaniciID == session['user_id'],
+        Todo.HatirlatmaTarihi.isnot(None),
+        Todo.Durum != 'Tamamlandı',
+        Todo.HatirlatmaTarihi >= bugun,
+        Todo.HatirlatmaTarihi <= uc_gun_sonra
+    ).limit(3).all()
+    
     # Okunmamiş bildirim sayısı
     unread_count = Bildirim.query.filter_by(KullaniciID=session['user_id'], Okundu=False).count()
-    return render_template('dashboard.html', randevular=randevular, unread_count=unread_count)
+    
+    return render_template('dashboard.html', 
+                         randevular=randevular, 
+                         unread_count=unread_count,
+                         user_todos=user_todos,
+                         toplam_todo=toplam_todo,
+                         tamamlanan_todo=tamamlanan_todo,
+                         beklemede_todo=beklemede_todo,
+                         devam_eden_todo=devam_eden_todo,
+                         yaklasan_todos=yaklasan_todos)
 
 
 @app.route('/profil')
@@ -3884,28 +3996,178 @@ def rapor_musteriler():
     # En çok randevusu olan 10 müşteri (birleştirilmiş verilerden)
     top_musteriler = sorted(merged_rows, key=lambda x: x['randevu_sayisi'], reverse=True)[:10]
 
-    # CSV dışa aktarım (birleştirilmiş)
-    if format_tip == 'csv':
-        output = StringIO()
-        writer = csv.writer(output, delimiter=';')
-        writer.writerow(['MusteriID', 'Ad', 'Soyad', 'Telefon', 'Email', 'Aktif', 'Kategori', 'OlusturmaTarihi', 'RandevuSayisi'])
-        for r in merged_rows:
-            # Telefon numarasını Excel'de metin olarak tanıması için +90'dan sonra boşluk ekle
-            telefon = r['telefon'] or ''
-            if telefon and telefon.startswith('+90'):
-                telefon = telefon.replace('+90', '+90 ')  # +90'dan sonra boşluk ekle
-            writer.writerow([
-                r['id'], r['ad'], r['soyad'], telefon, r['email'], 'Evet' if r['aktif'] else 'Hayır', r['kategori'] or '', (r['olusturma'].strftime('%Y-%m-%d %H:%M') if r['olusturma'] else ''), r['randevu_sayisi']
-            ])
-        output.seek(0)
-        filename = f"musteri_raporu_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
-        data = output.getvalue().encode('utf-8-sig')
-        # Çıktı alma (CSV) logla
+    # Export işlemleri
+    if format_tip in ['csv', 'excel', 'pdf']:
+        # Çıktı alma logla
         try:
-            log_user_action('VIEW', 'Rapor', detail="Müşteri raporu CSV indirildi")
+            log_user_action('VIEW', 'Rapor', detail=f"Müşteri raporu {format_tip.upper()} indirildi")
         except Exception:
             pass
-        return send_file(BytesIO(data), mimetype='text/csv; charset=utf-8', as_attachment=True, download_name=filename)
+        
+        if format_tip == 'csv':
+            # CSV Export
+            output = StringIO()
+            writer = csv.writer(output, delimiter=';')
+            writer.writerow(['MusteriID', 'Ad', 'Soyad', 'Telefon', 'Email', 'Aktif', 'Kategori', 'OlusturmaTarihi', 'RandevuSayisi'])
+            for r in merged_rows:
+                # Telefon numarasını Excel'de metin olarak tanıması için +90'dan sonra boşluk ekle
+                telefon = r['telefon'] or ''
+                if telefon and telefon.startswith('+90'):
+                    telefon = telefon.replace('+90', '+90 ')  # +90'dan sonra boşluk ekle
+                writer.writerow([
+                    r['id'], r['ad'], r['soyad'], telefon, r['email'], 'Evet' if r['aktif'] else 'Hayır', r['kategori'] or '', (r['olusturma'].strftime('%Y-%m-%d %H:%M') if r['olusturma'] else ''), r['randevu_sayisi']
+                ])
+            output.seek(0)
+            filename = f"musteri_raporu_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+            data = output.getvalue().encode('utf-8-sig')
+            return send_file(BytesIO(data), mimetype='text/csv; charset=utf-8', as_attachment=True, download_name=filename)
+        
+        elif format_tip == 'excel':
+            # Excel Export
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Müşteri Raporu"
+            
+            # Başlık satırı
+            headers = ['Müşteri ID', 'Ad', 'Soyad', 'Telefon', 'Email', 'Aktif', 'Kategori', 'Oluşturma Tarihi', 'Randevu Sayısı']
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col, value=header)
+                cell.font = Font(bold=True)
+                cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+            
+            # Veri satırları
+            for row, r in enumerate(merged_rows, 2):
+                telefon = r['telefon'] or ''
+                if telefon and telefon.startswith('+90'):
+                    telefon = telefon.replace('+90', '+90 ')
+                
+                ws.cell(row=row, column=1, value=r['id'])
+                ws.cell(row=row, column=2, value=r['ad'])
+                ws.cell(row=row, column=3, value=r['soyad'])
+                ws.cell(row=row, column=4, value=telefon)
+                ws.cell(row=row, column=5, value=r['email'])
+                ws.cell(row=row, column=6, value='Evet' if r['aktif'] else 'Hayır')
+                ws.cell(row=row, column=7, value=r['kategori'] or '')
+                ws.cell(row=row, column=8, value=r['olusturma'].strftime('%Y-%m-%d %H:%M') if r['olusturma'] else '')
+                ws.cell(row=row, column=9, value=r['randevu_sayisi'])
+            
+            # Sütun genişliklerini ayarla
+            for column in ws.columns:
+                max_length = 0
+                column_letter = get_column_letter(column[0].column)
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 50)
+                ws.column_dimensions[column_letter].width = adjusted_width
+            
+            # Excel dosyasını kaydet
+            buffer = BytesIO()
+            wb.save(buffer)
+            buffer.seek(0)
+            
+            filename = f"musteri_raporu_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+            return send_file(
+                buffer,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=filename
+            )
+        
+        elif format_tip == 'pdf':
+            # PDF Export
+            buffer = BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+            
+            # Türkçe font desteği
+            try:
+                pdfmetrics.registerFont(TTFont('DejaVuSans', 'C:/Windows/Fonts/dejavu-sans.ttf'))
+                pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'C:/Windows/Fonts/dejavu-sans-bold.ttf'))
+                turkish_font = 'DejaVuSans'
+                turkish_font_bold = 'DejaVuSans-Bold'
+            except:
+                try:
+                    pdfmetrics.registerFont(TTFont('DejaVuSans', 'C:/Windows/Fonts/arial.ttf'))
+                    pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'C:/Windows/Fonts/arialbd.ttf'))
+                    turkish_font = 'DejaVuSans'
+                    turkish_font_bold = 'DejaVuSans-Bold'
+                except:
+                    turkish_font = 'Helvetica'
+                    turkish_font_bold = 'Helvetica-Bold'
+            
+            # Stil tanımları
+            styles = getSampleStyleSheet()
+            title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=18, spaceAfter=30, alignment=TA_CENTER, fontName=turkish_font_bold)
+            
+            # Başlık
+            title = Paragraph("Müşteri Raporu", title_style)
+            
+            # Özet bilgiler
+            summary_data = [
+                ['Toplam Müşteri', str(toplam_musteri)],
+                ['Aktif Müşteri', str(aktif_musteri)],
+                ['Yeni Müşteri', str(yeni_musteri)]
+            ]
+            
+            summary_table = Table(summary_data)
+            summary_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.lightgrey),
+                ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, -1), turkish_font),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            
+            # Tablo verileri
+            table_data = [['Müşteri ID', 'Ad', 'Soyad', 'Telefon', 'Email', 'Aktif', 'Kategori', 'Randevu Sayısı']]
+            
+            for r in merged_rows[:50]:  # İlk 50 kayıt
+                telefon = r['telefon'] or ''
+                if telefon and telefon.startswith('+90'):
+                    telefon = telefon.replace('+90', '+90 ')
+                
+                table_data.append([
+                    str(r['id']),
+                    r['ad'],
+                    r['soyad'],
+                    telefon,
+                    r['email'],
+                    'Evet' if r['aktif'] else 'Hayır',
+                    r['kategori'] or '',
+                    str(r['randevu_sayisi'])
+                ])
+            
+            # Tablo oluştur
+            table = Table(table_data, repeatRows=1)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), turkish_font_bold),
+                ('FONTSIZE', (0, 0), (-1, 0), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('FONTNAME', (0, 1), (-1, -1), turkish_font),
+                ('FONTSIZE', (0, 1), (-1, -1), 7),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            
+            # PDF oluştur
+            elements = [title, Spacer(1, 12), summary_table, Spacer(1, 12), table]
+            doc.build(elements)
+            buffer.seek(0)
+            
+            filename = f"musteri_raporu_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+            return send_file(
+                buffer,
+                mimetype='application/pdf',
+                as_attachment=True,
+                download_name=filename
+            )
 
     # Kategoriler dropdown için
     kategoriler = MusteriKategori.query.filter_by(FirmaID=firma_id).order_by(MusteriKategori.KategoriAdi).all()
@@ -5096,8 +5358,13 @@ def loglar():
     kullanici_id = request.args.get('kullanici_id', type=int)
     islem_tipi = request.args.get('islem_tipi')
     tablo_adi = request.args.get('tablo_adi')
-    tarih_baslangic = request.args.get('tarih_baslangic')
-    tarih_bitis = request.args.get('tarih_bitis')
+    
+    # Bugünün tarihi
+    today = datetime.now().strftime('%Y-%m-%d')
+    
+    # Tarih filtreleri - eğer belirtilmemişse bugünü kullan
+    tarih_baslangic = request.args.get('tarih_baslangic', today)
+    tarih_bitis = request.args.get('tarih_bitis', today)
     
     # Query oluştur
     query = KullaniciLog.query.join(Kullanici)
@@ -5108,18 +5375,17 @@ def loglar():
         query = query.filter(KullaniciLog.IslemTipi == islem_tipi)
     if tablo_adi:
         query = query.filter(KullaniciLog.TabloAdi == tablo_adi)
-    if tarih_baslangic:
-        try:
-            baslangic_dt = datetime.strptime(tarih_baslangic, '%Y-%m-%d')
-            query = query.filter(KullaniciLog.OlusturmaTarihi >= baslangic_dt)
-        except ValueError:
-            pass
-    if tarih_bitis:
-        try:
-            bitis_dt = datetime.strptime(tarih_bitis, '%Y-%m-%d') + timedelta(days=1)
-            query = query.filter(KullaniciLog.OlusturmaTarihi < bitis_dt)
-        except ValueError:
-            pass
+    # Tarih filtrelerini uygula (her zaman)
+    try:
+        baslangic_dt = datetime.strptime(tarih_baslangic, '%Y-%m-%d')
+        query = query.filter(KullaniciLog.OlusturmaTarihi >= baslangic_dt)
+    except ValueError:
+        pass
+    try:
+        bitis_dt = datetime.strptime(tarih_bitis, '%Y-%m-%d') + timedelta(days=1)
+        query = query.filter(KullaniciLog.OlusturmaTarihi < bitis_dt)
+    except ValueError:
+        pass
     
     # Sadece kendi firma logları
     query = query.filter(Kullanici.FirmaID == session['firma_id'])
@@ -5127,45 +5393,171 @@ def loglar():
     # Sıralama ve sayfalama
     query = query.order_by(KullaniciLog.OlusturmaTarihi.desc())
     
-    # CSV export
-    if request.args.get('export') == 'csv':
+    # Export işlemleri
+    export_format = request.args.get('export')
+    if export_format in ['csv', 'excel', 'pdf']:
         logs = query.all()
-        output = StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['Tarih', 'Kullanıcı', 'İşlem', 'Tablo', 'Kayıt ID', 'Detay', 'IP'])
-        for log in logs:
-            writer.writerow([
-                log.OlusturmaTarihi.strftime('%d.%m.%Y %H:%M:%S'),
-                log.kullanici.KullaniciAdi,
-                log.IslemTipi,
-                log.TabloAdi,
-                log.KayitID or '',
-                log.IslemDetayi or '',
-                log.IPAdresi or ''
-            ])
-        output.seek(0)
-        # Çıktı alma (Log CSV) logla
+        
+        # Çıktı alma logla
         try:
-            log_user_action('VIEW', 'Sistem', detail="Loglar CSV indirildi")
+            log_user_action('VIEW', 'Sistem', detail=f"Loglar {export_format.upper()} indirildi")
         except Exception:
             pass
-        return send_file(
-            BytesIO(output.getvalue().encode('utf-8-sig')),
-            mimetype='text/csv',
-            as_attachment=True,
-            download_name=f'loglar_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
-        )
+        
+        if export_format == 'csv':
+            # CSV Export
+            output = StringIO()
+            writer = csv.writer(output, delimiter=';')
+            writer.writerow(['Tarih', 'Kullanıcı', 'İşlem', 'Tablo', 'Kayıt Bilgisi', 'Detay', 'IP'])
+            for log in logs:
+                record_info = get_record_info(log)
+                writer.writerow([
+                    log.OlusturmaTarihi.strftime('%d.%m.%Y %H:%M:%S'),
+                    log.kullanici.KullaniciAdi,
+                    log.IslemTipi,
+                    log.TabloAdi,
+                    record_info or (log.KayitID or ''),
+                    log.IslemDetayi or '',
+                    log.IPAdresi or ''
+                ])
+            output.seek(0)
+            return send_file(
+                BytesIO(output.getvalue().encode('utf-8-sig')),
+                mimetype='text/csv; charset=utf-8',
+                as_attachment=True,
+                download_name=f'loglar_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+            )
+        
+        elif export_format == 'excel':
+            # Excel Export
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Kullanıcı Logları"
+            
+            # Başlık satırı
+            headers = ['Tarih', 'Kullanıcı', 'İşlem', 'Tablo', 'Kayıt Bilgisi', 'Detay', 'IP']
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col, value=header)
+                cell.font = Font(bold=True)
+                cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+            
+            # Veri satırları
+            for row, log in enumerate(logs, 2):
+                record_info = get_record_info(log)
+                ws.cell(row=row, column=1, value=log.OlusturmaTarihi.strftime('%d.%m.%Y %H:%M:%S'))
+                ws.cell(row=row, column=2, value=log.kullanici.KullaniciAdi)
+                ws.cell(row=row, column=3, value=log.IslemTipi)
+                ws.cell(row=row, column=4, value=log.TabloAdi)
+                ws.cell(row=row, column=5, value=record_info or (log.KayitID or ''))
+                ws.cell(row=row, column=6, value=log.IslemDetayi or '')
+                ws.cell(row=row, column=7, value=log.IPAdresi or '')
+            
+            # Sütun genişliklerini ayarla
+            for column in ws.columns:
+                max_length = 0
+                column_letter = get_column_letter(column[0].column)
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 50)
+                ws.column_dimensions[column_letter].width = adjusted_width
+            
+            # Excel dosyasını kaydet
+            buffer = BytesIO()
+            wb.save(buffer)
+            buffer.seek(0)
+            
+            return send_file(
+                buffer,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=f'loglar_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+            )
+        
+        elif export_format == 'pdf':
+            # PDF Export
+            buffer = BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+            
+            # Türkçe font desteği
+            try:
+                pdfmetrics.registerFont(TTFont('DejaVuSans', 'C:/Windows/Fonts/dejavu-sans.ttf'))
+                pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'C:/Windows/Fonts/dejavu-sans-bold.ttf'))
+                turkish_font = 'DejaVuSans'
+                turkish_font_bold = 'DejaVuSans-Bold'
+            except:
+                try:
+                    pdfmetrics.registerFont(TTFont('DejaVuSans', 'C:/Windows/Fonts/arial.ttf'))
+                    pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'C:/Windows/Fonts/arialbd.ttf'))
+                    turkish_font = 'DejaVuSans'
+                    turkish_font_bold = 'DejaVuSans-Bold'
+                except:
+                    turkish_font = 'Helvetica'
+                    turkish_font_bold = 'Helvetica-Bold'
+            
+            # Stil tanımları
+            styles = getSampleStyleSheet()
+            title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=18, spaceAfter=30, alignment=TA_CENTER, fontName=turkish_font_bold)
+            
+            # Başlık
+            title = Paragraph("Kullanıcı Aktivite Logları", title_style)
+            
+            # Tablo verileri
+            table_data = [['Tarih', 'Kullanıcı', 'İşlem', 'Tablo', 'Kayıt Bilgisi', 'Detay', 'IP']]
+            
+            for log in logs:
+                record_info = get_record_info(log)
+                table_data.append([
+                    log.OlusturmaTarihi.strftime('%d.%m.%Y %H:%M:%S'),
+                    log.kullanici.KullaniciAdi,
+                    log.IslemTipi,
+                    log.TabloAdi,
+                    record_info or (log.KayitID or ''),
+                    log.IslemDetayi or '',
+                    log.IPAdresi or ''
+                ])
+            
+            # Tablo oluştur
+            table = Table(table_data, repeatRows=1)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), turkish_font_bold),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('FONTNAME', (0, 1), (-1, -1), turkish_font),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            
+            # PDF oluştur
+            elements = [title, Spacer(1, 12), table]
+            doc.build(elements)
+            buffer.seek(0)
+            
+            return send_file(
+                buffer,
+                mimetype='application/pdf',
+                as_attachment=True,
+                download_name=f'loglar_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+            )
     
     # Sayfalama
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     loglar = pagination.items
     total_pages = pagination.pages
     
+    # Her log için record bilgisini hazırla
+    for log in loglar:
+        log.record_info = get_record_info(log)
+    
     # Kullanıcı listesi (filtre için)
     kullanicilar = Kullanici.query.filter_by(FirmaID=session['firma_id'], Aktif=True).all()
-    
-    # Bugünün tarihi
-    today = datetime.now().strftime('%Y-%m-%d')
     
     return render_template('loglar.html', 
                          loglar=loglar,
@@ -5550,7 +5942,8 @@ def raporlar():
     # Kapasite ve defter parametrelerini al
     kapasite = request.args.get('kapasite', '')
     defter_id = request.args.get('defter_id', '')
-    print(f"Form parametreleri - defter_id: '{defter_id}', kapasite: '{kapasite}'")
+    format_tip = request.args.get('format')  # Export format
+    print(f"Form parametreleri - defter_id: '{defter_id}', kapasite: '{kapasite}', format: '{format_tip}'")
     
     # Defter listesini al
     defterler = RandevuDefterAyar.query.filter(
@@ -5568,18 +5961,226 @@ def raporlar():
             ayar = RandevuDefterAyar.query.filter_by(AyarID=defter_id, FirmaID=session['firma_id'], Aktif=True).first()
             if ayar:
                 def parse_hhmm(s):
-                    h, m = (s or '09:00').split(':')
-                    return int(h), int(m)
+                    try:
+                        h, m = (s or '09:00').split(':')
+                        return int(h), int(m)
+                    except:
+                        return 9, 0  # Varsayılan 09:00
+                
                 sh, sm = parse_hhmm(ayar.BaslangicSaati or '09:00')
                 eh, em = parse_hhmm(ayar.BitisSaati or '18:00')
                 total_minutes = max(0, (eh * 60 + em) - (sh * 60 + sm))
-                slot_min = ayar.SlotDakika or 30
+                slot_min = max(1, ayar.SlotDakika or 30)  # En az 1 dakika
                 auto_capacity = max(1, total_minutes // slot_min)
-        except Exception:
+                print(f"Defter {ayar.DefterAdi} için otomatik kapasite hesaplandı: {auto_capacity} (Saat: {ayar.BaslangicSaati}-{ayar.BitisSaati}, Slot: {slot_min}dk)")
+        except Exception as e:
+            print(f"Kapasite hesaplama hatası: {e}")
             auto_capacity = None
 
     if not kapasite or kapasite == '0':
         kapasite = str(auto_capacity or 8)
+
+    # Export işlemleri
+    if format_tip in ['csv', 'excel', 'pdf']:
+        # Randevu verilerini al
+        start_dt = datetime(start_date.year, start_date.month, start_date.day, 0, 0)
+        end_dt = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59)
+        
+        # Randevu sorgusu
+        if session.get('is_admin', False):
+            q = Randevu.query.filter(
+                Randevu.FirmaID == session['firma_id'],
+                Randevu.RandevuTarihi >= start_dt,
+                Randevu.RandevuTarihi <= end_dt
+            )
+        else:
+            q = db.session.query(Randevu).join(RandevuYetki).filter(
+                RandevuYetki.KullaniciID == session['user_id'],
+                RandevuYetki.GoruntulemeYetkisi == True,
+                Randevu.FirmaID == session['firma_id'],
+                Randevu.RandevuTarihi >= start_dt,
+                Randevu.RandevuTarihi <= end_dt
+            )
+        
+        # Defter filtresi
+        if defter_id:
+            q = q.filter(Randevu.DefterID == defter_id)
+        
+        randevular = q.order_by(Randevu.RandevuTarihi.desc()).all()
+        
+        # Çıktı alma logla
+        try:
+            log_user_action('VIEW', 'Rapor', detail=f"Randevu raporu {format_tip.upper()} indirildi")
+        except Exception:
+            pass
+        
+        if format_tip == 'csv':
+            # CSV Export
+            output = StringIO()
+            writer = csv.writer(output, delimiter=';')
+            writer.writerow(['Randevu ID', 'Tarih', 'Saat', 'Müşteri', 'Telefon', 'Email', 'Başlık', 'Durum', 'Süre', 'Defter'])
+            for r in randevular:
+                writer.writerow([
+                    r.RandevuID,
+                    r.RandevuTarihi.strftime('%d.%m.%Y'),
+                    r.RandevuTarihi.strftime('%H:%M'),
+                    f"{r.MusteriAdi} {r.MusteriSoyadi or ''}".strip(),
+                    r.MusteriTelefon or '',
+                    r.MusteriEmail or '',
+                    r.RandevuBaslik or '',
+                    r.Durum or '',
+                    f"{r.RandevuSuresi or 60} dk",
+                    r.defter.DefterAdi if r.defter else ''
+                ])
+            output.seek(0)
+            filename = f"randevu_raporu_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+            data = output.getvalue().encode('utf-8-sig')
+            return send_file(BytesIO(data), mimetype='text/csv; charset=utf-8', as_attachment=True, download_name=filename)
+        
+        elif format_tip == 'excel':
+            # Excel Export
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Randevu Raporu"
+            
+            # Başlık satırı
+            headers = ['Randevu ID', 'Tarih', 'Saat', 'Müşteri', 'Telefon', 'Email', 'Başlık', 'Durum', 'Süre', 'Defter']
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col, value=header)
+                cell.font = Font(bold=True)
+                cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+            
+            # Veri satırları
+            for row, r in enumerate(randevular, 2):
+                ws.cell(row=row, column=1, value=r.RandevuID)
+                ws.cell(row=row, column=2, value=r.RandevuTarihi.strftime('%d.%m.%Y'))
+                ws.cell(row=row, column=3, value=r.RandevuTarihi.strftime('%H:%M'))
+                ws.cell(row=row, column=4, value=f"{r.MusteriAdi} {r.MusteriSoyadi or ''}".strip())
+                ws.cell(row=row, column=5, value=r.MusteriTelefon or '')
+                ws.cell(row=row, column=6, value=r.MusteriEmail or '')
+                ws.cell(row=row, column=7, value=r.RandevuBaslik or '')
+                ws.cell(row=row, column=8, value=r.Durum or '')
+                ws.cell(row=row, column=9, value=f"{r.RandevuSuresi or 60} dk")
+                ws.cell(row=row, column=10, value=r.defter.DefterAdi if r.defter else '')
+            
+            # Sütun genişliklerini ayarla
+            for column in ws.columns:
+                max_length = 0
+                column_letter = get_column_letter(column[0].column)
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 50)
+                ws.column_dimensions[column_letter].width = adjusted_width
+            
+            # Excel dosyasını kaydet
+            buffer = BytesIO()
+            wb.save(buffer)
+            buffer.seek(0)
+            
+            filename = f"randevu_raporu_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+            return send_file(
+                buffer,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=filename
+            )
+        
+        elif format_tip == 'pdf':
+            # PDF Export
+            buffer = BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+            
+            # Türkçe font desteği
+            try:
+                pdfmetrics.registerFont(TTFont('DejaVuSans', 'C:/Windows/Fonts/dejavu-sans.ttf'))
+                pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'C:/Windows/Fonts/dejavu-sans-bold.ttf'))
+                turkish_font = 'DejaVuSans'
+                turkish_font_bold = 'DejaVuSans-Bold'
+            except:
+                try:
+                    pdfmetrics.registerFont(TTFont('DejaVuSans', 'C:/Windows/Fonts/arial.ttf'))
+                    pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'C:/Windows/Fonts/arialbd.ttf'))
+                    turkish_font = 'DejaVuSans'
+                    turkish_font_bold = 'DejaVuSans-Bold'
+                except:
+                    turkish_font = 'Helvetica'
+                    turkish_font_bold = 'Helvetica-Bold'
+            
+            # Stil tanımları
+            styles = getSampleStyleSheet()
+            title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=18, spaceAfter=30, alignment=TA_CENTER, fontName=turkish_font_bold)
+            
+            # Başlık
+            title = Paragraph("Randevu Raporu", title_style)
+            
+            # Özet bilgiler
+            toplam_randevu = len(randevular)
+            tamamlanan = len([r for r in randevular if r.Durum == 'Tamamlandı'])
+            iptal = len([r for r in randevular if r.Durum == 'İptal'])
+            beklemede = len([r for r in randevular if r.Durum == 'Beklemede'])
+            
+            summary_data = [
+                ['Toplam Randevu', str(toplam_randevu)],
+                ['Tamamlanan', str(tamamlanan)],
+                ['İptal', str(iptal)],
+                ['Beklemede', str(beklemede)]
+            ]
+            
+            summary_table = Table(summary_data)
+            summary_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.lightgrey),
+                ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, -1), turkish_font),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            
+            # Tablo verileri
+            table_data = [['Tarih', 'Saat', 'Müşteri', 'Telefon', 'Başlık', 'Durum', 'Süre']]
+            
+            for r in randevular[:50]:  # İlk 50 kayıt
+                table_data.append([
+                    r.RandevuTarihi.strftime('%d.%m.%Y'),
+                    r.RandevuTarihi.strftime('%H:%M'),
+                    f"{r.MusteriAdi} {r.MusteriSoyadi or ''}".strip(),
+                    r.MusteriTelefon or '',
+                    r.RandevuBaslik or '',
+                    r.Durum or '',
+                    f"{r.RandevuSuresi or 60} dk"
+                ])
+            
+            # Tablo oluştur
+            table = Table(table_data, repeatRows=1)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), turkish_font_bold),
+                ('FONTSIZE', (0, 0), (-1, 0), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('FONTNAME', (0, 1), (-1, -1), turkish_font),
+                ('FONTSIZE', (0, 1), (-1, -1), 7),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            
+            # PDF oluştur
+            elements = [title, Spacer(1, 12), summary_table, Spacer(1, 12), table]
+            doc.build(elements)
+            buffer.seek(0)
+            
+            filename = f"randevu_raporu_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+            return send_file(
+                buffer,
+                mimetype='application/pdf',
+                as_attachment=True,
+                download_name=filename
+            )
 
     return render_template('raporlar.html', 
                          baslangic=start_date.strftime('%Y-%m-%d'), 
@@ -5979,10 +6580,332 @@ def api_musteri_ara():
     
     return jsonify(sonuc)
 
+# ==================== TODO SİSTEMİ ====================
+
+@app.route('/todos')
+@login_required
+def todos():
+    """Todo listesi sayfası"""
+    # Kullanıcının todolarını getir
+    user_todos = Todo.query.filter_by(KullaniciID=session['user_id']).order_by(
+        Todo.Oncelik.desc(), Todo.OlusturmaTarihi.desc()
+    ).all()
+    
+    # İstatistikler
+    toplam_todo = len(user_todos)
+    tamamlanan_todo = len([t for t in user_todos if t.Durum == 'Tamamlandı'])
+    beklemede_todo = len([t for t in user_todos if t.Durum == 'Beklemede'])
+    devam_eden_todo = len([t for t in user_todos if t.Durum == 'Devam Ediyor'])
+    
+    # Yaklaşan hatırlatmalar (bugünden itibaren 3 gün)
+    bugun = datetime.now().date()
+    uc_gun_sonra = bugun + timedelta(days=3)
+    yaklasan_todos = [t for t in user_todos 
+                     if t.HatirlatmaTarihi and t.Durum != 'Tamamlandı'
+                     and bugun <= t.HatirlatmaTarihi.date() <= uc_gun_sonra]
+    
+    return render_template('todos.html', 
+                         todos=user_todos,
+                         toplam_todo=toplam_todo,
+                         tamamlanan_todo=tamamlanan_todo,
+                         beklemede_todo=beklemede_todo,
+                         devam_eden_todo=devam_eden_todo,
+                         yaklasan_todos=yaklasan_todos)
+
+@app.route('/todos/ekle', methods=['POST'])
+@login_required
+def todo_ekle():
+    """Yeni todo ekle"""
+    try:
+        data = request.get_json()
+        print(f"Todo ekleme isteği: {data}")  # Debug log
+        
+        # Tarih formatlarını parse et
+        bitis_tarihi = None
+        if data.get('bitis_tarihi'):
+            bitis_tarihi = datetime.strptime(data['bitis_tarihi'], '%Y-%m-%d')
+        
+        hatirlatma_tarihi = None
+        if data.get('hatirlatma_tarihi'):
+            hatirlatma_tarihi = datetime.strptime(data['hatirlatma_tarihi'], '%Y-%m-%d')
+        
+        # Yeni todo oluştur
+        yeni_todo = Todo(
+            KullaniciID=session['user_id'],
+            Baslik=data['baslik'],
+            Aciklama=data.get('aciklama', ''),
+            Oncelik=data.get('oncelik', 'Orta'),
+            Durum=data.get('durum', 'Beklemede'),
+            BitisTarihi=bitis_tarihi,
+            HatirlatmaTarihi=hatirlatma_tarihi
+        )
+        
+        print(f"Todo oluşturuluyor: {yeni_todo}")  # Debug log
+        db.session.add(yeni_todo)
+        db.session.commit()
+        print("Todo başarıyla kaydedildi")  # Debug log
+        
+        # Log ekle
+        try:
+            log_user_action(
+                action_type='Todo Oluşturuldu',
+                table_name='Todos',
+                record_id=yeni_todo.TodoID,
+                old_data=None,
+                new_data={'baslik': data['baslik'], 'oncelik': data.get('oncelik', 'Orta')},
+                detail=f"Başlık: {data['baslik']}"
+            )
+        except Exception as log_error:
+            print(f"Log hatası (önemli değil): {log_error}")
+        
+        return jsonify({'success': True, 'message': 'Todo başarıyla eklendi!'})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Todo ekleme hatası: {str(e)}")  # Debug log
+        import traceback
+        traceback.print_exc()  # Detaylı hata log'u
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
+
+@app.route('/todos/<int:todo_id>/guncelle', methods=['POST'])
+@login_required
+def todo_guncelle(todo_id):
+    """Todo güncelle"""
+    try:
+        todo = Todo.query.filter_by(TodoID=todo_id, KullaniciID=session['user_id']).first()
+        if not todo:
+            return jsonify({'success': False, 'message': 'Todo bulunamadı!'}), 404
+        
+        data = request.get_json()
+        old_data = {
+            'baslik': todo.Baslik,
+            'aciklama': todo.Aciklama,
+            'oncelik': todo.Oncelik,
+            'durum': todo.Durum,
+            'bitis_tarihi': todo.BitisTarihi.isoformat() if todo.BitisTarihi else None,
+            'hatirlatma_tarihi': todo.HatirlatmaTarihi.isoformat() if todo.HatirlatmaTarihi else None
+        }
+        
+        # Güncelle
+        todo.Baslik = data['baslik']
+        todo.Aciklama = data.get('aciklama', '')
+        todo.Oncelik = data.get('oncelik', 'Orta')
+        todo.Durum = data.get('durum', 'Beklemede')
+        
+        # Tarih formatlarını parse et
+        if data.get('bitis_tarihi'):
+            todo.BitisTarihi = datetime.strptime(data['bitis_tarihi'], '%Y-%m-%d')
+        else:
+            todo.BitisTarihi = None
+            
+        if data.get('hatirlatma_tarihi'):
+            todo.HatirlatmaTarihi = datetime.strptime(data['hatirlatma_tarihi'], '%Y-%m-%d')
+        else:
+            todo.HatirlatmaTarihi = None
+        
+        # Eğer durum "Tamamlandı" ise tamamlanma tarihini set et
+        if todo.Durum == 'Tamamlandı' and not todo.TamamlanmaTarihi:
+            todo.TamamlanmaTarihi = datetime.utcnow()
+        elif todo.Durum != 'Tamamlandı':
+            todo.TamamlanmaTarihi = None
+        
+        db.session.commit()
+        
+        # Log ekle
+        try:
+            log_user_action(
+                action_type='Todo Güncellendi',
+                table_name='Todos',
+                record_id=todo_id,
+                old_data=old_data,
+                new_data=data,
+                detail=f"Başlık: {data['baslik']}"
+            )
+        except Exception as log_error:
+            print(f"Log hatası (önemli değil): {log_error}")
+        
+        return jsonify({'success': True, 'message': 'Todo başarıyla güncellendi!'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
+
+@app.route('/todos/<int:todo_id>/durum', methods=['POST'])
+@login_required
+def todo_durum_degistir(todo_id):
+    """Todo durumunu değiştir"""
+    try:
+        print(f"Todo durum değiştirme isteği: todo_id={todo_id}, user_id={session.get('user_id')}")
+        
+        todo = Todo.query.filter_by(TodoID=todo_id, KullaniciID=session['user_id']).first()
+        if not todo:
+            print(f"Todo bulunamadı: todo_id={todo_id}, user_id={session.get('user_id')}")
+            return jsonify({'success': False, 'message': 'Todo bulunamadı!'}), 404
+        
+        data = request.get_json()
+        print(f"Request data: {data}")
+        yeni_durum = data.get('durum')
+        
+        if yeni_durum not in ['Beklemede', 'Devam Ediyor', 'Tamamlandı']:
+            print(f"Geçersiz durum: {yeni_durum}")
+            return jsonify({'success': False, 'message': 'Geçersiz durum!'}), 400
+        
+        eski_durum = todo.Durum
+        todo.Durum = yeni_durum
+        print(f"Durum değiştiriliyor: {eski_durum} -> {yeni_durum}")
+        
+        # Eğer durum "Tamamlandı" ise tamamlanma tarihini set et
+        if yeni_durum == 'Tamamlandı' and not todo.TamamlanmaTarihi:
+            todo.TamamlanmaTarihi = datetime.utcnow()
+        elif yeni_durum != 'Tamamlandı':
+            todo.TamamlanmaTarihi = None
+        
+        db.session.commit()
+        print("Todo durumu başarıyla güncellendi")
+        
+        # Log ekle
+        log_user_action(
+            action_type='Todo Durumu Değiştirildi',
+            table_name='Todos',
+            record_id=todo_id,
+            old_data={'durum': eski_durum},
+            new_data={'durum': yeni_durum},
+            detail=f"Başlık: {todo.Baslik} - {eski_durum} → {yeni_durum}"
+        )
+        
+        return jsonify({'success': True, 'message': f'Durum {yeni_durum} olarak güncellendi!'})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Todo durum değiştirme hatası: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
+
+@app.route('/todos/<int:todo_id>/sil', methods=['DELETE'])
+@login_required
+def todo_sil(todo_id):
+    """Todo sil"""
+    try:
+        todo = Todo.query.filter_by(TodoID=todo_id, KullaniciID=session['user_id']).first()
+        if not todo:
+            return jsonify({'success': False, 'message': 'Todo bulunamadı!'}), 404
+        
+        baslik = todo.Baslik
+        db.session.delete(todo)
+        db.session.commit()
+        
+        # Log ekle
+        try:
+            log_user_action(
+                action_type='Todo Silindi',
+                table_name='Todos',
+                record_id=todo_id,
+                old_data={'baslik': baslik, 'durum': todo.Durum},
+                new_data=None,
+                detail=f"Başlık: {baslik}"
+            )
+        except Exception as log_error:
+            print(f"Log hatası (önemli değil): {log_error}")
+        
+        return jsonify({'success': True, 'message': 'Todo başarıyla silindi!'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
+
+@app.route('/todos/api')
+@login_required
+def todos_api():
+    """Todo verilerini API olarak döndür (dashboard için)"""
+    try:
+        # Kullanıcının todolarını getir
+        todos = Todo.query.filter_by(KullaniciID=session['user_id']).all()
+        
+        result = []
+        for todo in todos:
+            result.append({
+                'id': todo.TodoID,
+                'baslik': todo.Baslik,
+                'aciklama': todo.Aciklama,
+                'oncelik': todo.Oncelik,
+                'durum': todo.Durum,
+                'bitis_tarihi': todo.BitisTarihi.isoformat() if todo.BitisTarihi else None,
+                'hatirlatma_tarihi': todo.HatirlatmaTarihi.isoformat() if todo.HatirlatmaTarihi else None,
+                'olusturma_tarihi': todo.OlusturmaTarihi.isoformat(),
+                'tamamlanma_tarihi': todo.TamamlanmaTarihi.isoformat() if todo.TamamlanmaTarihi else None
+            })
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ==================== TODO BİLDİRİM SİSTEMİ ====================
+
+def check_todo_reminders():
+    """Todo hatırlatmalarını kontrol et ve bildirim oluştur"""
+    try:
+        bugun = datetime.now().date()
+        
+        # Bugün hatırlatma tarihi olan ve tamamlanmamış todoları bul
+        hatirlatma_todos = Todo.query.filter(
+            Todo.HatirlatmaTarihi == bugun,
+            Todo.Durum != 'Tamamlandı'
+        ).all()
+        
+        for todo in hatirlatma_todos:
+            # Bu todo için bugün zaten bildirim oluşturulmuş mu kontrol et
+            existing_notification = Bildirim.query.filter(
+                Bildirim.KullaniciID == todo.KullaniciID,
+                Bildirim.Baslik == 'Todo Hatırlatması',
+                Bildirim.Metin.contains(todo.Baslik),
+                Bildirim.OlusturmaTarihi >= datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            ).first()
+            
+            if not existing_notification:
+                # Yeni bildirim oluştur
+                bildirim = Bildirim(
+                    KullaniciID=todo.KullaniciID,
+                    Baslik='Todo Hatırlatması',
+                    Metin=f'"{todo.Baslik}" görevinin hatırlatma tarihi bugün!',
+                    Tip='todo_reminder',
+                    Okundu=False
+                )
+                db.session.add(bildirim)
+        
+        db.session.commit()
+        print(f"Todo hatırlatma kontrolü tamamlandı. {len(hatirlatma_todos)} todo kontrol edildi.")
+        
+    except Exception as e:
+        print(f"Todo hatırlatma kontrolünde hata: {str(e)}")
+        db.session.rollback()
+
+def todo_reminder_worker():
+    """Todo hatırlatma worker'ı - her gün saat 09:00'da çalışır"""
+    while True:
+        try:
+            now = datetime.now()
+            # Her gün saat 09:00'da çalıştır
+            if now.hour == 9 and now.minute == 0:
+                check_todo_reminders()
+            
+            # 1 dakika bekle
+            time.sleep(60)
+            
+        except Exception as e:
+            print(f"Todo reminder worker hatası: {str(e)}")
+            time.sleep(60)
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     # Hatirlatma worker'i arka planda baslat
     worker_thread = threading.Thread(target=reminder_worker, daemon=True)
     worker_thread.start()
+    
+    # Todo hatırlatma worker'ını başlat
+    todo_worker_thread = threading.Thread(target=todo_reminder_worker, daemon=True)
+    todo_worker_thread.start()
+    
     app.run(debug=True, host='0.0.0.0', port=5000)

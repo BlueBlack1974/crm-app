@@ -4,6 +4,8 @@
 
 {% block content %}
 <style>
+/* Modal stilleri artık base.html'de global olarak tanımlandı */
+
 /* Mobile-friendly styles - only for mobile */
 @media (max-width: 768px) {
     /* Hide desktop filter form on mobile */
@@ -377,7 +379,7 @@
 </div>
 
 <!-- Yeni Randevu Modal -->
-<div class="modal fade" id="newAppointmentModal" tabindex="-1" aria-labelledby="newAppointmentModalLabel" aria-hidden="true">
+<div class="modal fade" id="newAppointmentModal" tabindex="-1" aria-labelledby="newAppointmentModalLabel" aria-hidden="true" data-bs-backdrop="false">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">

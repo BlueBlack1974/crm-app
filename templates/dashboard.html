@@ -94,6 +94,194 @@
     </div>
 </div>
 
+<!-- Todo Widget -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-tasks me-2"></i>{{ _('My Todos') }}
+                </h6>
+                <div>
+                    <a href="{{ url_for('todos') }}" class="btn btn-sm btn-outline-primary me-2">
+                        {{ _('View All') }}
+                    </a>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#quickTodoModal">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if user_todos %}
+                <div class="list-group list-group-flush">
+                    {% for todo in user_todos %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <button class="btn btn-sm btn-outline-success" 
+                                        onclick="quickChangeStatus({{ todo.TodoID }}, 'Tamamlandı')"
+                                        {% if todo.Durum == 'Tamamlandı' %}disabled{% endif %}
+                                        title="{{ _('Mark as Completed') }}">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </div>
+                            <div>
+                                <h6 class="mb-1 {% if todo.Durum == 'Tamamlandı' %}text-decoration-line-through text-muted{% endif %}">
+                                    {{ todo.Baslik }}
+                                </h6>
+                                {% if todo.Aciklama %}
+                                <p class="mb-1 text-muted small">{{ todo.Aciklama[:50] }}{% if todo.Aciklama|length > 50 %}...{% endif %}</p>
+                                {% endif %}
+                                <small class="text-muted">
+                                    <span class="badge bg-{% if todo.Oncelik == 'Yüksek' %}danger{% elif todo.Oncelik == 'Orta' %}warning{% else %}success{% endif %} me-2">
+                                        {{ todo.Oncelik }}
+                                    </span>
+                                    {% if todo.BitisTarihi %}
+                                    <i class="fas fa-calendar-alt me-1"></i>{{ todo.BitisTarihi.strftime('%d.%m.%Y') }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="badge bg-{% if todo.Durum == 'Beklemede' %}warning{% elif todo.Durum == 'Devam Ediyor' %}info{% else %}success{% endif %}">
+                                {{ todo.Durum }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-tasks fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">{{ _('No todos yet') }}</p>
+                    <button class="btn btn-sm btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#quickTodoModal">
+                        <i class="fas fa-plus me-1"></i>{{ _('Create First Todo') }}
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Todo İstatistikleri -->
+        <div class="card shadow mb-3">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Todo Statistics') }}</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="h4 text-primary">{{ toplam_todo }}</div>
+                        <small class="text-muted">{{ _('Total') }}</small>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="h4 text-success">{{ tamamlanan_todo }}</div>
+                        <small class="text-muted">{{ _('Completed') }}</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="h4 text-warning">{{ beklemede_todo }}</div>
+                        <small class="text-muted">{{ _('Pending') }}</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="h4 text-info">{{ devam_eden_todo }}</div>
+                        <small class="text-muted">{{ _('In Progress') }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Yaklaşan Hatırlatmalar -->
+        {% if yaklasan_todos %}
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-warning">
+                    <i class="fas fa-bell me-2"></i>{{ _('Upcoming Reminders') }}
+                </h6>
+            </div>
+            <div class="card-body">
+                {% for todo in yaklasan_todos %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <small class="fw-bold">{{ todo.Baslik }}</small>
+                        <br>
+                        <small class="text-muted">{{ todo.HatirlatmaTarihi.strftime('%d.%m.%Y') }}</small>
+                    </div>
+                    <span class="badge bg-warning">{{ todo.Oncelik }}</span>
+                </div>
+                {% if not loop.last %}<hr class="my-2">{% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Hızlı Todo Ekleme Modal -->
+<div class="modal fade" id="quickTodoModal" tabindex="-1" aria-labelledby="quickTodoModalLabel" aria-hidden="true" data-bs-backdrop="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="quickTodoModalLabel">{{ _('Quick Add Todo') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div id="quickTodoForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="quickBaslik" class="form-label">{{ _('Title') }} <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="quickBaslik" name="baslik" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quickOncelik" class="form-label">{{ _('Priority') }}</label>
+                        <select class="form-select" id="quickOncelik" name="oncelik">
+                            <option value="Düşük">{{ _('Low') }}</option>
+                            <option value="Orta" selected>{{ _('Medium') }}</option>
+                            <option value="Yüksek">{{ _('High') }}</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quickBitisTarihi" class="form-label">{{ _('Due Date') }}</label>
+                        <input type="date" class="form-control" id="quickBitisTarihi" name="bitis_tarihi">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                    <button type="button" class="btn btn-primary" id="quickAddTodoBtn" onclick="
+                        console.log('Quick Add Todo butonuna tıklandı!');
+                        const data = {
+                            baslik: document.getElementById('quickBaslik').value,
+                            oncelik: document.getElementById('quickOncelik').value,
+                            bitis_tarihi: document.getElementById('quickBitisTarihi').value
+                        };
+                        if (!data.baslik.trim()) {
+                            alert('Başlık gerekli!');
+                            return;
+                        }
+                        fetch('/todos/ekle', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(data)
+                        })
+                        .then(response => response.json())
+                        .then(result => {
+                            if (result.success) {
+                                alert('Görev eklendi!');
+                                location.reload();
+                            } else {
+                                alert('Hata: ' + result.message);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('Bir hata oluştu!');
+                        });
+                    ">{{ _('Add Todo') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Son Randevular -->
 <div class="card shadow mb-4">
     <div class="card-header py-3">
@@ -166,4 +354,102 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block styles %}
+<style>
+/* Modal stilleri artık base.html'de global olarak tanımlandı */
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// DOM yüklendikten sonra event listener'ları ekle
+document.addEventListener('DOMContentLoaded', function() {
+    // Hızlı todo ekleme - Add Todo butonuna tıklama
+    document.getElementById('quickAddTodoBtn').addEventListener('click', function(e) {
+        console.log('Quick Add Todo butonuna tıklandı!');
+        e.preventDefault();
+    
+    // Form verilerini manuel olarak topla
+    const data = {
+        baslik: document.getElementById('quickBaslik').value,
+        oncelik: document.getElementById('quickOncelik').value,
+        bitis_tarihi: document.getElementById('quickBitisTarihi').value
+    };
+    
+    fetch('/todos/ekle', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert('success', result.message);
+            location.reload();
+        } else {
+            showAlert('danger', result.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('danger', 'Bir hata oluştu!');
+    });
+});
+
+// Hızlı durum değiştirme
+function quickChangeStatus(todoId, newStatus) {
+    fetch(`/todos/${todoId}/durum`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ durum: newStatus })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert('success', result.message);
+            location.reload();
+        } else {
+            showAlert('danger', result.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('danger', 'Bir hata oluştu!');
+    });
+}
+
+// Alert gösterme
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.container-fluid').firstChild);
+    
+    // 5 saniye sonra otomatik kapat
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+    // Modal temizleme
+    document.getElementById('quickTodoModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('quickTodoForm').reset();
+    });
+
+}); // DOMContentLoaded kapanışı
+</script>
 {% endblock %}

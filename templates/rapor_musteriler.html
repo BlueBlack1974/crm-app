@@ -4,15 +4,48 @@
 
 {% block head %}
 <!-- Chart.js base.html'de yüklendi -->
+<style>
+/* Modal stilleri artık base.html'de global olarak tanımlandı */
+
+/* Modal stilleri artık base.html'de global olarak tanımlandı */
+
+#customerDetailModal .modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px 10px 0 0;
+}
+
+#customerDetailModal .modal-header .btn-close {
+    filter: invert(1);
+}
+
+#customerDetailModal .modal-body {
+    background-color: #f8f9fa;
+}
+
+#customerDetailModal .modal-footer {
+    background-color: #f8f9fa;
+    border-radius: 0 0 10px 10px;
+}
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">{{ _('Customer Report') }}</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="{{ url_for('rapor_musteriler', baslangic=filtreler.baslangic, bitis=filtreler.bitis, kategori_id=filtreler.kategori_id, aktif=filtreler.aktif, iletisim_var=filtreler.iletisim_var, format='csv') }}" class="btn btn-sm btn-outline-secondary">
-            <i class="fas fa-file-csv me-1"></i> {{ _('Export CSV') }}
-        </a>
+        <div class="btn-group me-2">
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-download me-1"></i>{{ _('Export') }}
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+                    <li><a class="dropdown-item" href="#" onclick="exportReport('csv')"><i class="fas fa-file-csv me-2"></i>{{ _('CSV Format') }}</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportReport('excel')"><i class="fas fa-file-excel me-2"></i>{{ _('Excel Format') }}</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportReport('pdf')"><i class="fas fa-file-pdf me-2"></i>{{ _('PDF Format') }}</a></li>
+                </ul>
+            </div>
+        </div>
     </div>
     
     
@@ -314,7 +347,7 @@
 </div>
 
         <!-- Müşteri Detay Raporu Modal -->
-        <div class="modal fade" id="customerDetailModal" tabindex="-1" aria-labelledby="customerDetailModalLabel" aria-hidden="true">
+        <div class="modal fade" id="customerDetailModal" tabindex="-1" aria-labelledby="customerDetailModalLabel" aria-hidden="true" data-bs-backdrop="false" data-bs-keyboard="true">
             <div class="modal-dialog modal-xl">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -424,6 +457,12 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {
             setupCustomerSearch();
         }, 100);
+        
+        // Modal instance'ını temizle
+        const existingInstance = bootstrap.Modal.getInstance(modalElement);
+        if (existingInstance) {
+            existingInstance.dispose();
+        }
     });
 });
 
@@ -542,22 +581,34 @@ const originalModalContent = `
 // Müşteri detay raporunu modal içinde yükle
 function loadCustomerDetailReport(customerId) {
     const modalEl = document.getElementById('customerDetailModal');
-    let modalInstance = bootstrap.Modal.getInstance(modalEl);
-    if (!modalInstance) {
-        modalInstance = new bootstrap.Modal(modalEl, { backdrop: true, keyboard: true });
-        modalInstance.show();
+    
+    // Mevcut modal instance'ını temizle
+    const existingInstance = bootstrap.Modal.getInstance(modalEl);
+    if (existingInstance) {
+        existingInstance.dispose();
     }
+    
+    // Yeni modal instance oluştur (backdrop kapalı, sadece modal gölgeli)
+    const modalInstance = new bootstrap.Modal(modalEl, { 
+        backdrop: false, 
+        keyboard: true,
+        focus: true
+    });
 
     fetch(`/rapor/musteri-detay-modal/${customerId}`)
-        .then(response => response.text())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.text();
+        })
         .then(html => {
             // Modal içeriğini güncelle
             const modalBody = document.querySelector('#customerDetailModal .modal-body');
             modalBody.innerHTML = html;
             
-            // Modal açık değilse göster
-            const currentInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-            currentInstance.show();
+            // Modal'ı göster
+            modalInstance.show();
             
             // Grafikleri başlat - Chart.js yüklenmesini bekle
             setTimeout(() => {
@@ -1208,6 +1259,12 @@ function createAppointmentTrendCharts() {
             }
         });
     }
+}
+
+function exportReport(format) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('format', format);
+    window.location.href = '{{ url_for("rapor_musteriler") }}?' + params.toString();
 }
 </script>
  

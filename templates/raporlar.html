@@ -45,6 +45,20 @@
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
   <h1 class="h2">{{ _('Reports') }}</h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <div class="btn-group me-2">
+      <div class="dropdown">
+        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="fas fa-download me-1"></i>{{ _('Export') }}
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+          <li><a class="dropdown-item" href="#" onclick="exportReport('csv')"><i class="fas fa-file-csv me-2"></i>{{ _('CSV Format') }}</a></li>
+          <li><a class="dropdown-item" href="#" onclick="exportReport('excel')"><i class="fas fa-file-excel me-2"></i>{{ _('Excel Format') }}</a></li>
+          <li><a class="dropdown-item" href="#" onclick="exportReport('pdf')"><i class="fas fa-file-pdf me-2"></i>{{ _('PDF Format') }}</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
 </div>
 
 <form class="row g-3 mb-3" method="get">
@@ -58,14 +72,18 @@
   </div>
   <div class="col-auto">
     <label class="form-label">{{ _('Max Daily Capacity') }}</label>
-    <input type="number" class="form-control" name="kapasite" value="{{ kapasite }}" min="1" max="100" placeholder="8">
+    <input type="number" class="form-control" name="kapasite" id="kapasiteInput" value="{{ kapasite }}" min="1" max="100" placeholder="8">
   </div>
   <div class="col-auto">
     <label class="form-label">{{ _('Book') }}</label>
-    <select class="form-control" name="defter_id" id="defterSelect" onchange="console.log('Defter değişti:', this.value)">
+    <select class="form-control" name="defter_id" id="defterSelect" onchange="updateCapacityFromDefter()">
       <option value="">{{ _('All Books') }}</option>
       {% for defter in defterler %}
-      <option value="{{ defter.AyarID }}" {% if defter_id|string == defter.AyarID|string %}selected{% endif %}>{{ defter.DefterAdi }}</option>
+      <option value="{{ defter.AyarID }}" 
+              data-baslangic="{{ defter.BaslangicSaati or '09:00' }}"
+              data-bitis="{{ defter.BitisSaati or '18:00' }}"
+              data-slot="{{ defter.SlotDakika or 30 }}"
+              {% if defter_id|string == defter.AyarID|string %}selected{% endif %}>{{ defter.DefterAdi }}</option>
       {% endfor %}
     </select>
   </div>
@@ -309,6 +327,48 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 loadReport();
+
+// Sayfa yüklendiğinde otomatik kapasite hesaplama
+document.addEventListener('DOMContentLoaded', function() {
+    updateCapacityFromDefter();
+});
+
+function exportReport(format) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('format', format);
+    window.location.href = '{{ url_for("raporlar") }}?' + params.toString();
+}
+
+function updateCapacityFromDefter() {
+    const defterSelect = document.getElementById('defterSelect');
+    const kapasiteInput = document.getElementById('kapasiteInput');
+    
+    if (defterSelect.value) {
+        const selectedOption = defterSelect.options[defterSelect.selectedIndex];
+        const baslangic = selectedOption.getAttribute('data-baslangic') || '09:00';
+        const bitis = selectedOption.getAttribute('data-bitis') || '18:00';
+        const slotDakika = parseInt(selectedOption.getAttribute('data-slot')) || 30;
+        
+        // Saat hesaplama
+        const [sh, sm] = baslangic.split(':').map(Number);
+        const [eh, em] = bitis.split(':').map(Number);
+        
+        const totalMinutes = Math.max(0, (eh * 60 + em) - (sh * 60 + sm));
+        const calculatedCapacity = Math.max(1, Math.floor(totalMinutes / slotDakika));
+        
+        // Kapasiteyi güncelle
+        kapasiteInput.value = calculatedCapacity;
+        
+        console.log(`Defter seçildi: ${selectedOption.textContent}`);
+        console.log(`Çalışma saatleri: ${baslangic} - ${bitis}`);
+        console.log(`Slot süresi: ${slotDakika} dakika`);
+        console.log(`Hesaplanan kapasite: ${calculatedCapacity} slot`);
+    } else {
+        // Tüm defterler seçildiğinde varsayılan değer
+        kapasiteInput.value = 8;
+        console.log('Tüm defterler seçildi, varsayılan kapasite: 8');
+    }
+}
 </script>
 {% endblock %}
 
