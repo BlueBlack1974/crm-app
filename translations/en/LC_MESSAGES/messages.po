@@ -2741,3 +2741,18 @@ msgstr "Available"
 #~ msgid "Connection test failed:"
 #~ msgstr "Connection test failed:"
 
+msgid "CREATE"
+msgstr "CREATE"
+
+msgid "UPDATE"
+msgstr "UPDATE"
+
+msgid "DELETE"
+msgstr "DELETE"
+
+msgid "VIEW"
+msgstr "VIEW"
+
+msgid "CANCEL"
+msgstr "CANCEL"
+

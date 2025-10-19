@@ -2731,18 +2731,18 @@ msgstr "Mesaj Değişkenleri"
 #~ msgid "Export to CSV"
 #~ msgstr "CSV Olarak Dışa Aktar"
 
-#~ msgid "CREATE"
-#~ msgstr "OLUŞTUR"
+msgid "CREATE"
+msgstr "OLUŞTUR"
 
-#~ msgid "UPDATE"
-#~ msgstr "GÜNCELLE"
+msgid "UPDATE"
+msgstr "GÜNCELLE"
 
-#~ msgid "DELETE"
-#~ msgstr "SİL"
+msgid "DELETE"
+msgstr "SİL"
 
-#~ msgid "VIEW"
-#~ msgstr "GÖRÜNTÜLE"
+msgid "VIEW"
+msgstr "GÖRÜNTÜLE"
 
-#~ msgid "CANCEL"
-#~ msgstr "İPTAL"
+msgid "CANCEL"
+msgstr "İPTAL"
 

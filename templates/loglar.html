@@ -150,8 +150,8 @@
                                 'VIEW': 'bg-info',
                                 'CANCEL': 'bg-dark'
                             } %}
-                            <span class="badge log-badge {{ badge_class.get(log.IslemTipi, 'bg-light text-dark') }}">
-                                {{ _(log.IslemTipi) }}
+                            <span class="badge log-badge {{ badge_class.get(log.IslemTipi, 'bg-light text-dark') }}" data-action="{{ log.IslemTipi }}">
+                                {{ log.IslemTipi }}
                             </span>
                         </td>
                         <td>
@@ -242,6 +242,42 @@
 
 {% block extra_js %}
 <script>
+// İşlem tiplerini çevir
+function translateActionTypes() {
+    const currentLang = document.documentElement.lang || 'tr';
+    const actionElements = document.querySelectorAll('[data-action]');
+    
+    actionElements.forEach(element => {
+        const action = element.getAttribute('data-action');
+        let translatedText = action;
+        
+        if (currentLang === 'tr') {
+            switch(action) {
+                case 'CREATE': translatedText = 'OLUŞTUR'; break;
+                case 'UPDATE': translatedText = 'GÜNCELLE'; break;
+                case 'DELETE': translatedText = 'SİL'; break;
+                case 'VIEW': translatedText = 'GÖRÜNTÜLE'; break;
+                case 'CANCEL': translatedText = 'İPTAL'; break;
+            }
+        } else {
+            // İngilizce için orijinal değerleri kullan
+            translatedText = action;
+        }
+        
+        element.textContent = translatedText;
+    });
+}
+
+// Sayfa yüklendiğinde çevir
+document.addEventListener('DOMContentLoaded', function() {
+    translateActionTypes();
+});
+
+// Dil değiştiğinde çevir
+document.addEventListener('languageChanged', function() {
+    translateActionTypes();
+});
+
 function showLogData(logId) {
     // Bu fonksiyon AJAX ile log detaylarını getirecek
     fetch(`/api/loglar/${logId}/data`)
