@@ -134,7 +134,7 @@
                                 {% endif %}
                                 <small class="text-muted">
                                     <span class="badge bg-{% if todo.Oncelik == 'Yüksek' %}danger{% elif todo.Oncelik == 'Orta' %}warning{% else %}success{% endif %} me-2">
-                                        {{ todo.Oncelik }}
+                                        <span class="oncelik-text">{{ todo.Oncelik }}</span>
                                     </span>
                                     {% if todo.BitisTarihi %}
                                     <i class="fas fa-calendar-alt me-1"></i>{{ todo.BitisTarihi.strftime('%d.%m.%Y') }}
@@ -144,7 +144,7 @@
                         </div>
                         <div>
                             <span class="badge bg-{% if todo.Durum == 'Beklemede' %}warning{% elif todo.Durum == 'Devam Ediyor' %}info{% else %}success{% endif %}">
-                                {{ todo.Durum }}
+                                <span class="durum-text">{{ todo.Durum }}</span>
                             </span>
                         </div>
                     </div>
@@ -191,29 +191,6 @@
             </div>
         </div>
         
-        <!-- Yaklaşan Hatırlatmalar -->
-        {% if yaklasan_todos %}
-        <div class="card shadow">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-warning">
-                    <i class="fas fa-bell me-2"></i>{{ _('Upcoming Reminders') }}
-                </h6>
-            </div>
-            <div class="card-body">
-                {% for todo in yaklasan_todos %}
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div>
-                        <small class="fw-bold">{{ todo.Baslik }}</small>
-                        <br>
-                        <small class="text-muted">{{ todo.HatirlatmaTarihi.strftime('%d.%m.%Y') }}</small>
-                    </div>
-                    <span class="badge bg-warning">{{ todo.Oncelik }}</span>
-                </div>
-                {% if not loop.last %}<hr class="my-2">{% endif %}
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
     </div>
 </div>
 
@@ -364,8 +341,85 @@
 
 {% block scripts %}
 <script>
+// Durum ve öncelik çevirileri
+function translateStatusAndPriority() {
+    const currentLang = document.documentElement.lang || 'tr';
+    
+    if (currentLang === 'en') {
+        // Durum çevirileri
+        document.querySelectorAll('.durum-text').forEach(element => {
+            const text = element.textContent.trim();
+            switch(text) {
+                case 'Beklemede':
+                    element.textContent = 'Pending';
+                    break;
+                case 'Devam Ediyor':
+                    element.textContent = 'In Progress';
+                    break;
+                case 'Tamamlandı':
+                    element.textContent = 'Completed';
+                    break;
+            }
+        });
+        
+        // Öncelik çevirileri
+        document.querySelectorAll('.oncelik-text').forEach(element => {
+            const text = element.textContent.trim();
+            switch(text) {
+                case 'Yüksek':
+                    element.textContent = 'High';
+                    break;
+                case 'Orta':
+                    element.textContent = 'Medium';
+                    break;
+                case 'Düşük':
+                    element.textContent = 'Low';
+                    break;
+            }
+        });
+    } else {
+        // Türkçe'ye geri döndür
+        document.querySelectorAll('.durum-text').forEach(element => {
+            const text = element.textContent.trim();
+            switch(text) {
+                case 'Pending':
+                    element.textContent = 'Beklemede';
+                    break;
+                case 'In Progress':
+                    element.textContent = 'Devam Ediyor';
+                    break;
+                case 'Completed':
+                    element.textContent = 'Tamamlandı';
+                    break;
+            }
+        });
+        
+        document.querySelectorAll('.oncelik-text').forEach(element => {
+            const text = element.textContent.trim();
+            switch(text) {
+                case 'High':
+                    element.textContent = 'Yüksek';
+                    break;
+                case 'Medium':
+                    element.textContent = 'Orta';
+                    break;
+                case 'Low':
+                    element.textContent = 'Düşük';
+                    break;
+            }
+        });
+    }
+}
+
 // DOM yüklendikten sonra event listener'ları ekle
 document.addEventListener('DOMContentLoaded', function() {
+    // Sayfa yüklendiğinde çevirileri uygula
+    translateStatusAndPriority();
+    
+    // Dil değişikliklerini dinle
+    document.addEventListener('languageChanged', function() {
+        translateStatusAndPriority();
+    });
     // Hızlı todo ekleme - Add Todo butonuna tıklama
     document.getElementById('quickAddTodoBtn').addEventListener('click', function(e) {
         console.log('Quick Add Todo butonuna tıklandı!');

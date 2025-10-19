@@ -38,12 +38,28 @@
                     </div>
                 </form>
                 
+                <div class="text-center mt-3">
+                    <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
+                        <i class="fas fa-key me-1"></i>
+                        {{ _('Forgot Password?') }}
+                    </a>
+                </div>
+                
                 {% if show_force_logout %}
                 <div class="mt-4 p-3 bg-warning bg-opacity-10 border border-warning rounded">
                     <div class="text-center">
                         <i class="fas fa-exclamation-triangle text-warning mb-2"></i>
                         <p class="mb-3">{{ _('This user is already logged in. Do you want to close the existing session and login again?') }}</p>
                         <form method="POST" action="{{ url_for('force_logout') }}" class="d-inline">
+                            <input type="hidden" name="pending_user_id" value="{{ session.get('pending_user_id', '') }}">
+                            <input type="hidden" name="pending_username" value="{{ session.get('pending_username', '') }}">
+                            <input type="hidden" name="pending_user_name" value="{{ session.get('pending_user_name', '') }}">
+                            <input type="hidden" name="pending_firma_id" value="{{ session.get('pending_firma_id', '') }}">
+                            <input type="hidden" name="pending_firma_adi" value="{{ session.get('pending_firma_adi', '') }}">
+                            <input type="hidden" name="pending_is_admin" value="{{ session.get('pending_is_admin', '') }}">
+                            <input type="hidden" name="pending_raporlar_modulu" value="{{ session.get('pending_raporlar_modulu', '') }}">
+                            <input type="hidden" name="pending_ayarlar_modulu" value="{{ session.get('pending_ayarlar_modulu', '') }}">
+                            <input type="hidden" name="pending_log_modulu" value="{{ session.get('pending_log_modulu', '') }}">
                             <button type="submit" class="btn btn-warning">
                                 <i class="fas fa-sign-out-alt me-2"></i>
                                 {{ _('Close Session and Login') }}
@@ -54,14 +70,58 @@
                         </a>
                     </div>
                 </div>
+                
                 {% endif %}
                 
-                <div class="text-center mt-4">
-                    <small class="text-muted">
-                        {{ _('Default Admin') }}: <strong>admin</strong> / <strong>admin123</strong>
-                    </small>
-                </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Şifre Hatırlatma Modal -->
+<div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel" aria-hidden="true" data-bs-backdrop="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="forgotPasswordModalLabel">
+                    <i class="fas fa-key me-2"></i>
+                    {{ _('Forgot Password') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="forgotPasswordForm" method="POST" action="{{ url_for('forgot_password') }}">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        {{ _('Enter your username and email address. We will send you a password reset link.') }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="forgot_username" class="form-label">{{ _('Username') }}</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                            <input type="text" class="form-control" id="forgot_username" name="username" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="forgot_email" class="form-label">{{ _('Email Address') }}</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                            <input type="email" class="form-control" id="forgot_email" name="email" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        {{ _('Cancel') }}
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane me-2"></i>
+                        {{ _('Send Reset Link') }}
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

@@ -6,9 +6,11 @@ Randevu Defteri ve Kullanici Yonetimi
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_babel import Babel, gettext, ngettext, get_locale
+_ = gettext
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import os
+import secrets
 from dotenv import load_dotenv
 from functools import wraps
 import smtplib
@@ -1581,8 +1583,12 @@ def api_cities(country_iso2, state_iso2=None):
 @app.route('/api/bildirimler')
 @login_required
 def api_bildirimler():
-    # Only return unread notifications
-    unread_q = Bildirim.query.filter_by(KullaniciID=session['user_id'], Okundu=False)
+    # Only return unread notifications (hatırlatma bildirimleri hariç)
+    unread_q = Bildirim.query.filter(
+        Bildirim.KullaniciID == session['user_id'], 
+        Bildirim.Okundu == False,
+        Bildirim.Tip != 'todo_reminder'  # Hatırlatma bildirimlerini hariç tut
+    )
     unread = unread_q.count()
     items = unread_q.order_by(Bildirim.OlusturmaTarihi.desc()).limit(50).all()
 
@@ -1608,6 +1614,75 @@ def api_bildirim_okundu():
     Bildirim.query.filter(Bildirim.KullaniciID==session['user_id'], Bildirim.BildirimID.in_(ids)).update({'Okundu': True}, synchronize_session=False)
     db.session.commit()
     return jsonify({'success': True})
+
+@app.route('/api/bildirimler/sil', methods=['POST'])
+@login_required
+def api_bildirim_sil():
+    ids = request.json.get('ids', []) if request.is_json else []
+    if not isinstance(ids, list):
+        return jsonify({'success': False, 'message': 'ids listesi bekleniyor'}), 400
+    
+    try:
+        # Belirtilen ID'lerdeki bildirimleri sil
+        Bildirim.query.filter(
+            Bildirim.BildirimID.in_(ids),
+            Bildirim.KullaniciID == session['user_id']
+        ).delete(synchronize_session=False)
+        
+        db.session.commit()
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/bildirimler/tumunu-sil', methods=['POST'])
+@login_required
+def api_bildirim_tumunu_sil():
+    try:
+        # Kullanıcının tüm bildirimlerini sil
+        Bildirim.query.filter_by(KullaniciID=session['user_id']).delete()
+        
+        db.session.commit()
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/today-reminders')
+@login_required
+def api_today_reminders():
+    """Bugünkü hatırlatmaları getir"""
+    try:
+        bugun = datetime.now().date()
+        
+        # Bugün hatırlatma tarihi olan ve tamamlanmamış todoları bul
+        reminders = Todo.query.filter(
+            Todo.HatirlatmaTarihi == bugun,
+            Todo.Durum != 'Tamamlandı',
+            Todo.KullaniciID == session['user_id']
+        ).all()
+        
+        reminder_data = []
+        for todo in reminders:
+            reminder_data.append({
+                'id': todo.TodoID,
+                'baslik': todo.Baslik,
+                'aciklama': todo.Aciklama,
+                'hatirlatma_tarihi': todo.HatirlatmaTarihi.strftime('%d.%m.%Y'),
+                'durum': todo.Durum,
+                'oncelik': todo.Oncelik
+            })
+        
+        return jsonify({
+            'success': True,
+            'reminders': reminder_data,
+            'count': len(reminder_data)
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/clear-session', methods=['POST'])
 def api_clear_session():
@@ -1703,6 +1778,9 @@ def login():
                 firma = Firma.query.filter_by(FirmaID=user.FirmaID).first()
                 session['pending_firma_adi'] = firma.FirmaAdi if firma else 'Bilinmeyen Firma'
                 
+                # Session'ı kaydet
+                session.permanent = True
+                
                 flash('Bu kullanıcı zaten giriş yapmış. Mevcut oturumu kapatıp yeni giriş yapmak istiyor musunuz?', 'warning')
                 return render_template('login.html', show_force_logout=True)
 
@@ -1720,7 +1798,6 @@ def login():
             session['log_modulu'] = user.LogModulu
 
             # Oturum kaydı oluştur
-            import secrets
             token = secrets.token_hex(16)
             session['session_token'] = token
             kayit = AktifOturum(
@@ -1750,35 +1827,52 @@ def login():
 @app.route('/force-logout', methods=['POST'])
 def force_logout():
     """Mevcut oturumu kapat ve yeni giriş yap"""
-    if 'pending_user_id' not in session:
-        flash('Geçersiz işlem', 'error')
+    # Form verilerinden veya session'dan al
+    user_id = request.form.get('pending_user_id') or session.get('pending_user_id')
+    
+    if not user_id:
+        flash('Geçersiz işlem - Pending user ID bulunamadı', 'error')
         return redirect(url_for('login'))
     
-    # Mevcut oturumu kapat
-    user_id = session['pending_user_id']
-    mevcut = AktifOturum.query.filter_by(KullaniciID=user_id).first()
-    if mevcut:
-        db.session.delete(mevcut)
+    # Tüm aktif oturumları kapat (güvenlik için)
+    mevcut_oturumlar = AktifOturum.query.filter_by(KullaniciID=user_id).all()
+    
+    for oturum in mevcut_oturumlar:
+        db.session.delete(oturum)
+    
+    try:
         db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash('Oturum kapatma hatası', 'error')
+        return redirect(url_for('login'))
+    
+    # Pending verileri form'dan veya session'dan al
+    pending_user_id = request.form.get('pending_user_id') or session.get('pending_user_id')
+    pending_username = request.form.get('pending_username') or session.get('pending_username')
+    pending_user_name = request.form.get('pending_user_name') or session.get('pending_user_name')
+    pending_firma_id = request.form.get('pending_firma_id') or session.get('pending_firma_id')
+    pending_firma_adi = request.form.get('pending_firma_adi') or session.get('pending_firma_adi')
+    pending_is_admin = request.form.get('pending_is_admin') or session.get('pending_is_admin')
+    pending_raporlar_modulu = request.form.get('pending_raporlar_modulu') or session.get('pending_raporlar_modulu')
+    pending_ayarlar_modulu = request.form.get('pending_ayarlar_modulu') or session.get('pending_ayarlar_modulu')
+    pending_log_modulu = request.form.get('pending_log_modulu') or session.get('pending_log_modulu')
+    
+    # Session'ı tamamen temizle
+    session.clear()
     
     # Yeni oturum oluştur
-    session['user_id'] = session['pending_user_id']
-    session['username'] = session['pending_username']
-    session['user_name'] = session['pending_user_name']
-    session['firma_id'] = session['pending_firma_id']
-    session['firma_adi'] = session['pending_firma_adi']
-    session['is_admin'] = session['pending_is_admin']
-    session['raporlar_modulu'] = session['pending_raporlar_modulu']
-    session['ayarlar_modulu'] = session['pending_ayarlar_modulu']
-    session['log_modulu'] = session['pending_log_modulu']
-    
-    # Pending session verilerini temizle
-    for key in list(session.keys()):
-        if key.startswith('pending_'):
-            session.pop(key, None)
+    session['user_id'] = pending_user_id
+    session['username'] = pending_username
+    session['user_name'] = pending_user_name
+    session['firma_id'] = pending_firma_id
+    session['firma_adi'] = pending_firma_adi
+    session['is_admin'] = pending_is_admin
+    session['raporlar_modulu'] = pending_raporlar_modulu
+    session['ayarlar_modulu'] = pending_ayarlar_modulu
+    session['log_modulu'] = pending_log_modulu
     
     # Oturum kaydı oluştur
-    import secrets
     token = secrets.token_hex(16)
     session['session_token'] = token
     kayit = AktifOturum(
@@ -1788,7 +1882,13 @@ def force_logout():
         UserAgent=request.headers.get('User-Agent', '')
     )
     db.session.add(kayit)
-    db.session.commit()
+    
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash('Oturum oluşturma hatası', 'error')
+        return redirect(url_for('login'))
     
     # Zorunlu parola değişimi kontrolü
     user = Kullanici.query.get(user_id)
@@ -1799,6 +1899,29 @@ def force_logout():
     
     flash('Başarıyla giriş yaptınız!', 'success')
     return redirect(url_for('dashboard'))
+
+@app.route('/clear-all-sessions', methods=['POST'])
+def clear_all_sessions():
+    """Tüm aktif oturumları temizle (admin için)"""
+    print("Clear all sessions başladı")
+    
+    try:
+        # Tüm aktif oturumları sil
+        count = AktifOturum.query.count()
+        print(f"Silinecek toplam oturum sayısı: {count}")
+        
+        AktifOturum.query.delete()
+        db.session.commit()
+        
+        print("Tüm oturumlar başarıyla temizlendi")
+        flash('Tüm aktif oturumlar temizlendi. Şimdi giriş yapabilirsiniz.', 'success')
+        
+    except Exception as e:
+        print(f"Oturum temizleme hatası: {e}")
+        db.session.rollback()
+        flash('Oturum temizleme hatası oluştu.', 'error')
+    
+    return redirect(url_for('login'))
 
 @app.route('/sifre-degistir', methods=['GET', 'POST'])
 def sifre_degistir():
@@ -1871,17 +1994,6 @@ def dashboard():
     beklemede_todo = Todo.query.filter_by(KullaniciID=session['user_id'], Durum='Beklemede').count()
     devam_eden_todo = Todo.query.filter_by(KullaniciID=session['user_id'], Durum='Devam Ediyor').count()
     
-    # Yaklaşan hatırlatmalar (bugünden itibaren 3 gün)
-    bugun = datetime.now().date()
-    uc_gun_sonra = bugun + timedelta(days=3)
-    yaklasan_todos = Todo.query.filter(
-        Todo.KullaniciID == session['user_id'],
-        Todo.HatirlatmaTarihi.isnot(None),
-        Todo.Durum != 'Tamamlandı',
-        Todo.HatirlatmaTarihi >= bugun,
-        Todo.HatirlatmaTarihi <= uc_gun_sonra
-    ).limit(3).all()
-    
     # Okunmamiş bildirim sayısı
     unread_count = Bildirim.query.filter_by(KullaniciID=session['user_id'], Okundu=False).count()
     
@@ -1892,8 +2004,7 @@ def dashboard():
                          toplam_todo=toplam_todo,
                          tamamlanan_todo=tamamlanan_todo,
                          beklemede_todo=beklemede_todo,
-                         devam_eden_todo=devam_eden_todo,
-                         yaklasan_todos=yaklasan_todos)
+                         devam_eden_todo=devam_eden_todo)
 
 
 @app.route('/profil')
@@ -6754,26 +6865,52 @@ def todo_durum_degistir(todo_id):
         todo.Durum = yeni_durum
         print(f"Durum değiştiriliyor: {eski_durum} -> {yeni_durum}")
         
-        # Eğer durum "Tamamlandı" ise tamamlanma tarihini set et
-        if yeni_durum == 'Tamamlandı' and not todo.TamamlanmaTarihi:
-            todo.TamamlanmaTarihi = datetime.utcnow()
-        elif yeni_durum != 'Tamamlandı':
+        # Eğer durum "Tamamlandı" ise tamamlanma tarihini set et ve todo'yu sil
+        if yeni_durum == 'Tamamlandı':
+            if not todo.TamamlanmaTarihi:
+                todo.TamamlanmaTarihi = datetime.utcnow()
+            
+            # Bu todo ile ilgili bildirimleri sil
+            deleted_notifications = Bildirim.query.filter(
+                Bildirim.KullaniciID == todo.KullaniciID,
+                Bildirim.Metin.contains(todo.Baslik),
+                Bildirim.Tip == 'todo_reminder'
+            ).delete(synchronize_session=False)
+            print(f"Todo ile ilgili {deleted_notifications} bildirim silindi: {todo.Baslik}")
+            
+            # Todo'yu sil
+            db.session.delete(todo)
+            print(f"Todo tamamlandı ve silindi: {todo.Baslik}")
+            
+            # Değişiklikleri kaydet
+            db.session.commit()
+            print("Todo ve bildirimler başarıyla silindi")
+        else:
             todo.TamamlanmaTarihi = None
-        
-        db.session.commit()
-        print("Todo durumu başarıyla güncellendi")
+            db.session.commit()
+            print("Todo durumu başarıyla güncellendi")
         
         # Log ekle
-        log_user_action(
-            action_type='Todo Durumu Değiştirildi',
-            table_name='Todos',
-            record_id=todo_id,
-            old_data={'durum': eski_durum},
-            new_data={'durum': yeni_durum},
-            detail=f"Başlık: {todo.Baslik} - {eski_durum} → {yeni_durum}"
-        )
-        
-        return jsonify({'success': True, 'message': f'Durum {yeni_durum} olarak güncellendi!'})
+        if yeni_durum == 'Tamamlandı':
+            log_user_action(
+                action_type='Todo Tamamlandı ve Silindi',
+                table_name='Todos',
+                record_id=todo_id,
+                old_data={'durum': eski_durum},
+                new_data={'durum': yeni_durum, 'action': 'deleted'},
+                detail=f"Başlık: {todo.Baslik} - {eski_durum} → {yeni_durum} (Silindi)"
+            )
+            return jsonify({'success': True, 'message': 'Todo tamamlandı ve silindi!'})
+        else:
+            log_user_action(
+                action_type='Todo Durumu Değiştirildi',
+                table_name='Todos',
+                record_id=todo_id,
+                old_data={'durum': eski_durum},
+                new_data={'durum': yeni_durum},
+                detail=f"Başlık: {todo.Baslik} - {eski_durum} → {yeni_durum}"
+            )
+            return jsonify({'success': True, 'message': f'Durum {yeni_durum} olarak güncellendi!'})
         
     except Exception as e:
         db.session.rollback()
@@ -6847,6 +6984,7 @@ def check_todo_reminders():
     """Todo hatırlatmalarını kontrol et ve bildirim oluştur"""
     try:
         bugun = datetime.now().date()
+        simdi = datetime.now()
         
         # Bugün hatırlatma tarihi olan ve tamamlanmamış todoları bul
         hatirlatma_todos = Todo.query.filter(
@@ -6854,12 +6992,14 @@ def check_todo_reminders():
             Todo.Durum != 'Tamamlandı'
         ).all()
         
+        yeni_bildirim_sayisi = 0
+        
         for todo in hatirlatma_todos:
             # Bu todo için bugün zaten bildirim oluşturulmuş mu kontrol et
             existing_notification = Bildirim.query.filter(
                 Bildirim.KullaniciID == todo.KullaniciID,
-                Bildirim.Baslik == 'Todo Hatırlatması',
                 Bildirim.Metin.contains(todo.Baslik),
+                Bildirim.Tip == 'todo_reminder',
                 Bildirim.OlusturmaTarihi >= datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             ).first()
             
@@ -6867,35 +7007,136 @@ def check_todo_reminders():
                 # Yeni bildirim oluştur
                 bildirim = Bildirim(
                     KullaniciID=todo.KullaniciID,
-                    Baslik='Todo Hatırlatması',
-                    Metin=f'"{todo.Baslik}" görevinin hatırlatma tarihi bugün!',
+                    FirmaID=1,  # Varsayılan firma ID
+                    Metin=f'📋 "{todo.Baslik}" görevinin hatırlatma tarihi bugün!',
                     Tip='todo_reminder',
                     Okundu=False
                 )
                 db.session.add(bildirim)
+                yeni_bildirim_sayisi += 1
+                print(f"Todo hatırlatma bildirimi oluşturuldu: {todo.Baslik} (Kullanıcı: {todo.KullaniciID})")
         
         db.session.commit()
-        print(f"Todo hatırlatma kontrolü tamamlandı. {len(hatirlatma_todos)} todo kontrol edildi.")
+        
+        if yeni_bildirim_sayisi > 0:
+            print(f"Todo hatırlatma kontrolü tamamlandı. {yeni_bildirim_sayisi} yeni bildirim oluşturuldu.")
+        else:
+            print(f"Todo hatırlatma kontrolü tamamlandı. {len(hatirlatma_todos)} todo kontrol edildi, yeni bildirim yok.")
         
     except Exception as e:
         print(f"Todo hatırlatma kontrolünde hata: {str(e)}")
         db.session.rollback()
 
 def todo_reminder_worker():
-    """Todo hatırlatma worker'ı - her gün saat 09:00'da çalışır"""
+    """Todo hatırlatma worker'ı - her 5 dakikada bir çalışır"""
     while True:
         try:
             now = datetime.now()
-            # Her gün saat 09:00'da çalıştır
-            if now.hour == 9 and now.minute == 0:
-                check_todo_reminders()
+            # Her 5 dakikada bir kontrol et
+            check_todo_reminders()
             
-            # 1 dakika bekle
-            time.sleep(60)
+            # 5 dakika bekle
+            time.sleep(300)
             
         except Exception as e:
             print(f"Todo reminder worker hatası: {str(e)}")
-            time.sleep(60)
+            time.sleep(300)
+
+# Şifre Hatırlatma Route'ları
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        
+        # Kullanıcı kontrolü
+        user = Kullanici.query.filter_by(KullaniciAdi=username, Email=email, Aktif=True).first()
+        
+        if user:
+            # Reset token oluştur
+            reset_token = secrets.token_urlsafe(32)
+            
+            # Token'ı veritabanına kaydet (geçici olarak session'da saklayalım)
+            session[f'reset_token_{user.KullaniciID}'] = {
+                'token': reset_token,
+                'expires': datetime.utcnow() + timedelta(hours=1)  # 1 saat geçerli
+            }
+            
+            # Reset link'i oluştur
+            reset_link = url_for('reset_password', token=reset_token, _external=True)
+            
+            # Email gönderme simülasyonu (gerçek uygulamada email gönderilir)
+            print(f"Password reset link for {user.KullaniciAdi}: {reset_link}")
+            
+            flash(_('Password reset link has been sent to your email address.'), 'success')
+            return redirect(url_for('login'))
+        else:
+            flash(_('Invalid username or email address.'), 'error')
+    
+    return redirect(url_for('login'))
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if request.method == 'GET':
+        # Token kontrolü
+        valid_token = False
+        user_id = None
+        
+        for key, value in session.items():
+            if key.startswith('reset_token_') and value.get('token') == token:
+                if value.get('expires', datetime.min) > datetime.utcnow():
+                    valid_token = True
+                    user_id = key.replace('reset_token_', '')
+                    break
+        
+        if not valid_token:
+            flash(_('Invalid or expired reset token.'), 'error')
+            return redirect(url_for('login'))
+        
+        return render_template('reset_password.html', token=token)
+    
+    elif request.method == 'POST':
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        
+        if new_password != confirm_password:
+            flash(_('Passwords do not match.'), 'error')
+            return render_template('reset_password.html', token=token)
+        
+        if len(new_password) < 6:
+            flash(_('Password must be at least 6 characters long.'), 'error')
+            return render_template('reset_password.html', token=token)
+        
+        # Token kontrolü
+        valid_token = False
+        user_id = None
+        
+        for key, value in session.items():
+            if key.startswith('reset_token_') and value.get('token') == token:
+                if value.get('expires', datetime.min) > datetime.utcnow():
+                    valid_token = True
+                    user_id = key.replace('reset_token_', '')
+                    break
+        
+        if not valid_token:
+            flash(_('Invalid or expired reset token.'), 'error')
+            return redirect(url_for('login'))
+        
+        # Şifreyi güncelle
+        user = Kullanici.query.get(user_id)
+        if user:
+            user.Sifre = new_password
+            user.GuncellemeTarihi = datetime.utcnow()
+            db.session.commit()
+            
+            # Token'ı temizle
+            session.pop(f'reset_token_{user_id}', None)
+            
+            flash(_('Password has been reset successfully. You can now login with your new password.'), 'success')
+            return redirect(url_for('login'))
+        else:
+            flash(_('User not found.'), 'error')
+            return redirect(url_for('login'))
 
 if __name__ == '__main__':
     with app.app_context():

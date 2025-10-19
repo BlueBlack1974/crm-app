@@ -70,6 +70,22 @@
             color: #fff;
             background-color: #495057;
         }
+        
+        /* Hatırlatmalar butonu animasyonu */
+        .reminder-button {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .reminder-badge {
+            background-color: #dc3545 !important;
+            animation: pulse 1.5s infinite;
+        }
         .main-content {
             margin-left: 0;
         }
@@ -182,6 +198,13 @@
                     {{ _('Todos') }}
                 </a>
             </li>
+            <li>
+                <a href="#" class="nav-link" id="reminderButton" data-bs-toggle="modal" data-bs-target="#reminderModal">
+                    <i class="fas fa-bell me-2"></i>
+                    <span id="reminderText">Bugünkü Hatırlatmalarım</span>
+                    <span id="reminderCount" class="badge bg-danger ms-2" style="display: none;">0</span>
+                </a>
+            </li>
             {% if session.is_admin or session.log_modulu %}
             <li>
                 <a href="{{ url_for('loglar') }}" class="nav-link {% if request.endpoint == 'loglar' %}active{% endif %}">
@@ -209,8 +232,8 @@
                     <span id="currentLanguage">{{ _('Language') }}</span>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="languageDropdown">
-                    <li><a class="dropdown-item" href="{{ url_for('set_language', language='tr') }}">🇹🇷 {{ _('Turkish') }}</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('set_language', language='en') }}">🇺🇸 {{ _('English') }}</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('set_language', language='tr') }}" onclick="document.dispatchEvent(new CustomEvent('languageChanged', {detail: 'tr'}))">🇹🇷 {{ _('Turkish') }}</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('set_language', language='en') }}" onclick="document.dispatchEvent(new CustomEvent('languageChanged', {detail: 'en'}))">🇺🇸 {{ _('English') }}</a></li>
                 </ul>
             </div>
         </div>
@@ -223,9 +246,19 @@
                     <span id="notifCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none;">0</span>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-dark text-small shadow p-0" aria-labelledby="notifBell" style="min-width: 320px; max-height: 400px; overflow:auto; z-index: 2000;">
-                    <li class="px-3 py-2 border-bottom"><strong>{{ _('Notifications') }}</strong></li>
+                    <li class="px-3 py-2 border-bottom d-flex justify-content-between align-items-center">
+                        <strong>{{ _('Notifications') }}</strong>
+                        <div>
+                            <button class="btn btn-sm btn-outline-light me-1" id="clearAllNotifications" title="Tümünü Sil">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </li>
                     <div id="notifList"></div>
-                    <li class="text-center py-2"><a href="#" id="markAllRead" class="small text-muted">{{ _('Mark all as read') }}</a></li>
+                    <li class="text-center py-2 border-top">
+                        <a href="#" id="markAllRead" class="small text-muted me-3">{{ _('Mark all as read') }}</a>
+                        <a href="#" id="clearAllNotifications2" class="small text-danger">{{ _('Clear all') }}</a>
+                    </li>
                 </ul>
             </div>
             <div class="dropdown">
@@ -284,8 +317,8 @@
                         <span class="me-auto">{{ _('Language') }}</span>
                     </a>
                     <ul class="dropdown-menu w-100" aria-labelledby="mobileLanguageDropdown">
-                        <li><a class="dropdown-item d-flex align-items-center" href="{{ url_for('set_language', language='tr') }}">🇹🇷 <span class="ms-2">{{ _('Turkish') }}</span></a></li>
-                        <li><a class="dropdown-item d-flex align-items-center" href="{{ url_for('set_language', language='en') }}">🇺🇸 <span class="ms-2">{{ _('English') }}</span></a></li>
+                        <li><a class="dropdown-item d-flex align-items-center" href="{{ url_for('set_language', language='tr') }}" onclick="document.dispatchEvent(new CustomEvent('languageChanged', {detail: 'tr'}))">🇹🇷 <span class="ms-2">{{ _('Turkish') }}</span></a></li>
+                        <li><a class="dropdown-item d-flex align-items-center" href="{{ url_for('set_language', language='en') }}" onclick="document.dispatchEvent(new CustomEvent('languageChanged', {detail: 'en'}))">🇺🇸 <span class="ms-2">{{ _('English') }}</span></a></li>
                     </ul>
                 </div>
             </li>
@@ -457,9 +490,244 @@
             }
         });
     }
+
+    // Hatırlatmalar fonksiyonları
+    async function loadReminders() {
+        try {
+            const response = await fetch('/api/today-reminders');
+            const data = await response.json();
+            
+            const reminderList = document.getElementById('reminderList');
+            const reminderCount = document.getElementById('reminderCount');
+            const reminderButton = document.getElementById('reminderButton');
+            
+            if (data.success && data.reminders.length > 0) {
+                // Hatırlatmalar var
+                reminderList.innerHTML = data.reminders.map(reminder => `
+                    <div class="card mb-3 border-warning">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="card-title text-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>${reminder.baslik}
+                                    </h6>
+                                    <p class="card-text">${reminder.aciklama || 'Açıklama yok'}</p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i><span class="reminder-label">Hatırlatma:</span> ${reminder.hatirlatma_tarihi}
+                                    </small>
+                                </div>
+                                <div class="btn-group-vertical">
+                                    <button class="btn btn-success btn-sm" onclick="completeReminder(${reminder.id})">
+                                        <i class="fas fa-check"></i> <span class="complete-btn-text">Tamamla</span>
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="markReminderAsRead(${reminder.id})">
+                                        <i class="fas fa-eye"></i> <span class="read-btn-text">Okundu</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                // Sayaç ve animasyon
+                reminderCount.textContent = data.reminders.length;
+                reminderCount.style.display = 'inline-block';
+                reminderButton.classList.add('reminder-button');
+                reminderCount.classList.add('reminder-badge');
+                
+                // Yeni yüklenen butonları çevir
+                translateSidebar();
+                
+            } else {
+                // Hatırlatma yok
+                reminderList.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <h5 class="text-muted">{{ _('No reminders for today!') }}</h5>
+                        <p class="text-muted">{{ _('All your tasks are up to date.') }}</p>
+                    </div>
+                `;
+                
+                // Animasyonu kaldır
+                reminderCount.style.display = 'none';
+                reminderButton.classList.remove('reminder-button');
+                reminderCount.classList.remove('reminder-badge');
+            }
+        } catch (error) {
+            console.error('Hatırlatmalar yüklenirken hata:', error);
+            document.getElementById('reminderList').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    {{ _('An error occurred while loading reminders.') }}
+                </div>
+            `;
+        }
+    }
+
+    async function completeReminder(todoId) {
+        try {
+            const response = await fetch(`/todos/${todoId}/durum`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ durum: 'Tamamlandı' })
+            });
+            
+            if (response.ok) {
+                // Modal'ı yenile
+                loadReminders();
+                // Ana sayfayı da yenile
+                if (typeof fetchNotifications === 'function') {
+                    fetchNotifications();
+                }
+            }
+        } catch (error) {
+            console.error('Görev tamamlanırken hata:', error);
+        }
+    }
+
+    async function markReminderAsRead(todoId) {
+        // Bu fonksiyon gelecekte implement edilebilir
+        console.log('Hatırlatma okundu işaretlendi:', todoId);
+    }
+
+    async function markAllRemindersAsRead() {
+        // Bu fonksiyon gelecekte implement edilebilir
+        console.log('Tüm hatırlatmalar okundu işaretlendi');
+    }
+
+    // Modal açıldığında hatırlatmaları yükle
+    document.addEventListener('DOMContentLoaded', function() {
+        const reminderModal = document.getElementById('reminderModal');
+        if (reminderModal) {
+            reminderModal.addEventListener('show.bs.modal', function() {
+                loadReminders();
+            });
+        }
+        
+        // Sayfa yüklendiğinde hatırlatma sayısını kontrol et
+        checkReminderCount();
+    });
+
+    async function checkReminderCount() {
+        try {
+            const response = await fetch('/api/today-reminders');
+            const data = await response.json();
+            
+            const reminderCount = document.getElementById('reminderCount');
+            const reminderButton = document.getElementById('reminderButton');
+            
+            if (data.success && data.reminders.length > 0) {
+                reminderCount.textContent = data.reminders.length;
+                reminderCount.style.display = 'inline-block';
+                reminderButton.classList.add('reminder-button');
+                reminderCount.classList.add('reminder-badge');
+            } else {
+                reminderCount.style.display = 'none';
+                reminderButton.classList.remove('reminder-button');
+                reminderCount.classList.remove('reminder-badge');
+            }
+        } catch (error) {
+            console.error('Hatırlatma sayısı kontrol edilirken hata:', error);
+        }
+    }
     </script>
 
     {% block extra_js %}{% endblock %}
+
+    <!-- Hatırlatmalar Modal -->
+    <div class="modal fade" id="reminderModal" tabindex="-1" aria-labelledby="reminderModalLabel" aria-hidden="true" data-bs-backdrop="false">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reminderModalLabel">
+                        <i class="fas fa-bell me-2"></i>Bugünkü Hatırlatmalarım
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="reminderList">
+                        <div class="text-center py-4">
+                            <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                            <p class="text-muted mt-2">{{ _('Loading reminders...') }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Close') }}</button>
+                    <button type="button" class="btn btn-primary" onclick="markAllRemindersAsRead()">{{ _('Mark All as Read') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// Sidebar çevirileri
+function translateSidebar() {
+    const currentLang = document.documentElement.lang || 'tr';
+    
+    if (currentLang === 'en') {
+        // Hatırlatmalar butonu çevirisi
+        const reminderText = document.getElementById('reminderText');
+        if (reminderText && reminderText.textContent === 'Bugünkü Hatırlatmalarım') {
+            reminderText.textContent = "Today's Reminders";
+        }
+        
+        // Modal başlığı çevirisi
+        const reminderModalLabel = document.getElementById('reminderModalLabel');
+        if (reminderModalLabel && reminderModalLabel.textContent.includes('Bugünkü Hatırlatmalarım')) {
+            reminderModalLabel.innerHTML = '<i class="fas fa-bell me-2"></i>Today\'s Reminders';
+        }
+        
+        // Modal içindeki butonları çevir
+        document.querySelectorAll('.complete-btn-text').forEach(el => {
+            el.textContent = 'Complete';
+        });
+        document.querySelectorAll('.read-btn-text').forEach(el => {
+            el.textContent = 'Read';
+        });
+        document.querySelectorAll('.reminder-label').forEach(el => {
+            el.textContent = 'Reminder:';
+        });
+    } else {
+        // Türkçe'ye geri döndür
+        const reminderText = document.getElementById('reminderText');
+        if (reminderText && reminderText.textContent === "Today's Reminders") {
+            reminderText.textContent = 'Bugünkü Hatırlatmalarım';
+        }
+        
+        const reminderModalLabel = document.getElementById('reminderModalLabel');
+        if (reminderModalLabel && reminderModalLabel.textContent.includes("Today's Reminders")) {
+            reminderModalLabel.innerHTML = '<i class="fas fa-bell me-2"></i>Bugünkü Hatırlatmalarım';
+        }
+        
+        // Modal içindeki butonları çevir
+        document.querySelectorAll('.complete-btn-text').forEach(el => {
+            el.textContent = 'Tamamla';
+        });
+        document.querySelectorAll('.read-btn-text').forEach(el => {
+            el.textContent = 'Okundu';
+        });
+        document.querySelectorAll('.reminder-label').forEach(el => {
+            el.textContent = 'Hatırlatma:';
+        });
+    }
+}
+
+// Sayfa yüklendiğinde çevirileri uygula
+document.addEventListener('DOMContentLoaded', function() {
+    translateSidebar();
+});
+
+// Dil değişikliklerini dinle
+document.addEventListener('languageChanged', function() {
+    translateSidebar();
+});
+</script>
+
+{% block scripts %}{% endblock %}
+
 </body>
 </html>
 

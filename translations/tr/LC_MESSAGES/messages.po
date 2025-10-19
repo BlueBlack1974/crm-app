@@ -883,6 +883,34 @@ msgstr "Defter"
 #
 msgid ""
 msgstr ""
+
+
+msgid "New Password"
+msgstr "Yeni Şifre"
+
+msgid "Confirm New Password"
+msgstr "Yeni Şifreyi Onayla"
+
+msgid "Password must be at least 6 characters long"
+msgstr "Şifre en az 6 karakter uzunluğunda olmalıdır"
+
+msgid "Passwords do not match"
+msgstr "Şifreler eşleşmiyor"
+
+msgid "Invalid or expired reset token."
+msgstr "Geçersiz veya süresi dolmuş sıfırlama anahtarı."
+
+msgid "Password must be at least 6 characters long."
+msgstr "Şifre en az 6 karakter uzunluğunda olmalıdır."
+
+msgid "Password has been reset successfully. You can now login with your new password."
+msgstr "Şifre başarıyla sıfırlandı. Artık yeni şifrenizle giriş yapabilirsiniz."
+
+msgid "User not found."
+msgstr "Kullanıcı bulunamadı."
+
+msgid "Back to Login"
+msgstr "Giriş Sayfasına Dön"
 "Project-Id-Version: CRM 1.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-09-28 20:33+0300\n"
@@ -1068,6 +1096,52 @@ msgstr "PDF Formatı"
 
 msgid "Export"
 msgstr "Dışa Aktar"
+
+# Şifre Hatırlatma Çevirileri
+msgid "Forgot Password?"
+msgstr "Şifremi Unuttum?"
+
+msgid "Forgot Password"
+msgstr "Şifremi Unuttum"
+
+msgid "Enter your username and email address. We will send you a password reset link."
+msgstr "Kullanıcı adınızı ve e-posta adresinizi girin. Size şifre sıfırlama bağlantısı göndereceğiz."
+
+msgid "Email Address"
+msgstr "E-posta Adresi"
+
+msgid "Send Reset Link"
+msgstr "Sıfırlama Bağlantısı Gönder"
+
+msgid "Password reset link has been sent to your email address."
+msgstr "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi."
+
+msgid "Invalid username or email address."
+msgstr "Geçersiz kullanıcı adı veya e-posta adresi."
+
+msgid "Reset Password"
+msgstr "Şifre Sıfırla"
+
+msgid "Enter your new password"
+msgstr "Yeni şifrenizi girin"
+
+msgid "New Password"
+msgstr "Yeni Şifre"
+
+msgid "Confirm New Password"
+msgstr "Yeni Şifreyi Onayla"
+
+msgid "Password has been reset successfully."
+msgstr "Şifre başarıyla sıfırlandı."
+
+msgid "Invalid or expired reset link."
+msgstr "Geçersiz veya süresi dolmuş sıfırlama bağlantısı."
+
+msgid "Passwords do not match."
+msgstr "Şifreler eşleşmiyor."
+
+msgid "Password must be at least 6 characters long."
+msgstr "Şifre en az 6 karakter uzunluğunda olmalıdır."
 #: templates/ayarlar/islemler.html:75 templates/randevu_detay.html:37
 #: templates/randevular.html:68
 msgid "Duration"
@@ -1437,6 +1511,52 @@ msgstr "PDF Formatı"
 
 msgid "Export"
 msgstr "Dışa Aktar"
+
+# Şifre Hatırlatma Çevirileri
+msgid "Forgot Password?"
+msgstr "Şifremi Unuttum?"
+
+msgid "Forgot Password"
+msgstr "Şifremi Unuttum"
+
+msgid "Enter your username and email address. We will send you a password reset link."
+msgstr "Kullanıcı adınızı ve e-posta adresinizi girin. Size şifre sıfırlama bağlantısı göndereceğiz."
+
+msgid "Email Address"
+msgstr "E-posta Adresi"
+
+msgid "Send Reset Link"
+msgstr "Sıfırlama Bağlantısı Gönder"
+
+msgid "Password reset link has been sent to your email address."
+msgstr "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi."
+
+msgid "Invalid username or email address."
+msgstr "Geçersiz kullanıcı adı veya e-posta adresi."
+
+msgid "Reset Password"
+msgstr "Şifre Sıfırla"
+
+msgid "Enter your new password"
+msgstr "Yeni şifrenizi girin"
+
+msgid "New Password"
+msgstr "Yeni Şifre"
+
+msgid "Confirm New Password"
+msgstr "Yeni Şifreyi Onayla"
+
+msgid "Password has been reset successfully."
+msgstr "Şifre başarıyla sıfırlandı."
+
+msgid "Invalid or expired reset link."
+msgstr "Geçersiz veya süresi dolmuş sıfırlama bağlantısı."
+
+msgid "Passwords do not match."
+msgstr "Şifreler eşleşmiyor."
+
+msgid "Password must be at least 6 characters long."
+msgstr "Şifre en az 6 karakter uzunluğunda olmalıdır."
 
 msgid "Notes"
 msgstr "Notlar"
@@ -2357,3 +2477,109 @@ msgstr "PDF Formatı"
 
 msgid "Export"
 msgstr "Dışa Aktar"
+
+# Şifre Hatırlatma Çevirileri
+msgid "Forgot Password?"
+msgstr "Şifremi Unuttum?"
+
+msgid "Forgot Password"
+msgstr "Şifremi Unuttum"
+
+msgid "Enter your username and email address. We will send you a password reset link."
+msgstr "Kullanıcı adınızı ve e-posta adresinizi girin. Size şifre sıfırlama bağlantısı göndereceğiz."
+
+msgid "Email Address"
+msgstr "E-posta Adresi"
+
+msgid "Send Reset Link"
+msgstr "Sıfırlama Bağlantısı Gönder"
+
+msgid "Password reset link has been sent to your email address."
+msgstr "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi."
+
+msgid "Invalid username or email address."
+msgstr "Geçersiz kullanıcı adı veya e-posta adresi."
+
+msgid "Reset Password"
+msgstr "Şifre Sıfırla"
+
+msgid "Enter your new password"
+msgstr "Yeni şifrenizi girin"
+
+msgid "New Password"
+msgstr "Yeni Şifre"
+
+msgid "Confirm New Password"
+msgstr "Yeni Şifreyi Onayla"
+
+msgid "Password has been reset successfully."
+msgstr "Şifre başarıyla sıfırlandı."
+
+msgid "Invalid or expired reset link."
+msgstr "Geçersiz veya süresi dolmuş sıfırlama bağlantısı."
+
+msgid "Passwords do not match."
+msgstr "Şifreler eşleşmiyor."
+
+msgid "Password must be at least 6 characters long."
+msgstr "Şifre en az 6 karakter uzunluğunda olmalıdır."
+ 
+ # :   t e m p l a t e s / t o d o s . h t m l 
+ 
+ m s g i d   \ 
+ 
+ B e k l e m e d e \ 
+ 
+ m s g s t r   \ 
+ 
+ P e n d i n g \ 
+ 
+ 
+ 
+ # :   t e m p l a t e s / t o d o s . h t m l 
+ 
+ m s g i d   \ 
+ 
+ T a m a m l a n d 1\ 
+ 
+ m s g s t r   \ 
+ 
+ C o m p l e t e d \ 
+ 
+ 
+ 
+ # :   t e m p l a t e s / t o d o s . h t m l 
+ 
+ m s g i d   \ 
+ 
+ Y � k s e k \ 
+ 
+ m s g s t r   \ 
+ 
+ H i g h \ 
+ 
+ 
+ 
+ # :   t e m p l a t e s / t o d o s . h t m l 
+ 
+ m s g i d   \ 
+ 
+ O r t a \ 
+ 
+ m s g s t r   \ 
+ 
+ M e d i u m \ 
+ 
+ 
+ 
+ # :   t e m p l a t e s / t o d o s . h t m l 
+ 
+ m s g i d   \ 
+ 
+ D � _� k \ 
+ 
+ m s g s t r   \ 
+ 
+ L o w \ 
+ 
+ 
