@@ -167,7 +167,7 @@
                             {% endif %}
                         </td>
                         <td>
-                            <div class="log-detail" title="{{ log.IslemDetayi or '' }}">
+                            <div class="log-detail" title="{{ log.IslemDetayi or '' }}" data-detail="{{ log.IslemDetayi or '' }}">
                                 {{ log.IslemDetayi or '-' }}
                             </div>
                         </td>
@@ -242,11 +242,13 @@
 
 {% block extra_js %}
 <script>
-// İşlem tiplerini çevir
+// İşlem tiplerini ve detayları çevir
 function translateActionTypes() {
     const currentLang = document.documentElement.lang || 'tr';
     const actionElements = document.querySelectorAll('[data-action]');
+    const detailElements = document.querySelectorAll('[data-detail]');
     
+    // İşlem tiplerini çevir
     actionElements.forEach(element => {
         const action = element.getAttribute('data-action');
         let translatedText = action;
@@ -265,6 +267,65 @@ function translateActionTypes() {
         }
         
         element.textContent = translatedText;
+    });
+    
+    // İşlem detaylarını çevir
+    detailElements.forEach(element => {
+        const detail = element.getAttribute('data-detail');
+        if (!detail || detail === '-') return;
+        
+        let translatedText = detail;
+        
+        if (currentLang === 'en') {
+            // Türkçe'den İngilizce'ye çevir
+            if (detail.includes('Todo oluşturuldu')) {
+                translatedText = detail.replace('Todo oluşturuldu', 'Todo created');
+            } else if (detail.includes('Todo tamamlandı')) {
+                translatedText = detail.replace('Todo tamamlandı', 'Todo completed');
+            } else if (detail.includes('Todo silindi')) {
+                translatedText = detail.replace('Todo silindi', 'Todo deleted');
+            } else if (detail.includes('Todo güncellendi')) {
+                translatedText = detail.replace('Todo güncellendi', 'Todo updated');
+            } else if (detail.includes('Randevu oluşturuldu')) {
+                translatedText = detail.replace('Randevu oluşturuldu', 'Appointment created');
+            } else if (detail.includes('Randevu güncellendi')) {
+                translatedText = detail.replace('Randevu güncellendi', 'Appointment updated');
+            } else if (detail.includes('Randevu silindi')) {
+                translatedText = detail.replace('Randevu silindi', 'Appointment deleted');
+            } else if (detail.includes('Müşteri oluşturuldu')) {
+                translatedText = detail.replace('Müşteri oluşturuldu', 'Customer created');
+            } else if (detail.includes('Müşteri güncellendi')) {
+                translatedText = detail.replace('Müşteri güncellendi', 'Customer updated');
+            } else if (detail.includes('Müşteri silindi')) {
+                translatedText = detail.replace('Müşteri silindi', 'Customer deleted');
+            }
+        } else {
+            // İngilizce'den Türkçe'ye çevir
+            if (detail.includes('Todo created')) {
+                translatedText = detail.replace('Todo created', 'Todo oluşturuldu');
+            } else if (detail.includes('Todo completed')) {
+                translatedText = detail.replace('Todo completed', 'Todo tamamlandı');
+            } else if (detail.includes('Todo deleted')) {
+                translatedText = detail.replace('Todo deleted', 'Todo silindi');
+            } else if (detail.includes('Todo updated')) {
+                translatedText = detail.replace('Todo updated', 'Todo güncellendi');
+            } else if (detail.includes('Appointment created')) {
+                translatedText = detail.replace('Appointment created', 'Randevu oluşturuldu');
+            } else if (detail.includes('Appointment updated')) {
+                translatedText = detail.replace('Appointment updated', 'Randevu güncellendi');
+            } else if (detail.includes('Appointment deleted')) {
+                translatedText = detail.replace('Appointment deleted', 'Randevu silindi');
+            } else if (detail.includes('Customer created')) {
+                translatedText = detail.replace('Customer created', 'Müşteri oluşturuldu');
+            } else if (detail.includes('Customer updated')) {
+                translatedText = detail.replace('Customer updated', 'Müşteri güncellendi');
+            } else if (detail.includes('Customer deleted')) {
+                translatedText = detail.replace('Customer deleted', 'Müşteri silindi');
+            }
+        }
+        
+        element.textContent = translatedText;
+        element.setAttribute('title', translatedText);
     });
 }
 
