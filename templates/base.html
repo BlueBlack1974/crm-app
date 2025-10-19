@@ -201,7 +201,7 @@
             <li>
                 <a href="#" class="nav-link" id="reminderButton" data-bs-toggle="modal" data-bs-target="#reminderModal">
                     <i class="fas fa-bell me-2"></i>
-                    <span id="reminderText">Bugünkü Hatırlatmalarım</span>
+                    <span id="reminderText">{{ _('Today\'s Reminders') }}</span>
                     <span id="reminderCount" class="badge bg-danger ms-2" style="display: none;">0</span>
                 </a>
             </li>
@@ -503,6 +503,11 @@
             
             if (data.success && data.reminders.length > 0) {
                 // Hatırlatmalar var
+                const currentLang = document.documentElement.lang || 'tr';
+                const reminderLabelText = currentLang === 'en' ? 'Reminder:' : 'Hatırlatma:';
+                const completeText = currentLang === 'en' ? 'Complete' : 'Tamamla';
+                const readText = currentLang === 'en' ? 'Read' : 'Okundu';
+                
                 reminderList.innerHTML = data.reminders.map(reminder => `
                     <div class="card mb-3 border-warning">
                         <div class="card-body">
@@ -513,15 +518,15 @@
                                     </h6>
                                     <p class="card-text">${reminder.aciklama || 'Açıklama yok'}</p>
                                     <small class="text-muted">
-                                        <i class="fas fa-clock me-1"></i><span class="reminder-label">Hatırlatma:</span> ${reminder.hatirlatma_tarihi}
+                                        <i class="fas fa-clock me-1"></i><span class="reminder-label">${reminderLabelText}</span> ${reminder.hatirlatma_tarihi}
                                     </small>
                                 </div>
                                 <div class="btn-group-vertical">
                                     <button class="btn btn-success btn-sm" onclick="completeReminder(${reminder.id})">
-                                        <i class="fas fa-check"></i> <span class="complete-btn-text">Tamamla</span>
+                                        <i class="fas fa-check"></i> <span class="complete-btn-text">${completeText}</span>
                                     </button>
                                     <button class="btn btn-outline-secondary btn-sm" onclick="markReminderAsRead(${reminder.id})">
-                                        <i class="fas fa-eye"></i> <span class="read-btn-text">Okundu</span>
+                                        <i class="fas fa-eye"></i> <span class="read-btn-text">${readText}</span>
                                     </button>
                                 </div>
                             </div>
@@ -540,11 +545,15 @@
                 
             } else {
                 // Hatırlatma yok
+                const currentLang = document.documentElement.lang || 'tr';
+                const noRemindersText = currentLang === 'en' ? 'No reminders for today!' : 'Bugün için hatırlatma yok!';
+                const allTasksText = currentLang === 'en' ? 'All your tasks are up to date.' : 'Tüm görevleriniz güncel.';
+                
                 reminderList.innerHTML = `
                     <div class="text-center py-4">
                         <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                        <h5 class="text-muted">{{ _('No reminders for today!') }}</h5>
-                        <p class="text-muted">{{ _('All your tasks are up to date.') }}</p>
+                        <h5 class="text-muted">${noRemindersText}</h5>
+                        <p class="text-muted">${allTasksText}</p>
                     </div>
                 `;
                 
@@ -555,10 +564,13 @@
             }
         } catch (error) {
             console.error('Hatırlatmalar yüklenirken hata:', error);
+            const currentLang = document.documentElement.lang || 'tr';
+            const errorText = currentLang === 'en' ? 'An error occurred while loading reminders.' : 'Hatırlatmalar yüklenirken bir hata oluştu.';
+            
             document.getElementById('reminderList').innerHTML = `
                 <div class="alert alert-danger">
                     <i class="fas fa-exclamation-triangle me-2"></i>
-                    {{ _('An error occurred while loading reminders.') }}
+                    ${errorText}
                 </div>
             `;
         }
@@ -642,7 +654,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="reminderModalLabel">
-                        <i class="fas fa-bell me-2"></i>Bugünkü Hatırlatmalarım
+                        <i class="fas fa-bell me-2"></i>{{ _('Today\'s Reminders') }}
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -650,13 +662,13 @@
                     <div id="reminderList">
                         <div class="text-center py-4">
                             <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
-                            <p class="text-muted mt-2">{{ _('Loading reminders...') }}</p>
+                            <p class="text-muted mt-2" id="loadingText">Hatırlatmalar yükleniyor...</p>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Close') }}</button>
-                    <button type="button" class="btn btn-primary" onclick="markAllRemindersAsRead()">{{ _('Mark All as Read') }}</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="closeBtn">Kapat</button>
+                    <button type="button" class="btn btn-primary" onclick="markAllRemindersAsRead()" id="markAllBtn">Tümünü Okundu İşaretle</button>
                 </div>
             </div>
         </div>
@@ -667,20 +679,31 @@
 function translateSidebar() {
     const currentLang = document.documentElement.lang || 'tr';
     
+    // Sidebar buton ve modal başlığını çevir
+    const reminderText = document.getElementById('reminderText');
+    const reminderModalLabel = document.getElementById('reminderModalLabel');
+    const loadingText = document.getElementById('loadingText');
+    const closeBtn = document.getElementById('closeBtn');
+    const markAllBtn = document.getElementById('markAllBtn');
+    
     if (currentLang === 'en') {
-        // Hatırlatmalar butonu çevirisi
-        const reminderText = document.getElementById('reminderText');
-        if (reminderText && reminderText.textContent === 'Bugünkü Hatırlatmalarım') {
+        if (reminderText) {
             reminderText.textContent = "Today's Reminders";
         }
-        
-        // Modal başlığı çevirisi
-        const reminderModalLabel = document.getElementById('reminderModalLabel');
-        if (reminderModalLabel && reminderModalLabel.textContent.includes('Bugünkü Hatırlatmalarım')) {
+        if (reminderModalLabel) {
             reminderModalLabel.innerHTML = '<i class="fas fa-bell me-2"></i>Today\'s Reminders';
         }
+        if (loadingText) {
+            loadingText.textContent = 'Loading reminders...';
+        }
+        if (closeBtn) {
+            closeBtn.textContent = 'Close';
+        }
+        if (markAllBtn) {
+            markAllBtn.textContent = 'Mark All as Read';
+        }
         
-        // Modal içindeki butonları çevir
+        // Modal içindeki dinamik butonları çevir
         document.querySelectorAll('.complete-btn-text').forEach(el => {
             el.textContent = 'Complete';
         });
@@ -691,18 +714,23 @@ function translateSidebar() {
             el.textContent = 'Reminder:';
         });
     } else {
-        // Türkçe'ye geri döndür
-        const reminderText = document.getElementById('reminderText');
-        if (reminderText && reminderText.textContent === "Today's Reminders") {
+        if (reminderText) {
             reminderText.textContent = 'Bugünkü Hatırlatmalarım';
         }
-        
-        const reminderModalLabel = document.getElementById('reminderModalLabel');
-        if (reminderModalLabel && reminderModalLabel.textContent.includes("Today's Reminders")) {
+        if (reminderModalLabel) {
             reminderModalLabel.innerHTML = '<i class="fas fa-bell me-2"></i>Bugünkü Hatırlatmalarım';
         }
+        if (loadingText) {
+            loadingText.textContent = 'Hatırlatmalar yükleniyor...';
+        }
+        if (closeBtn) {
+            closeBtn.textContent = 'Kapat';
+        }
+        if (markAllBtn) {
+            markAllBtn.textContent = 'Tümünü Okundu İşaretle';
+        }
         
-        // Modal içindeki butonları çevir
+        // Modal içindeki dinamik butonları çevir
         document.querySelectorAll('.complete-btn-text').forEach(el => {
             el.textContent = 'Tamamla';
         });
