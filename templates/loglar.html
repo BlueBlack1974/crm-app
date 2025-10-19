@@ -274,57 +274,62 @@ function translateActionTypes() {
     });
     
     // İşlem detaylarını çevir
-    detailElements.forEach(element => {
+    detailElements.forEach((element, index) => {
         const detail = element.getAttribute('data-detail');
-        if (!detail || detail === '-') return;
+        if (!detail || detail === '-') {
+            console.log(`Detay ${index}: Boş veya '-'`);
+            return;
+        }
         
+        console.log(`Detay ${index}: "${detail}"`);
         let translatedText = detail;
         
         if (currentLang === 'en') {
-            // Türkçe'den İngilizce'ye çevir
-            if (detail.includes('Todo oluşturuldu')) {
-                translatedText = detail.replace('Todo oluşturuldu', 'Todo created');
-            } else if (detail.includes('Todo tamamlandı')) {
-                translatedText = detail.replace('Todo tamamlandı', 'Todo completed');
-            } else if (detail.includes('Todo silindi')) {
-                translatedText = detail.replace('Todo silindi', 'Todo deleted');
-            } else if (detail.includes('Todo güncellendi')) {
-                translatedText = detail.replace('Todo güncellendi', 'Todo updated');
-            } else if (detail.includes('Randevu oluşturuldu')) {
-                translatedText = detail.replace('Randevu oluşturuldu', 'Appointment created');
-            } else if (detail.includes('Randevu güncellendi')) {
-                translatedText = detail.replace('Randevu güncellendi', 'Appointment updated');
-            } else if (detail.includes('Randevu silindi')) {
-                translatedText = detail.replace('Randevu silindi', 'Appointment deleted');
-            } else if (detail.includes('Müşteri oluşturuldu')) {
-                translatedText = detail.replace('Müşteri oluşturuldu', 'Customer created');
-            } else if (detail.includes('Müşteri güncellendi')) {
-                translatedText = detail.replace('Müşteri güncellendi', 'Customer updated');
-            } else if (detail.includes('Müşteri silindi')) {
-                translatedText = detail.replace('Müşteri silindi', 'Customer deleted');
+            // Türkçe'den İngilizce'ye çevir - daha kapsamlı
+            let hasTranslation = false;
+            
+            // Önce genel kelime çevirileri
+            translatedText = translatedText.replace(/randevu hatırlatma/g, 'appointment reminder');
+            translatedText = translatedText.replace(/Başlık:/g, 'Title:');
+            translatedText = translatedText.replace(/Açıklama:/g, 'Description:');
+            translatedText = translatedText.replace(/oluşturuldu/g, 'created');
+            translatedText = translatedText.replace(/tamamlandı/g, 'completed');
+            translatedText = translatedText.replace(/silindi/g, 'deleted');
+            translatedText = translatedText.replace(/güncellendi/g, 'updated');
+            translatedText = translatedText.replace(/Todo/g, 'Todo');
+            translatedText = translatedText.replace(/Randevu/g, 'Appointment');
+            translatedText = translatedText.replace(/Müşteri/g, 'Customer');
+            
+            if (translatedText !== detail) {
+                hasTranslation = true;
+                console.log(`Çevrildi: "${detail}" → "${translatedText}"`);
+            }
+            
+            if (!hasTranslation) {
+                console.log(`Çeviri bulunamadı: "${detail}"`);
             }
         } else {
-            // İngilizce'den Türkçe'ye çevir
-            if (detail.includes('Todo created')) {
-                translatedText = detail.replace('Todo created', 'Todo oluşturuldu');
-            } else if (detail.includes('Todo completed')) {
-                translatedText = detail.replace('Todo completed', 'Todo tamamlandı');
-            } else if (detail.includes('Todo deleted')) {
-                translatedText = detail.replace('Todo deleted', 'Todo silindi');
-            } else if (detail.includes('Todo updated')) {
-                translatedText = detail.replace('Todo updated', 'Todo güncellendi');
-            } else if (detail.includes('Appointment created')) {
-                translatedText = detail.replace('Appointment created', 'Randevu oluşturuldu');
-            } else if (detail.includes('Appointment updated')) {
-                translatedText = detail.replace('Appointment updated', 'Randevu güncellendi');
-            } else if (detail.includes('Appointment deleted')) {
-                translatedText = detail.replace('Appointment deleted', 'Randevu silindi');
-            } else if (detail.includes('Customer created')) {
-                translatedText = detail.replace('Customer created', 'Müşteri oluşturuldu');
-            } else if (detail.includes('Customer updated')) {
-                translatedText = detail.replace('Customer updated', 'Müşteri güncellendi');
-            } else if (detail.includes('Customer deleted')) {
-                translatedText = detail.replace('Customer deleted', 'Müşteri silindi');
+            // İngilizce'den Türkçe'ye çevir - daha kapsamlı
+            let hasTranslation = false;
+            
+            // Önce genel kelime çevirileri
+            translatedText = translatedText.replace(/appointment reminder/g, 'randevu hatırlatma');
+            translatedText = translatedText.replace(/Title:/g, 'Başlık:');
+            translatedText = translatedText.replace(/Description:/g, 'Açıklama:');
+            translatedText = translatedText.replace(/created/g, 'oluşturuldu');
+            translatedText = translatedText.replace(/completed/g, 'tamamlandı');
+            translatedText = translatedText.replace(/deleted/g, 'silindi');
+            translatedText = translatedText.replace(/updated/g, 'güncellendi');
+            translatedText = translatedText.replace(/Appointment/g, 'Randevu');
+            translatedText = translatedText.replace(/Customer/g, 'Müşteri');
+            
+            if (translatedText !== detail) {
+                hasTranslation = true;
+                console.log(`Çevrildi: "${detail}" → "${translatedText}"`);
+            }
+            
+            if (!hasTranslation) {
+                console.log(`Çeviri bulunamadı: "${detail}"`);
             }
         }
         
