@@ -206,15 +206,21 @@
                                     .then(response => response.json())
                                     .then(result => {
                                         if (result.success) {
-                                            alert('Todo silindi!');
+                                            const currentLang = document.documentElement.lang || 'tr';
+                                            const message = currentLang === 'en' ? 'Todo deleted!' : 'Todo silindi!';
+                                            alert(message);
                                             location.reload();
                                         } else {
-                                            alert('Hata: ' + result.message);
+                                            const currentLang = document.documentElement.lang || 'tr';
+                                            const errorMessage = currentLang === 'en' ? 'Error: ' : 'Hata: ';
+                                            alert(errorMessage + result.message);
                                         }
                                     })
                                     .catch(error => {
                                         console.error('Error:', error);
-                                        alert('Bir hata oluştu!');
+                                        const currentLang = document.documentElement.lang || 'tr';
+                                        const errorMessage = currentLang === 'en' ? 'An error occurred!' : 'Bir hata oluştu!';
+                                        alert(errorMessage);
                                     });
                                 }
                             " title="{{ _('Delete') }}">
@@ -276,15 +282,21 @@
                                     .then(result => {
                                         console.log('Response result:', result);
                                         if (result.success) {
-                                            alert('Durum değiştirildi!');
+                                            const currentLang = document.documentElement.lang || 'tr';
+                                            const message = currentLang === 'en' ? 'Status changed!' : 'Durum değiştirildi!';
+                                            alert(message);
                                             location.reload();
                                         } else {
-                                            alert('Hata: ' + result.message);
+                                            const currentLang = document.documentElement.lang || 'tr';
+                                            const errorMessage = currentLang === 'en' ? 'Error: ' : 'Hata: ';
+                                            alert(errorMessage + result.message);
                                         }
                                     })
                                     .catch(error => {
                                         console.error('Error:', error);
-                                        alert('Bir hata oluştu: ' + error.message);
+                                        const currentLang = document.documentElement.lang || 'tr';
+                                        const errorMessage = currentLang === 'en' ? 'An error occurred: ' : 'Bir hata oluştu: ';
+                                        alert(errorMessage + error.message);
                                     });
                                 "
                                 {% if todo.Durum == 'Beklemede' %}disabled{% endif %}>
@@ -309,15 +321,21 @@
                                     .then(result => {
                                         console.log('Response result:', result);
                                         if (result.success) {
-                                            alert('Durum değiştirildi!');
+                                            const currentLang = document.documentElement.lang || 'tr';
+                                            const message = currentLang === 'en' ? 'Status changed!' : 'Durum değiştirildi!';
+                                            alert(message);
                                             location.reload();
                                         } else {
-                                            alert('Hata: ' + result.message);
+                                            const currentLang = document.documentElement.lang || 'tr';
+                                            const errorMessage = currentLang === 'en' ? 'Error: ' : 'Hata: ';
+                                            alert(errorMessage + result.message);
                                         }
                                     })
                                     .catch(error => {
                                         console.error('Error:', error);
-                                        alert('Bir hata oluştu: ' + error.message);
+                                        const currentLang = document.documentElement.lang || 'tr';
+                                        const errorMessage = currentLang === 'en' ? 'An error occurred: ' : 'Bir hata oluştu: ';
+                                        alert(errorMessage + error.message);
                                     });
                                 "
                                 {% if todo.Durum == 'Devam Ediyor' %}disabled{% endif %}>
@@ -342,15 +360,21 @@
                                     .then(result => {
                                         console.log('Response result:', result);
                                         if (result.success) {
-                                            alert('Durum değiştirildi!');
+                                            const currentLang = document.documentElement.lang || 'tr';
+                                            const message = currentLang === 'en' ? 'Status changed!' : 'Durum değiştirildi!';
+                                            alert(message);
                                             location.reload();
                                         } else {
-                                            alert('Hata: ' + result.message);
+                                            const currentLang = document.documentElement.lang || 'tr';
+                                            const errorMessage = currentLang === 'en' ? 'Error: ' : 'Hata: ';
+                                            alert(errorMessage + result.message);
                                         }
                                     })
                                     .catch(error => {
                                         console.error('Error:', error);
-                                        alert('Bir hata oluştu: ' + error.message);
+                                        const currentLang = document.documentElement.lang || 'tr';
+                                        const errorMessage = currentLang === 'en' ? 'An error occurred: ' : 'Bir hata oluştu: ';
+                                        alert(errorMessage + error.message);
                                     });
                                 "
                                 {% if todo.Durum == 'Tamamlandı' %}disabled{% endif %}>
@@ -448,7 +472,9 @@
                             hatirlatma_tarihi: document.getElementById('hatirlatma_tarihi').value
                         };
                         if (!data.baslik.trim()) {
-                            alert('Başlık gerekli!');
+                            const currentLang = document.documentElement.lang || 'tr';
+                            const message = currentLang === 'en' ? 'Title is required!' : 'Başlık gerekli!';
+                            alert(message);
                             return;
                         }
                         const todoId = document.getElementById('todoId').value;
@@ -461,15 +487,21 @@
                         .then(response => response.json())
                         .then(result => {
                             if (result.success) {
-                                alert('Başarılı!');
+                                const currentLang = document.documentElement.lang || 'tr';
+                                const message = currentLang === 'en' ? 'Success!' : 'Başarılı!';
+                                alert(message);
                                 location.reload();
                             } else {
-                                alert('Hata: ' + result.message);
+                                const currentLang = document.documentElement.lang || 'tr';
+                                const errorMessage = currentLang === 'en' ? 'Error: ' : 'Hata: ';
+                                alert(errorMessage + result.message);
                             }
                         })
                         .catch(error => {
                             console.error('Error:', error);
-                            alert('Bir hata oluştu!');
+                            const currentLang = document.documentElement.lang || 'tr';
+                            const errorMessage = currentLang === 'en' ? 'An error occurred!' : 'Bir hata oluştu!';
+                            alert(errorMessage);
                         });
                     ">{{ _('Save') }}</button>
                 </div>

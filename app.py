@@ -279,14 +279,27 @@ def login_required(f):
                         mevcut_kayit = AktifOturum.query.filter_by(KullaniciID=user_id).first()
                         if mevcut_kayit is None:
                             # Kayıt yoksa otomatik yeniden oluştur (tarayıcı çerezi duruyor ama DB kaydı silinmiş olabilir)
-                            yeni = AktifOturum(
-                                KullaniciID=user_id,
-                                SessionToken=session_token,
-                                ClientIP=request.remote_addr,
-                                UserAgent=request.headers.get('User-Agent', '')
-                            )
-                            db.session.add(yeni)
-                            db.session.commit()
+                            try:
+                                yeni = AktifOturum(
+                                    KullaniciID=user_id,
+                                    SessionToken=session_token,
+                                    ClientIP=request.remote_addr,
+                                    UserAgent=request.headers.get('User-Agent', '')
+                                )
+                                db.session.add(yeni)
+                                db.session.commit()
+                            except Exception as db_error:
+                                # UNIQUE constraint hatası - başka bir kayıt oluşturulmuş
+                                db.session.rollback()
+                                print(f"Oturum kaydı oluşturma hatası: {db_error}")
+                                # Mevcut kaydı güncelle
+                                mevcut_kayit = AktifOturum.query.filter_by(KullaniciID=user_id).first()
+                                if mevcut_kayit:
+                                    mevcut_kayit.SessionToken = session_token
+                                    mevcut_kayit.ClientIP = request.remote_addr
+                                    mevcut_kayit.UserAgent = request.headers.get('User-Agent', '')
+                                    mevcut_kayit.SonGorulmeZamani = datetime.utcnow()
+                                    db.session.commit()
                         else:
                             # Başka bir cihazda aktif oturum var: engelle
                             session.clear()

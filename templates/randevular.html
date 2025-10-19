@@ -347,6 +347,9 @@
                                 <button class="btn btn-sm btn-success" title="{{ _('New Appointment') }}" onclick="openNewAppointmentModal({{ randevu.RandevuID }})">
                                     <i class="fas fa-plus"></i>
                                 </button>
+                                <button class="btn btn-sm btn-info" title="{{ _('Add to Tasks') }}" onclick="addToTasks({{ randevu.RandevuID }}, '{{ randevu.musteri.tam_adi if randevu.musteri else (randevu.MusteriAdi + " " + randevu.MusteriSoyadi) }}', '{{ randevu.RandevuBaslik }}', '{{ randevu.RandevuTarihi }}', '{{ randevu.defter.DefterAdi if randevu.defter else "Defter" }}')">
+                                    <i class="fas fa-tasks"></i>
+                                </button>
                                 {% if session.is_admin or randevu.OlusturanKullaniciID == session.user_id %}
                                 <a href="{{ url_for('randevu_duzenle', randevu_id=randevu.RandevuID) }}" class="btn btn-sm btn-warning" title="{{ _('Edit') }}">
                                     <i class="fas fa-edit"></i>
@@ -477,6 +480,75 @@
                     <button type="submit" class="btn btn-primary">{{ _('Create Appointment') }}</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Todo Ekleme Modal -->
+<div class="modal fade" id="todoModal" tabindex="-1" aria-labelledby="todoModalLabel" aria-hidden="true" data-bs-backdrop="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="todoModalLabel">{{ _('New Todo') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div id="todoForm">
+                <div class="modal-body">
+                    <input type="hidden" id="todoId" name="todo_id">
+                    
+                    <div class="mb-3">
+                        <label for="todoBaslik" class="form-label">{{ _('Title') }} <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="todoBaslik" name="baslik" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="todoAciklama" class="form-label">{{ _('Description') }}</label>
+                        <textarea class="form-control" id="todoAciklama" name="aciklama" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="todoOncelik" class="form-label">{{ _('Priority') }}</label>
+                                <select class="form-select" id="todoOncelik" name="oncelik">
+                                    <option value="Düşük">{{ _('Low') }}</option>
+                                    <option value="Orta" selected>{{ _('Medium') }}</option>
+                                    <option value="Yüksek">{{ _('High') }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="todoDurum" class="form-label">{{ _('Status') }}</label>
+                                <select class="form-select" id="todoDurum" name="durum">
+                                    <option value="Beklemede" selected>{{ _('Pending') }}</option>
+                                    <option value="Devam Ediyor">{{ _('In Progress') }}</option>
+                                    <option value="Tamamlandı">{{ _('Completed') }}</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="todoBitisTarihi" class="form-label">{{ _('Due Date') }}</label>
+                                <input type="date" class="form-control" id="todoBitisTarihi" name="bitis_tarihi">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="todoHatirlatmaTarihi" class="form-label">{{ _('Reminder Date') }}</label>
+                                <input type="date" class="form-control" id="todoHatirlatmaTarihi" name="hatirlatma_tarihi">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                    <button type="button" class="btn btn-primary" id="saveTodoBtn" onclick="saveTodoFromAppointment()">{{ _('Save') }}</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -839,6 +911,99 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Randevuyu görevlere ekleme fonksiyonu
+function addToTasks(randevuId, musteriAdi, randevuBaslik, randevuTarihi, defterAdi) {
+    // Görev ekleme modal'ını aç
+    const todoModal = new bootstrap.Modal(document.getElementById('todoModal'));
+    
+    // Tarih formatını düzenle (YYYY-MM-DD'den DD/MM/YYYY'ye)
+    function formatDate(dateString) {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    }
+    
+    // Form alanlarını doldur
+    document.getElementById('todoBaslik').value = musteriAdi + ' randevu hatırlatma';
+    
+    // Açıklama alanını doldur
+    let aciklama = musteriAdi + ' ' + defterAdi + ' randevusu var.';
+    document.getElementById('todoAciklama').value = aciklama;
+    
+    // Randevu tarihini bitiş tarihi olarak ayarla
+    if (randevuTarihi) {
+        const dateOnly = randevuTarihi.split(' ')[0]; // Sadece tarih kısmını al
+        document.getElementById('todoBitisTarihi').value = dateOnly;
+        document.getElementById('todoHatirlatmaTarihi').value = dateOnly;
+    }
+    
+    // Modal'ı aç
+    todoModal.show();
+}
+
+// Randevudan görev kaydetme fonksiyonu
+function saveTodoFromAppointment() {
+    const data = {
+        baslik: document.getElementById('todoBaslik').value,
+        aciklama: document.getElementById('todoAciklama').value,
+        oncelik: document.getElementById('todoOncelik').value,
+        durum: document.getElementById('todoDurum').value,
+        bitis_tarihi: document.getElementById('todoBitisTarihi').value,
+        hatirlatma_tarihi: document.getElementById('todoHatirlatmaTarihi').value
+    };
+    
+    if (!data.baslik.trim()) {
+        const currentLang = document.documentElement.lang || 'tr';
+        const message = currentLang === 'en' ? 'Title is required!' : 'Başlık gerekli!';
+        alert(message);
+        return;
+    }
+    
+    fetch('/todos/ekle', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            const currentLang = document.documentElement.lang || 'tr';
+            const message = currentLang === 'en' ? 'Task created successfully!' : 'Görev başarıyla oluşturuldu!';
+            alert(message);
+            // Modal'ı kapat
+            const modal = bootstrap.Modal.getInstance(document.getElementById('todoModal'));
+            if (modal) {
+                modal.hide();
+            }
+            // Formu temizle
+            document.getElementById('todoBaslik').value = '';
+            document.getElementById('todoAciklama').value = '';
+            document.getElementById('todoOncelik').value = 'Orta';
+            document.getElementById('todoDurum').value = 'Beklemede';
+            document.getElementById('todoBitisTarihi').value = '';
+            document.getElementById('todoHatirlatmaTarihi').value = '';
+            
+            // Hatırlatma sayısını güncelle
+            if (typeof checkReminderCount === 'function') {
+                checkReminderCount();
+            }
+        } else {
+            const currentLang = document.documentElement.lang || 'tr';
+            const errorMessage = currentLang === 'en' ? 'Error: ' : 'Hata: ';
+            alert(errorMessage + result.message);
+        }
+    })
+    .catch(error => {
+        console.error('Fetch error:', error);
+        const currentLang = document.documentElement.lang || 'tr';
+        const errorMessage = currentLang === 'en' ? 'An error occurred: ' : 'Bir hata oluştu: ';
+        alert(errorMessage + error.message);
+    });
+}
 </script>
 {% endblock %}
 

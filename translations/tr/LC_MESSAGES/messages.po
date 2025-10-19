@@ -2582,4 +2582,12 @@ msgstr "Şifre en az 6 karakter uzunluğunda olmalıdır."
  
  L o w \ 
  
+ m s g i d   \  
+ A d d  
+ t o  
+ T a s k s \  
+ m s g s t r   \  
+ G � r e v l e r e  
+ E k l e \  
+  
  
