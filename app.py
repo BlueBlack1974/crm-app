@@ -1,5 +1,5 @@
 """
-CRM Uygulamasi - Ana Dosya
+Crandyx CRM - Ana Dosya
 Randevu Defteri ve Kullanici Yonetimi
 """
 

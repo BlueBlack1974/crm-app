@@ -1,6 +1,6 @@
-# Turkish translations for CRM Project.
-# Copyright (C) 2025 CRM Project
-# This file is distributed under the same license as the CRM project.
+# Turkish translations for Crandyx CRM Project.
+# Copyright (C) 2025 Crandyx CRM Project
+# This file is distributed under the same license as the Crandyx CRM project.
 #
 msgid ""
 msgstr ""
@@ -1500,7 +1500,7 @@ msgstr "Yeni Şifreyi Onayla"
 #: templates/reset_password.html:47
 msgid "Back to Login"
 msgstr ""
-"Giriş Sayfasına DönProject-Id-Version: CRM 1.0\n"
+"Giriş Sayfasına DönProject-Id-Version: Crandyx CRM 1.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-09-28 20:33+0300\n"
 "PO-Revision-Date: 2025-09-27 16:04+0300\n"

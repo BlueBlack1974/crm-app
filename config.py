@@ -1,5 +1,5 @@
 """
-CRM Uygulamasi - Konfigurasyon Dosyasi
+Crandyx CRM - Konfigurasyon Dosyasi
 """
 
 import os
@@ -17,7 +17,7 @@ class Config:
     # Veritabani ayarlari
     # MSSQL Server baglantisi icin
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'mssql+pyodbc://sa:YourPassword@localhost/CRM_DB?driver=ODBC+Driver+17+for+SQL+Server'
+        'mssql+pyodbc://sa:YourPassword@localhost/Crandyx_CRM_DB?driver=ODBC+Driver+17+for+SQL+Server'
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
@@ -43,7 +43,7 @@ class DevelopmentConfig(Config):
     """Gelistirme ortami konfigurasyonu"""
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
-        'mssql+pyodbc://sa:YourPassword@localhost/CRM_DB?driver=ODBC+Driver+17+for+SQL+Server'
+        'mssql+pyodbc://sa:YourPassword@localhost/Crandyx_CRM_DB?driver=ODBC+Driver+17+for+SQL+Server'
 
 class ProductionConfig(Config):
     """Uretim ortami konfigurasyonu"""

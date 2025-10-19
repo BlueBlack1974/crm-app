@@ -1,4 +1,4 @@
-# CRM - Randevu Defteri Sistemi
+# Crandyx CRM - Randevu Defteri Sistemi
 
 MSSQL Server ve Python Flask kullanılarak geliştirilmiş bir randevu defteri ve kullanıcı yönetim sistemi.
 
@@ -22,7 +22,7 @@ MSSQL Server ve Python Flask kullanılarak geliştirilmiş bir randevu defteri v
 
 ```bash
 git clone <repository-url>
-cd CRM
+cd Crandyx-CRM
 ```
 
 ### 2. Python Sanal Ortamı Oluşturun
@@ -57,7 +57,7 @@ copy env_example.txt .env
 
 ```
 SECRET_KEY=your-very-secret-key-here
-DATABASE_URL=mssql+pyodbc://sa:YourPassword@localhost/CRM_DB?driver=ODBC+Driver+17+for+SQL+Server
+DATABASE_URL=mssql+pyodbc://sa:YourPassword@localhost/Crandyx_CRM_DB?driver=ODBC+Driver+17+for+SQL+Server
 ```
 
 ### 6. Uygulamayı Çalıştırın
@@ -120,7 +120,7 @@ Uygulama `http://localhost:5000` adresinde çalışacaktır.
 ### Proje Yapısı
 
 ```
-CRM/
+Crandyx-CRM/
 ├── app.py                 # Ana uygulama dosyası
 ├── models.py              # Veritabanı modelleri
 ├── config.py              # Konfigürasyon ayarları

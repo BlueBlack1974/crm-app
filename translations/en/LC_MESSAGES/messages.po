@@ -1,10 +1,10 @@
-# English translations for CRM Project.
-# Copyright (C) 2025 CRM Project
-# This file is distributed under the same license as the CRM project.
+# English translations for Crandyx CRM Project.
+# Copyright (C) 2025 Crandyx CRM Project
+# This file is distributed under the same license as the Crandyx CRM project.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: CRM 1.0\n"
+"Project-Id-Version: Crandyx CRM 1.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-10-19 15:53+0300\n"
 "PO-Revision-Date: 2025-09-27 16:04+0300\n"

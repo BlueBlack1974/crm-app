@@ -2,13 +2,13 @@
 -- MSSQL Server icin
 
 -- Veritabani olustur
-IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'CRM_DB')
+IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'Crandyx_CRM_DB')
 BEGIN
-    CREATE DATABASE CRM_DB;
+    CREATE DATABASE Crandyx_CRM_DB;
 END
 GO
 
-USE CRM_DB;
+USE Crandyx_CRM_DB;
 GO
 
 -- Ortam ayarlari
