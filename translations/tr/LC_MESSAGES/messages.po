@@ -2590,4 +2590,18 @@ msgstr "Şifre en az 6 karakter uzunluğunda olmalıdır."
  G � r e v l e r e  
  E k l e \  
   
+ m s g i d   \  
+ D a r k  
+ M o d e \  
+ m s g s t r   \  
+ K a r a n l 1k  
+ M o d \  
+  
+ m s g i d   \  
+ L i g h t  
+ M o d e \  
+ m s g s t r   \  
+ A y d 1n l 1k  
+ M o d \  
+  
  

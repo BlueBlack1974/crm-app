@@ -436,6 +436,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (customerSearch) {
             customerSearch.focus();
         }
+        
+        // Scroll pozisyonunu kaydet
+        const scrollY = window.scrollY;
+        document.body.style.top = `-${scrollY}px`;
     });
     
     // Modal kapatıldığında orijinal içeriği geri yükle
@@ -462,6 +466,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const existingInstance = bootstrap.Modal.getInstance(modalElement);
         if (existingInstance) {
             existingInstance.dispose();
+        }
+        
+        // Body scroll'unu geri aç
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        
+        // Sayfa scroll pozisyonunu koru
+        const scrollY = document.body.style.top;
+        if (scrollY) {
+            document.body.style.top = '';
+            window.scrollTo(0, parseInt(scrollY || '0') * -1);
         }
     });
 });
