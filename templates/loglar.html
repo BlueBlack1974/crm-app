@@ -252,22 +252,96 @@ function translateActionTypes() {
     console.log('Bulunan işlem elementleri:', actionElements.length);
     console.log('Bulunan detay elementleri:', detailElements.length);
     
+    // Tüm log tablosundaki metinleri çevir
+    const logTable = document.querySelector('.log-table');
+    if (logTable) {
+        const allTextElements = logTable.querySelectorAll('td, span, div, .badge');
+        console.log('Bulunan tüm metin elementleri:', allTextElements.length);
+        
+        allTextElements.forEach((element, index) => {
+            const originalText = element.textContent.trim();
+            if (!originalText || originalText === '-' || originalText.length < 3) return;
+            
+            let translatedText = originalText;
+            
+            if (currentLang === 'en') {
+                // Türkçe'den İngilizce'ye çevir - daha kapsamlı
+                translatedText = translatedText.replace(/oluşturuldu/g, 'created');
+                translatedText = translatedText.replace(/tamamlandı/g, 'completed');
+                translatedText = translatedText.replace(/silindi/g, 'deleted');
+                translatedText = translatedText.replace(/güncellendi/g, 'updated');
+                translatedText = translatedText.replace(/durumu değiştirildi/g, 'status changed');
+                translatedText = translatedText.replace(/ve silindi/g, 'and deleted');
+                translatedText = translatedText.replace(/randevu hatırlatma/g, 'appointment reminder');
+                translatedText = translatedText.replace(/Başlık:/g, 'Title:');
+                translatedText = translatedText.replace(/Açıklama:/g, 'Description:');
+            } else {
+                // İngilizce'den Türkçe'ye çevir
+                translatedText = translatedText.replace(/created/g, 'oluşturuldu');
+                translatedText = translatedText.replace(/completed/g, 'tamamlandı');
+                translatedText = translatedText.replace(/deleted/g, 'silindi');
+                translatedText = translatedText.replace(/updated/g, 'güncellendi');
+                translatedText = translatedText.replace(/status changed/g, 'durumu değiştirildi');
+                translatedText = translatedText.replace(/and deleted/g, 've silindi');
+                translatedText = translatedText.replace(/appointment reminder/g, 'randevu hatırlatma');
+                translatedText = translatedText.replace(/Title:/g, 'Başlık:');
+                translatedText = translatedText.replace(/Description:/g, 'Açıklama:');
+            }
+            
+            if (translatedText !== originalText) {
+                console.log(`Genel çeviri ${index}: "${originalText}" → "${translatedText}"`);
+                element.textContent = translatedText;
+            }
+        });
+    }
+    
     // İşlem tiplerini çevir
-    actionElements.forEach(element => {
+    actionElements.forEach((element, index) => {
         const action = element.getAttribute('data-action');
         let translatedText = action;
         
-        if (currentLang === 'tr') {
+        console.log(`İşlem ${index}: "${action}"`);
+        
+        if (currentLang === 'en') {
+            // Türkçe'den İngilizce'ye çevir (dil İngilizce seçili ama metinler Türkçe)
+            switch(action) {
+                case 'CREATE': translatedText = 'CREATE'; break;
+                case 'UPDATE': translatedText = 'UPDATE'; break;
+                case 'DELETE': translatedText = 'DELETE'; break;
+                case 'VIEW': translatedText = 'VIEW'; break;
+                case 'CANCEL': translatedText = 'CANCEL'; break;
+                default:
+                    // Karmaşık işlem tiplerini çevir
+                    translatedText = action.replace(/oluşturuldu/gi, 'created');
+                    translatedText = translatedText.replace(/tamamlandı/gi, 'completed');
+                    translatedText = translatedText.replace(/silindi/gi, 'deleted');
+                    translatedText = translatedText.replace(/güncellendi/gi, 'updated');
+                    translatedText = translatedText.replace(/durumu değiştirildi/gi, 'status changed');
+                    translatedText = translatedText.replace(/ve silindi/gi, 'and deleted');
+                    break;
+            }
+        } else {
+            // Türkçe için İngilizce'den Türkçe'ye çevir
             switch(action) {
                 case 'CREATE': translatedText = 'OLUŞTUR'; break;
                 case 'UPDATE': translatedText = 'GÜNCELLE'; break;
                 case 'DELETE': translatedText = 'SİL'; break;
                 case 'VIEW': translatedText = 'GÖRÜNTÜLE'; break;
                 case 'CANCEL': translatedText = 'İPTAL'; break;
+                default:
+                    // Karmaşık işlem tiplerini çevir
+                    translatedText = action.replace(/created/gi, 'oluşturuldu');
+                    translatedText = translatedText.replace(/completed/gi, 'tamamlandı');
+                    translatedText = translatedText.replace(/deleted/gi, 'silindi');
+                    translatedText = translatedText.replace(/updated/gi, 'güncellendi');
+                    translatedText = translatedText.replace(/status changed/gi, 'durumu değiştirildi');
+                    translatedText = translatedText.replace(/and deleted/gi, 've silindi');
+                    break;
             }
-        } else {
-            // İngilizce için orijinal değerleri kullan
-            translatedText = action;
+        }
+        
+        if (translatedText !== action) {
+            console.log(`İşlem çevrildi: "${action}" → "${translatedText}"`);
         }
         
         element.textContent = translatedText;
