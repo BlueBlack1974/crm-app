@@ -248,6 +248,10 @@ function translateActionTypes() {
     const actionElements = document.querySelectorAll('[data-action]');
     const detailElements = document.querySelectorAll('[data-detail]');
     
+    console.log('Çeviri başlatıldı. Dil:', currentLang);
+    console.log('Bulunan işlem elementleri:', actionElements.length);
+    console.log('Bulunan detay elementleri:', detailElements.length);
+    
     // İşlem tiplerini çevir
     actionElements.forEach(element => {
         const action = element.getAttribute('data-action');
@@ -331,13 +335,21 @@ function translateActionTypes() {
 
 // Sayfa yüklendiğinde çevir
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Loglar sayfası yüklendi, çeviri başlatılıyor...');
     translateActionTypes();
 });
 
 // Dil değiştiğinde çevir
 document.addEventListener('languageChanged', function() {
+    console.log('Dil değişti, çeviri güncelleniyor...');
     translateActionTypes();
 });
+
+// Sayfa yüklendikten sonra da çevir (güvenlik için)
+setTimeout(function() {
+    console.log('Gecikmeli çeviri başlatılıyor...');
+    translateActionTypes();
+}, 1000);
 
 function showLogData(logId) {
     // Bu fonksiyon AJAX ile log detaylarını getirecek
