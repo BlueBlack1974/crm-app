@@ -462,7 +462,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('todoModalLabel').textContent = '{{ _("New Todo") }}';
         });
     });
-    
+}); // DOMContentLoaded kapanışı
 
 // Todo düzenleme fonksiyonu - global olarak tanımla
 window.editTodo = function(todoId) {
@@ -536,244 +536,97 @@ function showAlert(type, message) {
     }, 5000);
 }
 
-    // Durum ve öncelik çevirileri
+// Durum ve öncelik çevirileri
 function translateStatusAndPriority() {
-    const currentLang = document.documentElement.lang || 'tr';
-    console.log('🔍 Current language:', currentLang);
-    console.log('🔍 Found durum-text elements:', document.querySelectorAll('.durum-text').length);
-    console.log('🔍 Found oncelik-text elements:', document.querySelectorAll('.oncelik-text').length);
-    console.log('🔍 Document lang attribute:', document.documentElement.getAttribute('lang'));
-    console.log('🔍 Body lang attribute:', document.body.getAttribute('lang'));
+    const currentLang = document.documentElement.lang || document.body.lang || 'tr';
+    console.log('🔍 Çeviri yapılıyor. Dil:', currentLang);
     
-    // Elementleri detaylı kontrol et
-    document.querySelectorAll('.durum-text').forEach((element, index) => {
-        console.log(`🔍 Durum element ${index}:`, element.textContent.trim());
-    });
-    document.querySelectorAll('.oncelik-text').forEach((element, index) => {
-        console.log(`🔍 Öncelik element ${index}:`, element.textContent.trim());
-    });
-    
-    // Eğer elementler bulunamadıysa, tüm sayfayı tara
-    if (document.querySelectorAll('.durum-text').length === 0) {
-        console.log('⚠️ Durum elementleri bulunamadı, tüm sayfa taranıyor...');
-        const allElements = document.querySelectorAll('*');
-        allElements.forEach((element, index) => {
-            if (element.textContent && element.textContent.includes('Beklemede')) {
-                console.log(`🔍 Beklemede bulundu element ${index}:`, element.textContent.trim());
-            }
-            if (element.textContent && element.textContent.includes('Orta')) {
-                console.log(`🔍 Orta bulundu element ${index}:`, element.textContent.trim());
-            }
-        });
-    }
-        
-        if (currentLang === 'en') {
-            // Durum çevirileri
-            document.querySelectorAll('.durum-text').forEach(element => {
-                const text = element.textContent.trim();
-                console.log('🔄 Durum text:', text);
-                switch(text) {
-                    case 'Beklemede':
-                        element.textContent = 'Pending';
-                        console.log('✅ Çevrildi: Beklemede → Pending');
-                        break;
-                    case 'Devam Ediyor':
-                        element.textContent = 'In Progress';
-                        console.log('✅ Çevrildi: Devam Ediyor → In Progress');
-                        break;
-                    case 'Tamamlandı':
-                        element.textContent = 'Completed';
-                        console.log('✅ Çevrildi: Tamamlandı → Completed');
-                        break;
-                }
-            });
-            
-            // Öncelik çevirileri
-            document.querySelectorAll('.oncelik-text').forEach(element => {
-                const text = element.textContent.trim();
-                console.log('🔄 Öncelik text:', text);
-                switch(text) {
-                    case 'Yüksek':
-                        element.textContent = 'High';
-                        console.log('✅ Çevrildi: Yüksek → High');
-                        break;
-                    case 'Orta':
-                        element.textContent = 'Medium';
-                        console.log('✅ Çevrildi: Orta → Medium');
-                        break;
-                    case 'Düşük':
-                        element.textContent = 'Low';
-                        console.log('✅ Çevrildi: Düşük → Low');
-                        break;
-                }
-            });
-        } else if (currentLang === 'fr') {
-            console.log('🇫🇷 Fransızca çeviri başlıyor...');
-            // Fransızca çeviriler
-            document.querySelectorAll('.durum-text').forEach(element => {
-                const text = element.textContent.trim();
-                console.log('🔄 Durum text (FR):', text);
-                switch(text) {
-                    case 'Beklemede':
-                        element.textContent = 'En Attente';
-                        console.log('✅ Çevrildi: Beklemede → En Attente');
-                        break;
-                    case 'Devam Ediyor':
-                        element.textContent = 'En Cours';
-                        console.log('✅ Çevrildi: Devam Ediyor → En Cours');
-                        break;
-                    case 'Tamamlandı':
-                        element.textContent = 'Terminé';
-                        console.log('✅ Çevrildi: Tamamlandı → Terminé');
-                        break;
-                }
-            });
-            
-            document.querySelectorAll('.oncelik-text').forEach(element => {
-                const text = element.textContent.trim();
-                console.log('🔄 Öncelik text (FR):', text);
-                switch(text) {
-                    case 'Yüksek':
-                        element.textContent = 'Élevé';
-                        console.log('✅ Çevrildi: Yüksek → Élevé');
-                        break;
-                    case 'Orta':
-                        element.textContent = 'Moyen';
-                        console.log('✅ Çevrildi: Orta → Moyen');
-                        break;
-                    case 'Düşük':
-                        element.textContent = 'Faible';
-                        console.log('✅ Çevrildi: Düşük → Faible');
-                        break;
-                }
-            });
-        } else if (currentLang === 'de') {
-            // Almanca çeviriler
-            document.querySelectorAll('.durum-text').forEach(element => {
-                const text = element.textContent.trim();
-                switch(text) {
-                    case 'Beklemede':
-                        element.textContent = 'Ausstehend';
-                        break;
-                    case 'Devam Ediyor':
-                        element.textContent = 'In Bearbeitung';
-                        break;
-                    case 'Tamamlandı':
-                        element.textContent = 'Abgeschlossen';
-                        break;
-                }
-            });
-            
-            document.querySelectorAll('.oncelik-text').forEach(element => {
-                const text = element.textContent.trim();
-                switch(text) {
-                    case 'Yüksek':
-                        element.textContent = 'Hoch';
-                        break;
-                    case 'Orta':
-                        element.textContent = 'Mittel';
-                        break;
-                    case 'Düşük':
-                        element.textContent = 'Niedrig';
-                        break;
-                }
-            });
-        } else {
-            // Türkçe'ye geri döndür
-            document.querySelectorAll('.durum-text').forEach(element => {
-                const text = element.textContent.trim();
-                switch(text) {
-                    case 'Pending':
-                        element.textContent = 'Beklemede';
-                        break;
-                    case 'In Progress':
-                        element.textContent = 'Devam Ediyor';
-                        break;
-                    case 'Completed':
-                        element.textContent = 'Tamamlandı';
-                        break;
-                }
-            });
-            
-            document.querySelectorAll('.oncelik-text').forEach(element => {
-                const text = element.textContent.trim();
-                switch(text) {
-                    case 'High':
-                        element.textContent = 'Yüksek';
-                        break;
-                    case 'Medium':
-                        element.textContent = 'Orta';
-                        break;
-                    case 'Low':
-                        element.textContent = 'Düşük';
-                        break;
-                }
-            });
+    // Çeviri sözlükleri
+    const translations = {
+        status: {
+            'Beklemede': { en: 'Pending', fr: 'En Attente', de: 'Ausstehend', tr: 'Beklemede' },
+            'Devam Ediyor': { en: 'In Progress', fr: 'En Cours', de: 'In Bearbeitung', tr: 'Devam Ediyor' },
+            'Tamamlandı': { en: 'Completed', fr: 'Terminé', de: 'Abgeschlossen', tr: 'Tamamlandı' },
+            // Ters çeviriler (diğer dillerden Türkçeye)
+            'Pending': { en: 'Pending', fr: 'En Attente', de: 'Ausstehend', tr: 'Beklemede' },
+            'In Progress': { en: 'In Progress', fr: 'En Cours', de: 'In Bearbeitung', tr: 'Devam Ediyor' },
+            'Completed': { en: 'Completed', fr: 'Terminé', de: 'Abgeschlossen', tr: 'Tamamlandı' },
+            'En Attente': { en: 'Pending', fr: 'En Attente', de: 'Ausstehend', tr: 'Beklemede' },
+            'En Cours': { en: 'In Progress', fr: 'En Cours', de: 'In Bearbeitung', tr: 'Devam Ediyor' },
+            'Terminé': { en: 'Completed', fr: 'Terminé', de: 'Abgeschlossen', tr: 'Tamamlandı' },
+            'Ausstehend': { en: 'Pending', fr: 'En Attente', de: 'Ausstehend', tr: 'Beklemede' },
+            'In Bearbeitung': { en: 'In Progress', fr: 'En Cours', de: 'In Bearbeitung', tr: 'Devam Ediyor' },
+            'Abgeschlossen': { en: 'Completed', fr: 'Terminé', de: 'Abgeschlossen', tr: 'Tamamlandı' }
+        },
+        priority: {
+            'Yüksek': { en: 'High', fr: 'Élevé', de: 'Hoch', tr: 'Yüksek' },
+            'Orta': { en: 'Medium', fr: 'Moyen', de: 'Mittel', tr: 'Orta' },
+            'Düşük': { en: 'Low', fr: 'Faible', de: 'Niedrig', tr: 'Düşük' },
+            // Ters çeviriler
+            'High': { en: 'High', fr: 'Élevé', de: 'Hoch', tr: 'Yüksek' },
+            'Medium': { en: 'Medium', fr: 'Moyen', de: 'Mittel', tr: 'Orta' },
+            'Low': { en: 'Low', fr: 'Faible', de: 'Niedrig', tr: 'Düşük' },
+            'Élevé': { en: 'High', fr: 'Élevé', de: 'Hoch', tr: 'Yüksek' },
+            'Moyen': { en: 'Medium', fr: 'Moyen', de: 'Mittel', tr: 'Orta' },
+            'Faible': { en: 'Low', fr: 'Faible', de: 'Niedrig', tr: 'Düşük' },
+            'Hoch': { en: 'High', fr: 'Élevé', de: 'Hoch', tr: 'Yüksek' },
+            'Mittel': { en: 'Medium', fr: 'Moyen', de: 'Mittel', tr: 'Orta' },
+            'Niedrig': { en: 'Low', fr: 'Faible', de: 'Niedrig', tr: 'Düşük' }
         }
-    }
-}
-
-// Test fonksiyonu - manuel çeviri testi
-function testTranslation() {
-    console.log('🧪 Test çevirisi başlatılıyor...');
-    const testElement = document.querySelector('.durum-text');
-    if (testElement) {
-        console.log('🧪 Test element bulundu:', testElement.textContent);
-        testElement.textContent = 'TEST ÇEVİRİSİ';
-        console.log('🧪 Test çevirisi uygulandı');
-    } else {
-        console.log('🧪 Test element bulunamadı!');
-    }
-}
-
-// Sayfa yüklendiğinde çevirileri uygula
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 DOMContentLoaded - Çeviri sistemi başlatılıyor...');
-    console.log('🚀 Mevcut dil:', document.documentElement.lang);
-    console.log('🚀 Body lang:', document.body.getAttribute('lang'));
+    };
     
-    // Test çevirisi
-    setTimeout(() => {
-        testTranslation();
-        translateStatusAndPriority();
-    }, 1000);
-    
-    // Dil değişikliklerini dinle
-    document.addEventListener('languageChanged', function(event) {
-        console.log('🌍 Language changed event received:', event.detail);
-        setTimeout(() => {
-            testTranslation();
-            translateStatusAndPriority();
-        }, 500);
+    // Durum çevirileri
+    document.querySelectorAll('.durum-text').forEach(element => {
+        const text = element.textContent.trim();
+        if (translations.status[text] && translations.status[text][currentLang]) {
+            element.textContent = translations.status[text][currentLang];
+        }
     });
+    
+    // Öncelik çevirileri
+    document.querySelectorAll('.oncelik-text').forEach(element => {
+        const text = element.textContent.trim();
+        if (translations.priority[text] && translations.priority[text][currentLang]) {
+            element.textContent = translations.priority[text][currentLang];
+        }
+    });
+    
+    console.log('✅ Çeviri tamamlandı');
+}
+
+// Sayfa yüklendiğinde ve her dil değişiminde çevirileri uygula
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Sayfa yüklendi, çeviri başlatılıyor...');
+    
+    // Biraz bekleyip çalıştır (DOM tam yüklenmesi için)
+    setTimeout(() => {
+        console.log('⏰ Gecikmiş çeviri başlatılıyor...');
+        console.log('📊 .durum-text elementleri:', document.querySelectorAll('.durum-text').length);
+        console.log('📊 .oncelik-text elementleri:', document.querySelectorAll('.oncelik-text').length);
+        translateStatusAndPriority();
+    }, 100);
     
     // Lang attribute değişikliklerini dinle
     const observer = new MutationObserver(function(mutations) {
         mutations.forEach(function(mutation) {
             if (mutation.type === 'attributes' && mutation.attributeName === 'lang') {
-                console.log('🔄 Lang attribute değişti:', document.documentElement.lang);
-                console.log('🔄 Eski değer:', mutation.oldValue);
-                console.log('🔄 Yeni değer:', document.documentElement.getAttribute('lang'));
-                console.log('🔄 Body lang:', document.body.getAttribute('lang'));
-                setTimeout(() => {
-                    testTranslation();
-                    translateStatusAndPriority();
-                }, 500);
+                console.log('🔄 Dil değişti:', document.documentElement.lang);
+                setTimeout(() => translateStatusAndPriority(), 50);
             }
         });
     });
     
-    // Hem documentElement hem de body'yi dinle
     observer.observe(document.documentElement, {
         attributes: true,
-        attributeFilter: ['lang']
+        attributeFilter: ['lang'],
+        attributeOldValue: true
     });
-    
-    observer.observe(document.body, {
-        attributes: true,
-        attributeFilter: ['lang']
-    });
-    
-}); // DOMContentLoaded kapanışı
+});
+
+// Sayfa tamamen yüklendikten sonra da bir kez daha dene
+window.addEventListener('load', function() {
+    console.log('🌟 Window load tamamlandı, son çeviri denemesi...');
+    setTimeout(() => translateStatusAndPriority(), 200);
+});
 </script>
 {% endblock %}

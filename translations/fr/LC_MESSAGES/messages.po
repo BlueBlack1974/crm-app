@@ -127,7 +127,6 @@ msgstr "Rappel"
 # Login
 #: templates/ayarlar/kullanici_duzenle.html:192
 #: templates/ayarlar/kullanicilar.html:118 templates/base.html:212
-#, fuzzy
 msgid "Logs"
 msgstr "Journaux"
 
@@ -480,9 +479,8 @@ msgid "Send Reset Link"
 msgstr "Utilise l'API REST"
 
 #: templates/loglar.html:3
-#, fuzzy
 msgid "User Logs"
-msgstr "Utilisateurs"
+msgstr "Journaux d'Activité Utilisateur"
 
 #: templates/loglar.html:37
 msgid "User Activity Logs"
@@ -509,7 +507,6 @@ msgid "PDF Format"
 msgstr "Format PDF"
 
 #: templates/loglar.html:59 templates/loglar.html:86 templates/loglar.html:124
-#, fuzzy
 msgid "User"
 msgstr "Utilisateur"
 
@@ -519,17 +516,14 @@ msgid "All Users"
 msgstr "Tous les Utilisateurs"
 
 #: templates/loglar.html:70
-#, fuzzy
 msgid "Action Type"
 msgstr "Type d'Action"
 
 #: templates/loglar.html:72
-#, fuzzy
 msgid "All Actions"
 msgstr "Toutes les Actions"
 
 #: templates/loglar.html:73
-#, fuzzy
 msgid "Create"
 msgstr "Créer"
 
@@ -552,17 +546,14 @@ msgid "View"
 msgstr "Voir"
 
 #: templates/loglar.html:81 templates/loglar.html:126
-#, fuzzy
 msgid "Table"
-msgstr "Tableau"
+msgstr "Table"
 
 #: templates/loglar.html:83
-#, fuzzy
 msgid "All Tables"
 msgstr "Toutes les Tables"
 
 #: templates/loglar.html:84
-#, fuzzy
 msgid "Appointment"
 msgstr "Rendez-vous"
 
@@ -583,7 +574,6 @@ msgid "End Date"
 msgstr "Date de Fin"
 
 #: templates/loglar.html:125
-#, fuzzy
 msgid "Action"
 msgstr "Action"
 
@@ -592,17 +582,14 @@ msgid "Record Info"
 msgstr "Informations d'Enregistrement"
 
 #: templates/loglar.html:128
-#, fuzzy
 msgid "Detail"
 msgstr "Détail"
 
 #: templates/loglar.html:129
-#, fuzzy
 msgid "IP Address"
 msgstr "Adresse IP"
 
 #: templates/loglar.html:130
-#, fuzzy
 msgid "Data"
 msgstr "Données"
 
@@ -1634,9 +1621,8 @@ msgid "An error occurred while moving the appointment"
 msgstr "Une erreur s'est produite lors du déplacement du rendez-vous"
 
 #: templates/todos.html:3 templates/todos.html:92
-#, fuzzy
 msgid "Todo List"
-msgstr "Customer"
+msgstr "Liste des Tâches"
 
 #: templates/todos.html:107
 #, fuzzy
