@@ -21,10 +21,12 @@
     position: relative;
     overflow: hidden;
     border-radius: 0.375rem;
+    line-height: 0; /* inline-img alt boşluğu engelle */
   }
   
   .img-container img {
     transition: opacity 0.3s ease;
+    display: block; /* alt boşluğu engelle */
   }
   
   .img-container img:not([src]) {
@@ -34,6 +36,10 @@
   .img-container img[src] {
     opacity: 1;
   }
+
+  /* Özellik kartları için sabit yükseklik ve tam sığdırma */
+  .feature-img-wrap { height: 200px; overflow: hidden; border-radius: 0.375rem; }
+  .feature-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 </style>
 {% endblock %}
 
@@ -55,7 +61,7 @@
     <div class="img-container">
       <img src="{{ url_for('static', filename='img/hero.jpg') }}"
            alt="Crandyx CRM Kahraman Görsel"
-           class="img-fluid rounded shadow"
+           class="img-fluid rounded shadow d-block mx-auto"
            loading="eager"
            width="800"
            height="400"
@@ -70,13 +76,11 @@
         <div class="card-body">
           <h5 class="card-title"><i class="fas fa-calendar-check me-2 text-primary"></i>Hızlı Randevu</h5>
           <p class="card-text text-muted">Güçlü takvim görünümleri ve kapasiteye duyarlı planlama ile randevuları oluşturun, yönetin, takip edin.</p>
-          <div class="img-container mt-2">
+          <div class="img-container mt-2 feature-img-wrap">
             <img src="{{ url_for('static', filename='img/randevu.jpg') }}"
                  alt="Bilgisayarda randevu alan kişi"
-                 class="img-fluid rounded"
+                 class="feature-img"
                  loading="lazy"
-                 width="400"
-                 height="200"
                  onload="this.style.opacity='1'"
                  onerror="this.onerror=function(){this.onerror=null; this.src='{{ url_for('static', filename='img/feature-calendar.svg') }}';}">
           </div>
@@ -88,12 +92,11 @@
         <div class="card-body">
           <h5 class="card-title"><i class="fas fa-chart-bar me-2 text-success"></i>Etkili Raporlar</h5>
           <p class="card-text text-muted">Yoğun saatler, ısı haritaları, performans KPI’ları ve çok daha fazlasıyla veriye dayalı kararlar alın.</p>
-          <div class="img-container mt-2">
+          <div class="img-container mt-2 feature-img-wrap">
             <img src="{{ url_for('static', filename='img/rapor.jpg') }}"
                  alt="Raporlar ve Grafikler"
-                 class="img-fluid rounded"
+                 class="feature-img"
                  loading="lazy"
-                 style="width: 100%; height: 200px; object-fit: cover;"
                  onload="this.style.opacity='1'"
                  onerror="this.onerror=function(){this.onerror=null; this.src='{{ url_for('static', filename='img/feature-reports.svg') }}';}">
           </div>
@@ -105,13 +108,11 @@
         <div class="card-body">
           <h5 class="card-title"><i class="fas fa-users me-2 text-warning"></i>Müşteri Memnuniyeti</h5>
           <p class="card-text text-muted">Tekil müşteri görünümü, hatırlatmalar ve içgörülerle memnuniyeti artırın; müşterileriniz geri gelsin.</p>
-          <div class="img-container mt-2">
+          <div class="img-container mt-2 feature-img-wrap">
             <img src="{{ url_for('static', filename='img/feature-customers.jpg') }}"
                  alt="Müşteri Memnuniyeti ve İlişkiler"
-                 class="img-fluid rounded"
+                 class="feature-img"
                  loading="lazy"
-                 width="400"
-                 height="200"
                  onload="this.style.opacity='1'"
                  onerror="this.onerror=function(){this.onerror=null; this.src='{{ url_for('static', filename='img/feature-customers.svg') }}';}; this.src='https://images.unsplash.com/photo-1521790797524-b2497295b8a0?q=80&w=400&auto=format&fit=crop';">
           </div>
@@ -147,7 +148,7 @@
       <div class="col-md-4">
         <div class="card h-100">
           <div class="img-container">
-            <img src="{{ url_for('static', filename='img/modules/appointments.jpg') }}" 
+            <img src="{{ url_for('static', filename='img/modules/appoinments.png') }}" 
                  class="card-img-top" 
                  alt="Randevular"
                  loading="lazy"
@@ -165,7 +166,7 @@
       <div class="col-md-4">
         <div class="card h-100">
           <div class="img-container">
-            <img src="{{ url_for('static', filename='img/modules/calendar.svg') }}" 
+            <img src="{{ url_for('static', filename='img/modules/calendar.png') }}" 
                  class="card-img-top" 
                  alt="Takvim"
                  loading="lazy"
@@ -183,14 +184,14 @@
       <div class="col-md-4">
         <div class="card h-100">
           <div class="img-container">
-            <img src="{{ url_for('static', filename='img/modules/reports.jpg') }}" 
+            <img src="{{ url_for('static', filename='img/modules/reports.png') }}" 
                  class="card-img-top" 
                  alt="Raporlar"
                  loading="lazy"
                  width="400"
                  height="200"
                  onload="this.style.opacity='1'"
-                 onerror="this.onerror=null; this.src='{{ url_for('static', filename='img/modules/reports.svg') }}'">
+                 onerror="this.onerror=null; this.src='{{ url_for('static', filename='img/feature-reports.svg') }}'">
           </div>
           <div class="card-body">
             <h5 class="card-title">Raporlar</h5>
@@ -201,7 +202,7 @@
       <div class="col-md-4">
         <div class="card h-100">
           <div class="img-container">
-            <img src="{{ url_for('static', filename='img/modules/customers.jpg') }}" 
+            <img src="{{ url_for('static', filename='img/modules/customers.png') }}" 
                  class="card-img-top" 
                  alt="Müşteriler"
                  loading="lazy"

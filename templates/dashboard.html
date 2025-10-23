@@ -345,70 +345,123 @@
 function translateStatusAndPriority() {
     const currentLang = document.documentElement.lang || 'tr';
     
-    if (currentLang === 'en') {
-        // Durum çevirileri
-        document.querySelectorAll('.durum-text').forEach(element => {
-            const text = element.textContent.trim();
-            switch(text) {
-                case 'Beklemede':
-                    element.textContent = 'Pending';
-                    break;
-                case 'Devam Ediyor':
-                    element.textContent = 'In Progress';
-                    break;
-                case 'Tamamlandı':
-                    element.textContent = 'Completed';
-                    break;
-            }
-        });
-        
-        // Öncelik çevirileri
-        document.querySelectorAll('.oncelik-text').forEach(element => {
-            const text = element.textContent.trim();
-            switch(text) {
-                case 'Yüksek':
-                    element.textContent = 'High';
-                    break;
-                case 'Orta':
-                    element.textContent = 'Medium';
-                    break;
-                case 'Düşük':
-                    element.textContent = 'Low';
-                    break;
-            }
-        });
-    } else {
-        // Türkçe'ye geri döndür
-        document.querySelectorAll('.durum-text').forEach(element => {
-            const text = element.textContent.trim();
-            switch(text) {
-                case 'Pending':
-                    element.textContent = 'Beklemede';
-                    break;
-                case 'In Progress':
-                    element.textContent = 'Devam Ediyor';
-                    break;
-                case 'Completed':
-                    element.textContent = 'Tamamlandı';
-                    break;
-            }
-        });
-        
-        document.querySelectorAll('.oncelik-text').forEach(element => {
-            const text = element.textContent.trim();
-            switch(text) {
-                case 'High':
-                    element.textContent = 'Yüksek';
-                    break;
-                case 'Medium':
-                    element.textContent = 'Orta';
-                    break;
-                case 'Low':
-                    element.textContent = 'Düşük';
-                    break;
-            }
-        });
-    }
+    // Durum çevirileri
+    document.querySelectorAll('.durum-text').forEach(element => {
+        const text = element.textContent.trim();
+        switch(currentLang) {
+            case 'en':
+                switch(text) {
+                    case 'Beklemede':
+                        element.textContent = 'Pending';
+                        break;
+                    case 'Devam Ediyor':
+                        element.textContent = 'In Progress';
+                        break;
+                    case 'Tamamlandı':
+                        element.textContent = 'Completed';
+                        break;
+                }
+                break;
+            case 'fr':
+                switch(text) {
+                    case 'Beklemede':
+                        element.textContent = 'En Attente';
+                        break;
+                    case 'Devam Ediyor':
+                        element.textContent = 'En Cours';
+                        break;
+                    case 'Tamamlandı':
+                        element.textContent = 'Terminé';
+                        break;
+                }
+                break;
+            case 'de':
+                switch(text) {
+                    case 'Beklemede':
+                        element.textContent = 'Ausstehend';
+                        break;
+                    case 'Devam Ediyor':
+                        element.textContent = 'In Bearbeitung';
+                        break;
+                    case 'Tamamlandı':
+                        element.textContent = 'Abgeschlossen';
+                        break;
+                }
+                break;
+            default: // tr
+                switch(text) {
+                    case 'Pending':
+                        element.textContent = 'Beklemede';
+                        break;
+                    case 'In Progress':
+                        element.textContent = 'Devam Ediyor';
+                        break;
+                    case 'Completed':
+                        element.textContent = 'Tamamlandı';
+                        break;
+                }
+                break;
+        }
+    });
+    
+    // Öncelik çevirileri
+    document.querySelectorAll('.oncelik-text').forEach(element => {
+        const text = element.textContent.trim();
+        switch(currentLang) {
+            case 'en':
+                switch(text) {
+                    case 'Yüksek':
+                        element.textContent = 'High';
+                        break;
+                    case 'Orta':
+                        element.textContent = 'Medium';
+                        break;
+                    case 'Düşük':
+                        element.textContent = 'Low';
+                        break;
+                }
+                break;
+            case 'fr':
+                switch(text) {
+                    case 'Yüksek':
+                        element.textContent = 'Élevé';
+                        break;
+                    case 'Orta':
+                        element.textContent = 'Moyen';
+                        break;
+                    case 'Düşük':
+                        element.textContent = 'Faible';
+                        break;
+                }
+                break;
+            case 'de':
+                switch(text) {
+                    case 'Yüksek':
+                        element.textContent = 'Hoch';
+                        break;
+                    case 'Orta':
+                        element.textContent = 'Mittel';
+                        break;
+                    case 'Düşük':
+                        element.textContent = 'Niedrig';
+                        break;
+                }
+                break;
+            default: // tr
+                switch(text) {
+                    case 'High':
+                        element.textContent = 'Yüksek';
+                        break;
+                    case 'Medium':
+                        element.textContent = 'Orta';
+                        break;
+                    case 'Low':
+                        element.textContent = 'Düşük';
+                        break;
+                }
+                break;
+        }
+    });
 }
 
 // DOM yüklendikten sonra event listener'ları ekle
@@ -419,6 +472,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // Dil değişikliklerini dinle
     document.addEventListener('languageChanged', function() {
         translateStatusAndPriority();
+    });
+    
+    // Lang attribute değişikliklerini dinle
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'lang') {
+                console.log('Lang attribute değişti:', document.documentElement.lang);
+                translateStatusAndPriority();
+            }
+        });
+    });
+    
+    observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['lang']
     });
     // Hızlı todo ekleme - Add Todo butonuna tıklama
     document.getElementById('quickAddTodoBtn').addEventListener('click', function(e) {

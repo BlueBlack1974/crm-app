@@ -2746,3 +2746,35 @@ msgstr "GÖRÜNTÜLE"
 msgid "CANCEL"
 msgstr "İPTAL"
 
+#: templates/base.html
+msgid "French"
+msgstr "Fransızca"
+
+#: templates/base.html
+msgid "German"
+msgstr "Almanca"
+
+#: templates/base.html
+msgid "New Appointment"
+msgstr "Yeni Randevu"
+
+#: templates/base.html
+msgid "Calendar"
+msgstr "Takvim"
+
+#: templates/base.html
+msgid "WhatsApp"
+msgstr "WhatsApp"
+
+#: templates/base.html
+msgid "Appointment Report"
+msgstr "Randevu Raporu"
+
+#: templates/base.html
+msgid "Customer Report"
+msgstr "Müşteri Raporu"
+
+#: templates/base.html
+msgid "Todos"
+msgstr "Görevler"
+

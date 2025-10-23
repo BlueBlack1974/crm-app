@@ -112,7 +112,7 @@
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body data-logged-in="{{ 'true' if session.user_id else 'false' }}" lang="{{ session.get('language', 'tr') }}">
     {% if session.user_id %}
     <!-- Mobil üst bar -->
     <nav class="navbar navbar-dark bg-dark d-md-none">
@@ -138,7 +138,7 @@
                  alt="Kullanıcı Fotoğrafı"
                  class="rounded-circle my-2"
                  style="width: 72px; height: 72px; object-fit: cover;"
-                 onerror="this.onerror=null; this.src='{{ url_for('static', filename='img/avatar-default.svg') }}'">
+                 onerror="setDefaultAvatar(this)">
             <small class="text-white-50">{{ session.get('firma_adi', '') }}</small>
         </a>
         <hr>
@@ -232,8 +232,10 @@
                     <span id="currentLanguage">{{ _('Language') }}</span>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="languageDropdown">
-                    <li><a class="dropdown-item" href="{{ url_for('set_language', language='tr') }}" onclick="document.dispatchEvent(new CustomEvent('languageChanged', {detail: 'tr'}))">🇹🇷 {{ _('Turkish') }}</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('set_language', language='en') }}" onclick="document.dispatchEvent(new CustomEvent('languageChanged', {detail: 'en'}))">🇺🇸 {{ _('English') }}</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('set_language', language='tr') }}" onclick="handleLanguageChange('tr')">🇹🇷 {{ _('Turkish') }}</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('set_language', language='en') }}" onclick="handleLanguageChange('en')">🇺🇸 {{ _('English') }}</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('set_language', language='fr') }}" onclick="handleLanguageChange('fr')">🇫🇷 {{ _('French') }}</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('set_language', language='de') }}" onclick="handleLanguageChange('de')">🇩🇪 {{ _('German') }}</a></li>
                 </ul>
             </div>
         </div>
@@ -317,8 +319,10 @@
                         <span class="me-auto">{{ _('Language') }}</span>
                     </a>
                     <ul class="dropdown-menu w-100" aria-labelledby="mobileLanguageDropdown">
-                        <li><a class="dropdown-item d-flex align-items-center" href="{{ url_for('set_language', language='tr') }}" onclick="document.dispatchEvent(new CustomEvent('languageChanged', {detail: 'tr'}))">🇹🇷 <span class="ms-2">{{ _('Turkish') }}</span></a></li>
-                        <li><a class="dropdown-item d-flex align-items-center" href="{{ url_for('set_language', language='en') }}" onclick="document.dispatchEvent(new CustomEvent('languageChanged', {detail: 'en'}))">🇺🇸 <span class="ms-2">{{ _('English') }}</span></a></li>
+                        <li><a class="dropdown-item d-flex align-items-center" href="{{ url_for('set_language', language='tr') }}" onclick="handleLanguageChange('tr')">🇹🇷 <span class="ms-2">{{ _('Turkish') }}</span></a></li>
+                        <li><a class="dropdown-item d-flex align-items-center" href="{{ url_for('set_language', language='en') }}" onclick="handleLanguageChange('en')">🇺🇸 <span class="ms-2">{{ _('English') }}</span></a></li>
+                        <li><a class="dropdown-item d-flex align-items-center" href="{{ url_for('set_language', language='fr') }}" onclick="handleLanguageChange('fr')">🇫🇷 <span class="ms-2">{{ _('French') }}</span></a></li>
+                        <li><a class="dropdown-item d-flex align-items-center" href="{{ url_for('set_language', language='de') }}" onclick="handleLanguageChange('de')">🇩🇪 <span class="ms-2">{{ _('German') }}</span></a></li>
                     </ul>
                 </div>
             </li>
@@ -360,6 +364,17 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
+    <script>
+    function setDefaultAvatar(imgEl) {
+        imgEl.onerror = null;
+        imgEl.src = "{{ url_for('static', filename='img/avatar-default.svg') }}";
+    }
+    function isLoggedIn() {
+        const v = document.body?.dataset?.loggedIn;
+        return v === 'true';
+    }
+    </script>
+
     <script>
     // Basit bildirim polling'i
     async function fetchNotifications() {
@@ -433,7 +448,7 @@
             console.warn('Bildirim alınamadı');
         }
     }
-    if ({{ 'true' if session.user_id else 'false' }}) {
+    if (isLoggedIn()) {
         // Dinamik aralık: görünürken hızlı, gizliyken yavaş
         let pollTimer = null;
         const ACTIVE_INTERVAL_MS = 15000;
@@ -504,9 +519,25 @@
             if (data.success && data.reminders.length > 0) {
                 // Hatırlatmalar var
                 const currentLang = document.documentElement.lang || 'tr';
-                const reminderLabelText = currentLang === 'en' ? 'Reminder:' : 'Hatırlatma:';
-                const completeText = currentLang === 'en' ? 'Complete' : 'Tamamla';
-                const readText = currentLang === 'en' ? 'Read' : 'Okundu';
+                let reminderLabelText, completeText, readText;
+                
+                if (currentLang === 'en') {
+                    reminderLabelText = 'Reminder:';
+                    completeText = 'Complete';
+                    readText = 'Read';
+                } else if (currentLang === 'fr') {
+                    reminderLabelText = 'Rappel:';
+                    completeText = 'Terminer';
+                    readText = 'Lu';
+                } else if (currentLang === 'de') {
+                    reminderLabelText = 'Erinnerung:';
+                    completeText = 'Abschließen';
+                    readText = 'Gelesen';
+                } else {
+                    reminderLabelText = 'Hatırlatma:';
+                    completeText = 'Tamamla';
+                    readText = 'Okundu';
+                }
                 
                 reminderList.innerHTML = data.reminders.map(reminder => `
                     <div class="card mb-3 border-warning">
@@ -516,7 +547,7 @@
                                     <h6 class="card-title text-warning">
                                         <i class="fas fa-exclamation-triangle me-2"></i>${reminder.baslik}
                                     </h6>
-                                    <p class="card-text">${reminder.aciklama || 'Açıklama yok'}</p>
+                                    <p class="card-text">${reminder.aciklama || (currentLang === 'en' ? 'No description' : currentLang === 'fr' ? 'Aucune description' : currentLang === 'de' ? 'Keine Beschreibung' : 'Açıklama yok')}</p>
                                     <small class="text-muted">
                                         <i class="fas fa-clock me-1"></i><span class="reminder-label">${reminderLabelText}</span> ${reminder.hatirlatma_tarihi}
                                     </small>
@@ -546,8 +577,21 @@
             } else {
                 // Hatırlatma yok
                 const currentLang = document.documentElement.lang || 'tr';
-                const noRemindersText = currentLang === 'en' ? 'No reminders for today!' : 'Bugün için hatırlatma yok!';
-                const allTasksText = currentLang === 'en' ? 'All your tasks are up to date.' : 'Tüm görevleriniz güncel.';
+                let noRemindersText, allTasksText;
+                
+                if (currentLang === 'en') {
+                    noRemindersText = 'No reminders for today!';
+                    allTasksText = 'All your tasks are up to date.';
+                } else if (currentLang === 'fr') {
+                    noRemindersText = 'Aucun rappel pour aujourd\'hui !';
+                    allTasksText = 'Toutes vos tâches sont à jour.';
+                } else if (currentLang === 'de') {
+                    noRemindersText = 'Keine Erinnerungen für heute!';
+                    allTasksText = 'Alle Ihre Aufgaben sind auf dem neuesten Stand.';
+                } else {
+                    noRemindersText = 'Bugün için hatırlatma yok!';
+                    allTasksText = 'Tüm görevleriniz güncel.';
+                }
                 
                 reminderList.innerHTML = `
                     <div class="text-center py-4">
@@ -565,7 +609,17 @@
         } catch (error) {
             console.error('Hatırlatmalar yüklenirken hata:', error);
             const currentLang = document.documentElement.lang || 'tr';
-            const errorText = currentLang === 'en' ? 'An error occurred while loading reminders.' : 'Hatırlatmalar yüklenirken bir hata oluştu.';
+            let errorText;
+            
+            if (currentLang === 'en') {
+                errorText = 'An error occurred while loading reminders.';
+            } else if (currentLang === 'fr') {
+                errorText = 'Une erreur s\'est produite lors du chargement des rappels.';
+            } else if (currentLang === 'de') {
+                errorText = 'Ein Fehler ist beim Laden der Erinnerungen aufgetreten.';
+            } else {
+                errorText = 'Hatırlatmalar yüklenirken bir hata oluştu.';
+            }
             
             document.getElementById('reminderList').innerHTML = `
                 <div class="alert alert-danger">
@@ -713,6 +767,60 @@ function translateSidebar() {
         document.querySelectorAll('.reminder-label').forEach(el => {
             el.textContent = 'Reminder:';
         });
+    } else if (currentLang === 'fr') {
+        if (reminderText) {
+            reminderText.textContent = 'Mes Rappels d\'Aujourd\'hui';
+        }
+        if (reminderModalLabel) {
+            reminderModalLabel.innerHTML = '<i class="fas fa-bell me-2"></i>Mes Rappels d\'Aujourd\'hui';
+        }
+        if (loadingText) {
+            loadingText.textContent = 'Chargement des rappels...';
+        }
+        if (closeBtn) {
+            closeBtn.textContent = 'Fermer';
+        }
+        if (markAllBtn) {
+            markAllBtn.textContent = 'Marquer Tout comme Lu';
+        }
+        
+        // Modal içindeki dinamik butonları çevir
+        document.querySelectorAll('.complete-btn-text').forEach(el => {
+            el.textContent = 'Terminer';
+        });
+        document.querySelectorAll('.read-btn-text').forEach(el => {
+            el.textContent = 'Lu';
+        });
+        document.querySelectorAll('.reminder-label').forEach(el => {
+            el.textContent = 'Rappel:';
+        });
+    } else if (currentLang === 'de') {
+        if (reminderText) {
+            reminderText.textContent = 'Meine Erinnerungen für Heute';
+        }
+        if (reminderModalLabel) {
+            reminderModalLabel.innerHTML = '<i class="fas fa-bell me-2"></i>Meine Erinnerungen für Heute';
+        }
+        if (loadingText) {
+            loadingText.textContent = 'Erinnerungen werden geladen...';
+        }
+        if (closeBtn) {
+            closeBtn.textContent = 'Schließen';
+        }
+        if (markAllBtn) {
+            markAllBtn.textContent = 'Alle als Gelesen Markieren';
+        }
+        
+        // Modal içindeki dinamik butonları çevir
+        document.querySelectorAll('.complete-btn-text').forEach(el => {
+            el.textContent = 'Abschließen';
+        });
+        document.querySelectorAll('.read-btn-text').forEach(el => {
+            el.textContent = 'Gelesen';
+        });
+        document.querySelectorAll('.reminder-label').forEach(el => {
+            el.textContent = 'Erinnerung:';
+        });
     } else {
         if (reminderText) {
             reminderText.textContent = 'Bugünkü Hatırlatmalarım';
@@ -747,6 +855,42 @@ function translateSidebar() {
 document.addEventListener('DOMContentLoaded', function() {
     translateSidebar();
 });
+
+// Dil değişikliği fonksiyonu
+function handleLanguageChange(lang) {
+    console.log('Dil değişiyor:', lang);
+    
+    // Lang attribute'unu hemen set et
+    document.documentElement.lang = lang;
+    document.body.setAttribute('lang', lang);
+    
+    // languageChanged event'ini tetikle
+    const event = new CustomEvent('languageChanged', { detail: { language: lang } });
+    document.dispatchEvent(event);
+    
+    // Önce session'ı kontrol et
+    fetch('/api/session/check', {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            // Session aktif, dil değişikliğini yap
+            window.location.href = `/set_language/${lang}`;
+        } else {
+            // Session süresi dolmuş, login sayfasına yönlendir
+            window.location.href = '/login';
+        }
+    })
+    .catch(error => {
+        console.error('Session kontrol hatası:', error);
+        // Hata durumunda sayfa yenile
+        window.location.href = `/set_language/${lang}`;
+    });
+}
 
 // Dil değişikliklerini dinle
 document.addEventListener('languageChanged', function() {

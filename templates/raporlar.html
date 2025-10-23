@@ -191,18 +191,71 @@
 <!-- Chart.js base.html'de yüklendi -->
 <script>
 async function loadReport() {
-  const params = new URLSearchParams(window.location.search);
-  console.log('API çağrısı parametreleri:', params.toString());
-  console.log('Defter ID:', params.get('defter_id'));
-  const res = await fetch('/api/raporlar/ozet?' + params.toString());
-  const data = await res.json();
-  if (!data.success) { alert('{{ _("Report could not be loaded") }}'); return; }
+  try {
+    const params = new URLSearchParams(window.location.search);
+    console.log('API çağrısı parametreleri:', params.toString());
+    console.log('Defter ID:', params.get('defter_id'));
+    console.log('Mevcut dil:', "{{ session.get('language', 'tr') }}");
+    
+    const res = await fetch('/api/raporlar/ozet?' + params.toString());
+    console.log('API yanıt durumu:', res.status);
+    
+    // Oturum kontrolü - eğer login sayfasına yönlendirilmişse
+    if (res.redirected && res.url.includes('/login')) {
+      console.log('Oturum süresi dolmuş, login sayfasına yönlendiriliyor...');
+      window.location.href = '/login';
+      return;
+    }
+    
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    
+    // Content-Type kontrolü - JSON değilse hata
+    const contentType = res.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.error('Beklenmeyen yanıt tipi:', contentType);
+      window.location.href = '/login';
+      return;
+    }
+    
+    const data = await res.json();
+    console.log('API yanıt verisi:', data);
+    
+    if (!data.success) { 
+      console.error('API başarısız:', data);
+      alert("{{ _('Report could not be loaded') }}"); 
+      return; 
+    }
 
   document.getElementById('toplam').textContent = data.toplam;
 
-  // Yoğun saatler verilerini yükle
-  const peakRes = await fetch('/api/raporlar/yoğun-saatler?' + params.toString());
-  const peakData = await peakRes.json();
+    // Yoğun saatler verilerini yükle
+    console.log('Yoğun saatler API çağrısı yapılıyor...');
+    const peakRes = await fetch('/api/raporlar/yoğun-saatler?' + params.toString());
+    console.log('Yoğun saatler API yanıt durumu:', peakRes.status);
+    
+    // Oturum kontrolü
+    if (peakRes.redirected && peakRes.url.includes('/login')) {
+      console.log('Oturum süresi dolmuş, login sayfasına yönlendiriliyor...');
+      window.location.href = '/login';
+      return;
+    }
+    
+    if (!peakRes.ok) {
+      throw new Error(`Yoğun saatler API HTTP error! status: ${peakRes.status}`);
+    }
+    
+    // Content-Type kontrolü
+    const peakContentType = peakRes.headers.get('content-type');
+    if (!peakContentType || !peakContentType.includes('application/json')) {
+      console.error('Yoğun saatler API - Beklenmeyen yanıt tipi:', peakContentType);
+      window.location.href = '/login';
+      return;
+    }
+    
+    const peakData = await peakRes.json();
+    console.log('Yoğun saatler API yanıt verisi:', peakData);
   
   if (peakData.success) {
     // KPI'ları güncelle
@@ -224,16 +277,16 @@ async function loadReport() {
       let status = '';
       let statusClass = '';
       if (capacityUsage >= 90) {
-        status = '{{ _("Very Busy") }}';
+        status = "{{ _('Very Busy') }}";
         statusClass = 'text-danger';
       } else if (capacityUsage >= 70) {
-        status = '{{ _("Busy") }}';
+        status = "{{ _('Busy') }}";
         statusClass = 'text-warning';
       } else if (capacityUsage >= 50) {
-        status = '{{ _("Moderate") }}';
+        status = "{{ _('Moderate') }}";
         statusClass = 'text-info';
       } else {
-        status = '{{ _("Quiet") }}';
+        status = "{{ _('Quiet') }}";
         statusClass = 'text-success';
       }
       
@@ -251,9 +304,11 @@ async function loadReport() {
   }
 
   // Saat grafiği
-  new Chart(document.getElementById('saatChart'), {
+  try {
+    console.log('Saat grafiği oluşturuluyor...');
+    new Chart(document.getElementById('saatChart'), {
     type: 'line',
-    data: { labels: data.saatler.labels, datasets: [{ label: '{{ _('By Hours') }}', data: data.saatler.values, borderColor: '#0d6efd', fill: false }]},
+    data: { labels: data.saatler.labels, datasets: [{ label: "{{ _('By Hours') }}", data: data.saatler.values, borderColor: '#0d6efd', fill: false }]},
     options: { 
       responsive: true,
       maintainAspectRatio: false,
@@ -271,11 +326,17 @@ async function loadReport() {
       }
     }
   });
+    console.log('Saat grafiği başarıyla oluşturuldu');
+    } catch (error) {
+      console.error('Saat grafiği oluşturma hatası:', error);
+    }
 
   // Durum grafiği
-  const durumLabels = Object.keys(data.durumlar);
-  const durumValues = Object.values(data.durumlar);
-  new Chart(document.getElementById('durumChart'), {
+  try {
+    console.log('Durum grafiği oluşturuluyor...');
+    const durumLabels = Object.keys(data.durumlar);
+    const durumValues = Object.values(data.durumlar);
+    new Chart(document.getElementById('durumChart'), {
     type: 'doughnut',
     data: { labels: durumLabels, datasets: [{ data: durumValues, backgroundColor: ['#ffc107','#198754','#dc3545','#0dcaf0','#6c757d'] }]},
     options: {
@@ -289,13 +350,19 @@ async function loadReport() {
       }
     }
   });
+    console.log('Durum grafiği başarıyla oluşturuldu');
+    } catch (error) {
+      console.error('Durum grafiği oluşturma hatası:', error);
+    }
 
   // Referans grafiği
-  const refLabels = Object.keys(data.referanslar);
-  const refValues = Object.values(data.referanslar);
-  new Chart(document.getElementById('refChart'), {
+  try {
+    console.log('Referans grafiği oluşturuluyor...');
+    const refLabels = Object.keys(data.referanslar);
+    const refValues = Object.values(data.referanslar);
+    new Chart(document.getElementById('refChart'), {
     type: 'bar',
-    data: { labels: refLabels, datasets: [{ label: '{{ _('Count') }}', data: refValues, backgroundColor: '#20c997' }]},
+    data: { labels: refLabels, datasets: [{ label: "{{ _('Count') }}", data: refValues, backgroundColor: '#20c997' }]},
     options: { 
       responsive: true,
       maintainAspectRatio: false,
@@ -313,6 +380,15 @@ async function loadReport() {
       }
     }
   });
+    console.log('Referans grafiği başarıyla oluşturuldu');
+    } catch (error) {
+      console.error('Referans grafiği oluşturma hatası:', error);
+    }
+    
+  } catch (error) {
+    console.error('Rapor yükleme hatası:', error);
+    alert('Rapor yüklenirken bir hata oluştu: ' + error.message);
+  }
 }
 
 // Form submit debug
@@ -326,7 +402,14 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-loadReport();
+// Chart.js yüklenip yüklenmediğini kontrol et
+if (typeof Chart === 'undefined') {
+  console.error('Chart.js yüklenmedi!');
+  alert('Grafik kütüphanesi yüklenemedi. Sayfayı yenileyin.');
+} else {
+  console.log('Chart.js yüklendi, versiyon:', Chart.version);
+  loadReport();
+}
 
 // Sayfa yüklendiğinde otomatik kapasite hesaplama
 document.addEventListener('DOMContentLoaded', function() {

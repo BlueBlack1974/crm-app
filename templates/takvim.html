@@ -218,7 +218,18 @@
                     {% if view_type == 'month' %}
                         {% set month_names_tr = ['', 'Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'] %}
                         {% set month_names_en = ['', 'January','February','March','April','May','June','July','August','September','October','November','December'] %}
-                        {{ (month_names_en if lang == 'en' else month_names_tr)[month] }} {{ year }}
+                        {% set month_names_fr = ['', 'Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'] %}
+                        {% set month_names_de = ['', 'Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'] %}
+                        
+                        {% if lang == 'en' %}
+                            {{ month_names_en[month] }} {{ year }}
+                        {% elif lang == 'fr' %}
+                            {{ month_names_fr[month] }} {{ year }}
+                        {% elif lang == 'de' %}
+                            {{ month_names_de[month] }} {{ year }}
+                        {% else %}
+                            {{ month_names_tr[month] }} {{ year }}
+                        {% endif %}
                     {% else %}
                         {{ week_range_title or _('Weekly View') }}
                     {% endif %}
@@ -390,7 +401,17 @@
         <div></div>
         {% set wd_tr = ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'] %}
         {% set wd_en = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}
-        {% set wd = wd_en if lang == 'en' else wd_tr %}
+        {% set wd_fr = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'] %}
+        {% set wd_de = ['Mo','Di','Mi','Do','Fr','Sa','So'] %}
+        {% if lang == 'en' %}
+            {% set wd = wd_en %}
+        {% elif lang == 'fr' %}
+            {% set wd = wd_fr %}
+        {% elif lang == 'de' %}
+            {% set wd = wd_de %}
+        {% else %}
+            {% set wd = wd_tr %}
+        {% endif %}
         <div class="week-day-header">{{ wd[0] }}</div>
         <div class="week-day-header">{{ wd[1] }}</div>
         <div class="week-day-header">{{ wd[2] }}</div>

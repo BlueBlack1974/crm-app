@@ -15,7 +15,7 @@
     <div class="card shadow mb-4">
       <div class="card-body">
         <div class="d-flex align-items-center mb-4">
-          <img src="{{ url_for('static', filename='uploads/users/user_' ~ kullanici.KullaniciID ~ '.jpg') }}" onerror="this.onerror=null; this.src='{{ url_for('static', filename='img/avatar-default.svg') }}'" alt="Avatar" class="rounded-circle me-3" style="width:96px;height:96px;object-fit:cover;">
+          <img src="{{ url_for('static', filename='uploads/users/user_' ~ kullanici.KullaniciID ~ '.jpg') }}" onerror="this.onerror=null; this.src='{{ url_for('static', filename='img/avatar-default.svg') }}';" alt="Avatar" class="rounded-circle me-3" style="width:96px;height:96px;object-fit:cover;">
           <div>
             <h4 class="mb-0">{{ kullanici.Ad }} {{ kullanici.Soyad }}</h4>
             <small class="text-muted">{{ kullanici.firma.FirmaAdi }}</small>

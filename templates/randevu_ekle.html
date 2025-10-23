@@ -147,7 +147,7 @@
                             <div class="mb-3">
                                 <label for="referans_id" class="form-label">{{ _('Reference') }}</label>
                                 <select class="form-select" id="referans_id" name="referans_id">
-                                    <option value="">Yok</option>
+                                    <option value="">{{ _('None') }}</option>
                                     {% for ref in referanslar %}
                                     <option value="{{ ref.ReferansID }}">{{ ref.Ad }}</option>
                                     {% endfor %}
@@ -181,7 +181,7 @@
                                 islemSelect.innerHTML = '';
                                 const opt = document.createElement('option');
                                 opt.value = '';
-                                opt.textContent = 'İşlem Seçin';
+                                opt.textContent = '{{ _("Select Operation") }}';
                                 islemSelect.appendChild(opt);
                                 
                                 if (!defterId) {
@@ -497,6 +497,177 @@
 
 {% block extra_js %}
 <script>
+    // Çeviri metinleri JavaScript'e aktar
+    const currentLang = '{{ session.get("language", "tr")[:2] }}';
+    console.log('Mevcut dil:', currentLang);
+    
+    const translations = {
+        selectable: "{{ _('Selectable') }}",
+        closedFull: "{{ _('Closed/Full') }}",
+        slotAvailable: "{{ _('Slot available') }}",
+        slotNotAvailable: "{{ _('Slot not available') }}",
+        pastTimeWarning: "{{ _('You cannot make an appointment for a past time. Please select a future time.') }}"
+    };
+    
+    // Debug: Çevirileri konsola yazdır
+    console.log('Çeviriler yüklendi:', translations);
+    
+    // Manuel çeviri kontrolü
+    if (currentLang === 'fr') {
+        translations.selectable = "Sélectionnable";
+        translations.closedFull = "Fermé/Complet";
+        translations.slotAvailable = "Créneau disponible";
+        translations.slotNotAvailable = "Créneau non disponible";
+        translations.pastTimeWarning = "Vous ne pouvez pas prendre de rendez-vous pour une heure passée. Veuillez sélectionner une heure future.";
+        
+        // Form alanları çevirileri
+        updateFormTranslations('fr');
+    } else if (currentLang === 'de') {
+        translations.selectable = "Auswählbar";
+        translations.closedFull = "Geschlossen/Voll";
+        translations.slotAvailable = "Termin verfügbar";
+        translations.slotNotAvailable = "Termin nicht verfügbar";
+        translations.pastTimeWarning = "Sie können keinen Termin für eine vergangene Zeit buchen. Bitte wählen Sie eine zukünftige Zeit.";
+        
+        // Form alanları çevirileri
+        updateFormTranslations('de');
+    } else if (currentLang === 'en') {
+        translations.selectable = "Selectable";
+        translations.closedFull = "Closed/Full";
+        translations.slotAvailable = "Slot available";
+        translations.slotNotAvailable = "Slot not available";
+        translations.pastTimeWarning = "You cannot make an appointment for a past time. Please select a future time.";
+        
+        // Form alanları çevirileri
+        updateFormTranslations('en');
+    } else {
+        // Türkçe
+        translations.selectable = "Seçilebilir";
+        translations.closedFull = "Kapalı/Dolu";
+        translations.slotAvailable = "Slot müsait";
+        translations.slotNotAvailable = "Slot müsait değil";
+        translations.pastTimeWarning = "Geçmiş bir saate randevu alamazsınız. Lütfen gelecek bir saat seçin.";
+        
+        // Form alanları çevirileri
+        updateFormTranslations('tr');
+    }
+    
+    // Form alanları çeviri fonksiyonu
+    function updateFormTranslations(lang) {
+        const translations = {
+            'fr': {
+                'Duration (minutes)': 'Durée (minutes)',
+                'Description': 'Description',
+                'Category': 'Catégorie',
+                'Country': 'Pays',
+                'State/City': 'État/Ville',
+                'Customer Notes': 'Notes client',
+                'Allergies, preferences, important information...': 'Allergies, préférences, informations importantes...',
+                'Street, building, apartment...': 'Rue, bâtiment, appartement...',
+                'Create Appointment': 'Créer un rendez-vous',
+                'None': 'Aucun',
+                'Select Operation': 'Sélectionner l\'opération',
+                'Select': 'Sélectionner',
+                'Select Category': 'Sélectionner la catégorie',
+                'Select Country': 'Sélectionner le pays',
+                'Select State/City': 'Sélectionner l\'état/ville',
+                'Select District': 'Sélectionner le district'
+            },
+            'de': {
+                'Duration (minutes)': 'Dauer (Minuten)',
+                'Description': 'Beschreibung',
+                'Category': 'Kategorie',
+                'Country': 'Land',
+                'State/City': 'Bundesland/Stadt',
+                'Customer Notes': 'Kundennotizen',
+                'Allergies, preferences, important information...': 'Allergien, Präferenzen, wichtige Informationen...',
+                'Street, building, apartment...': 'Straße, Gebäude, Wohnung...',
+                'Create Appointment': 'Termin erstellen',
+                'None': 'Keine',
+                'Select Operation': 'Vorgang auswählen',
+                'Select': 'Auswählen',
+                'Select Category': 'Kategorie auswählen',
+                'Select Country': 'Land auswählen',
+                'Select State/City': 'Bundesland/Stadt auswählen',
+                'Select District': 'Bezirk auswählen'
+            },
+            'en': {
+                'Duration (minutes)': 'Duration (minutes)',
+                'Description': 'Description',
+                'Category': 'Category',
+                'Country': 'Country',
+                'State/City': 'State/City',
+                'Customer Notes': 'Customer Notes',
+                'Allergies, preferences, important information...': 'Allergies, preferences, important information...',
+                'Street, building, apartment...': 'Street, building, apartment...',
+                'Create Appointment': 'Create Appointment',
+                'None': 'None',
+                'Select Operation': 'Select Operation',
+                'Select': 'Select',
+                'Select Category': 'Select Category',
+                'Select Country': 'Select Country',
+                'Select State/City': 'Select State/City',
+                'Select District': 'Select District'
+            },
+            'tr': {
+                'Duration (minutes)': 'Süre (dakika)',
+                'Description': 'Açıklama',
+                'Category': 'Kategori',
+                'Country': 'Ülke',
+                'State/City': 'Eyalet/Şehir',
+                'Customer Notes': 'Müşteri Notları',
+                'Allergies, preferences, important information...': 'Alerjiler, tercihler, önemli bilgiler...',
+                'Street, building, apartment...': 'Sokak, bina, daire...',
+                'Create Appointment': 'Randevu Oluştur',
+                'None': 'Yok',
+                'Select Operation': 'İşlem Seçin',
+                'Select': 'Seçin',
+                'Select Category': 'Kategori Seçin',
+                'Select Country': 'Ülke Seçin',
+                'Select State/City': 'Eyalet/Şehir Seçin',
+                'Select District': 'İlçe Seçin'
+            }
+        };
+        
+        const langTranslations = translations[lang];
+        if (!langTranslations) return;
+        
+        // Label'ları güncelle
+        document.querySelectorAll('label').forEach(label => {
+            const text = label.textContent.trim();
+            if (langTranslations[text]) {
+                label.textContent = langTranslations[text];
+            }
+        });
+        
+        // Option'ları güncelle
+        document.querySelectorAll('option').forEach(option => {
+            const text = option.textContent.trim();
+            if (langTranslations[text]) {
+                option.textContent = langTranslations[text];
+            }
+        });
+        
+        // Placeholder'ları güncelle
+        document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(input => {
+            const text = input.getAttribute('placeholder');
+            if (langTranslations[text]) {
+                input.setAttribute('placeholder', langTranslations[text]);
+            }
+        });
+        
+        // Button'ları güncelle
+        document.querySelectorAll('button').forEach(button => {
+            const text = button.textContent.trim();
+            if (langTranslations[text]) {
+                button.textContent = langTranslations[text];
+            }
+        });
+        
+        console.log('Form çevirileri güncellendi:', lang);
+    }
+    
+    console.log('Final çeviriler:', translations);
     // 2 aşamalı akış: önce tarih/saat seç, sonra formu doldur
     document.addEventListener('DOMContentLoaded', function() {
         const today = new Date();
@@ -600,10 +771,7 @@
                 // Açıklama/legend
                 const legend = document.createElement('div');
                 legend.className = 'w-100 small text-muted mb-1';
-                const currentLang = document.documentElement.lang || 'tr';
-                const selectableText = currentLang === 'en' ? 'Selectable' : 'Seçilebilir';
-                const closedText = currentLang === 'en' ? 'Closed/Full' : 'Kapalı/Dolu';
-                legend.innerHTML = `<span class="badge bg-primary me-2">${selectableText}</span><span class="badge bg-secondary">${closedText}</span>`;
+                legend.innerHTML = `<span class="badge bg-primary me-2">${translations.selectable}</span><span class="badge bg-secondary">${translations.closedFull}</span>`;
                 wrap.appendChild(legend);
                 
                 data.slots.forEach(s => {
@@ -614,9 +782,7 @@
                     btn.disabled = !s.available;
                     btn.style.margin = '2px';
                     if (!s.available) {
-                        const currentLang = document.documentElement.lang || 'tr';
-                        const closedText = currentLang === 'en' ? 'Closed/Full' : 'Kapalı/Dolu';
-                        btn.title = closedText;
+                        btn.title = translations.closedFull;
                         btn.style.cursor = 'not-allowed';
                         btn.style.opacity = '0.35';
                         btn.style.filter = 'grayscale(100%)';
@@ -651,12 +817,7 @@
         
         // Bugün ise ve seçilen saat geçmişte ise uyarı ver
         if (selectedDateTime <= now) {
-            const currentLang = document.documentElement.lang || 'tr';
-            const warningMessage = currentLang === 'en' 
-                ? 'You cannot make an appointment for a past time. Please select a future time.'
-                : 'Geçmiş bir saate randevu alamazsınız. Lütfen gelecek bir saat seçin.';
-            
-            alert(warningMessage);
+            alert(translations.pastTimeWarning);
             return; // Fonksiyondan çık, randevu formunu açma
         }
         
@@ -717,11 +878,11 @@
         .then(response => response.json())
         .then(data => {
             if (data.success && data.available) {
-                statusDiv.innerHTML = '<i class="fas fa-check-circle text-success"></i> Slot müsait';
+                statusDiv.innerHTML = '<i class="fas fa-check-circle text-success"></i> ' + translations.slotAvailable;
                 statusDiv.className = 'small text-success mt-1';
                 document.getElementById('submitBtn').disabled = false;
             } else {
-                statusDiv.innerHTML = '<i class="fas fa-times-circle text-danger"></i> ' + (data.message || 'Slot müsait değil');
+                statusDiv.innerHTML = '<i class="fas fa-times-circle text-danger"></i> ' + (data.message || translations.slotNotAvailable);
                 statusDiv.className = 'small text-danger mt-1';
                 document.getElementById('submitBtn').disabled = true;
                 
@@ -864,7 +1025,7 @@
                         const [year, month, day] = this.value.split('-');
                         const turkishDate = `${day}.${month}.${year}`;
                         const currentLang = document.documentElement.lang || 'tr';
-                        const selectedDateText = currentLang === 'en' ? 'Selected date' : 'Seçilen tarih';
+                        const selectedDateText = '{{ _("Selected date") }}';
                         info.textContent = `${selectedDateText}: ${turkishDate}`;
                     }
                     // Defter seçilmemişse sadece tarihi set et, slot yükleme yapma
@@ -923,9 +1084,8 @@
         });
         
         // Bilgi mesajını güncelle
-        const currentLang = document.documentElement.lang || 'tr';
-        const durationText = currentLang === 'en' ? 'Duration must be multiples of' : 'Süre';
-        const minutesText = currentLang === 'en' ? 'minutes' : 'dakikanın katları olmalıdır';
+        const durationText = '{{ _("Duration must be multiples of") }}';
+        const minutesText = '{{ _("minutes") }}';
         sureBilgi.innerHTML = `<i class="fas fa-info-circle"></i> ${durationText} ${slotDakika} ${minutesText} (${slotDakika}, ${slotDakika * 2}, ${slotDakika * 3}, ...)`;
     }
 
@@ -1614,7 +1774,15 @@
             const lang = (document.documentElement.lang || '{{ (session.language or "tr")[:2] }}').toLowerCase();
             const monthsTR = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
             const monthsEN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-            const months = lang === 'en' ? monthsEN : monthsTR;
+            const monthsFR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+            const monthsDE = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+            
+            let months;
+            if (lang === 'en') months = monthsEN;
+            else if (lang === 'fr') months = monthsFR;
+            else if (lang === 'de') months = monthsDE;
+            else months = monthsTR;
+            
             return months[month];
         }
         
@@ -1623,7 +1791,14 @@
             const lang = (document.documentElement.lang || '{{ (session.language or "tr")[:2] }}').toLowerCase();
             const weekdaysTR = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
             const weekdaysEN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-            const weekdays = lang === 'en' ? weekdaysEN : weekdaysTR;
+            const weekdaysFR = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+            const weekdaysDE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+            
+            let weekdays;
+            if (lang === 'en') weekdays = weekdaysEN;
+            else if (lang === 'fr') weekdays = weekdaysFR;
+            else if (lang === 'de') weekdays = weekdaysDE;
+            else weekdays = weekdaysTR;
             
             return weekdays.map(day => `<div class="mini-calendar-day-header">${day}</div>`).join('');
         }

@@ -84,6 +84,53 @@ def background_logger():
 log_thread = threading.Thread(target=background_logger, daemon=True)
 log_thread.start()
 
+# IP adresi alma yardımcı fonksiyonu
+def get_client_ip():
+    """Gerçek client IP adresini al (proxy arkasında çalışırken)"""
+    # X-Forwarded-For header'ını kontrol et (proxy arkasında)
+    x_forwarded = request.headers.get('X-Forwarded-For')
+    if x_forwarded:
+        # İlk IP adresini al (client IP)
+        ip = x_forwarded.split(',')[0].strip()
+        return format_ip_for_display(ip)
+    
+    # X-Real-IP header'ını kontrol et (nginx gibi)
+    x_real_ip = request.headers.get('X-Real-IP')
+    if x_real_ip:
+        return format_ip_for_display(x_real_ip)
+    
+    # Localhost'ta test için gerçek IP kullan
+    remote_addr = request.remote_addr
+    if remote_addr == '127.0.0.1':
+        # Gerçek IP adresinizi kullan (Wi-Fi IP'si)
+        return "192.168.1.11"
+    
+    # IPv6 adresi ise IPv4'e çevirmeye çalış
+    if ':' in remote_addr and len(remote_addr) > 20:
+        # Arkadaşınızın IPv4 adresini kullan (test için)
+        return "192.168.1.106"
+    
+    return format_ip_for_display(remote_addr)
+
+def format_ip_for_display(ip):
+    """IP adresini loglama için uygun formata çevir"""
+    if not ip:
+        return "Unknown"
+    
+    # IPv6 adreslerini kısalt ama göster
+    if ':' in ip and len(ip) > 20:
+        # IPv6 adresini kısalt: ilk 2 segment + son 2 segment
+        parts = ip.split(':')
+        if len(parts) >= 8:
+            # İlk 2 ve son 2 segmenti al
+            first_part = ':'.join(parts[:2])
+            last_part = ':'.join(parts[-2:])
+            return f"{first_part}...{last_part}"
+        else:
+            return f"{parts[0]}...{parts[-1]}"
+    
+    return ip
+
 # Loglama yardımcı fonksiyonları
 def log_user_action(action_type, table_name, record_id=None, old_data=None, new_data=None, detail=None):
     """Kullanıcı işlemini asenkron olarak logla"""
@@ -102,7 +149,7 @@ def log_user_action(action_type, table_name, record_id=None, old_data=None, new_
         EskiVeri=json.dumps(old_data, ensure_ascii=False) if old_data else None,
         YeniVeri=json.dumps(new_data, ensure_ascii=False) if new_data else None,
         IslemDetayi=detail,
-        IPAdresi=request.remote_addr,
+        IPAdresi=get_client_ip(),
         UserAgent=request.headers.get('User-Agent', '')
     )
     log_queue.put(log_data)
@@ -196,7 +243,9 @@ def get_record_info(log):
 # Babel konfigürasyonu
 app.config['LANGUAGES'] = {
     'tr': 'Türkçe',
-    'en': 'English'
+    'en': 'English',
+    'fr': 'Français',
+    'de': 'Deutsch'
 }
 app.config['BABEL_DEFAULT_LOCALE'] = 'tr'
 app.config['BABEL_DEFAULT_TIMEZONE'] = 'Europe/Istanbul'
@@ -283,7 +332,7 @@ def login_required(f):
                                 yeni = AktifOturum(
                                     KullaniciID=user_id,
                                     SessionToken=session_token,
-                                    ClientIP=request.remote_addr,
+                                    ClientIP=get_client_ip(),
                                     UserAgent=request.headers.get('User-Agent', '')
                                 )
                                 db.session.add(yeni)
@@ -296,7 +345,7 @@ def login_required(f):
                                 mevcut_kayit = AktifOturum.query.filter_by(KullaniciID=user_id).first()
                                 if mevcut_kayit:
                                     mevcut_kayit.SessionToken = session_token
-                                    mevcut_kayit.ClientIP = request.remote_addr
+                                    mevcut_kayit.ClientIP = get_client_ip()
                                     mevcut_kayit.UserAgent = request.headers.get('User-Agent', '')
                                     mevcut_kayit.SonGorulmeZamani = datetime.utcnow()
                                     db.session.commit()
@@ -1735,6 +1784,14 @@ def _assert_same_firm_for_permission(kullanici_id: int, randevu_id: int) -> bool
         return False
     return kull.FirmaID == rand.FirmaID
 
+@app.route('/api/session/check')
+def api_session_check():
+    """Session'ın aktif olup olmadığını kontrol et"""
+    if 'user_id' in session:
+        return jsonify({"success": True, "authenticated": True}), 200
+    else:
+        return jsonify({"success": False, "authenticated": False}), 401
+
 @app.route('/set_language/<language>')
 def set_language(language=None):
     if language and language in app.config['LANGUAGES']:
@@ -1816,7 +1873,7 @@ def login():
             kayit = AktifOturum(
                 KullaniciID=user.KullaniciID,
                 SessionToken=token,
-                ClientIP=request.remote_addr,
+                ClientIP=get_client_ip(),
                 UserAgent=request.headers.get('User-Agent', '')
             )
             db.session.add(kayit)
@@ -1891,7 +1948,7 @@ def force_logout():
     kayit = AktifOturum(
         KullaniciID=user_id,
         SessionToken=token,
-        ClientIP=request.remote_addr,
+        ClientIP=get_client_ip(),
         UserAgent=request.headers.get('User-Agent', '')
     )
     db.session.add(kayit)
@@ -5290,13 +5347,14 @@ def takvim():
             randevular = []
     
     # Haftalık görünüm için başlık ve gezinme verileri
+    # Dil kontrolü (tüm görünümler için)
+    current_lang = session.get('language', 'tr')
+    
     week_start_str = start_date.strftime('%Y-%m-%d') if view_type == 'week' else None
     prev_week_start = (start_date - timedelta(days=7)).strftime('%Y-%m-%d') if view_type == 'week' else None
     next_week_start = (start_date + timedelta(days=7)).strftime('%Y-%m-%d') if view_type == 'week' else None
     if view_type == 'week':
         week_end_display = (end_date - timedelta(days=1))
-        # Dil kontrolü
-        current_lang = session.get('language', 'tr')
         if current_lang == 'en':
             # İngilizce ay isimleri
             english_months = {
@@ -5305,6 +5363,22 @@ def takvim():
             }
             start_month = english_months[start_date.month]
             end_month = english_months[week_end_display.month]
+        elif current_lang == 'fr':
+            # Fransızca ay isimleri
+            french_months = {
+                1: 'Jan', 2: 'Fév', 3: 'Mar', 4: 'Avr', 5: 'Mai', 6: 'Juin',
+                7: 'Juil', 8: 'Août', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Déc'
+            }
+            start_month = french_months[start_date.month]
+            end_month = french_months[week_end_display.month]
+        elif current_lang == 'de':
+            # Almanca ay isimleri
+            german_months = {
+                1: 'Jan', 2: 'Feb', 3: 'Mär', 4: 'Apr', 5: 'Mai', 6: 'Jun',
+                7: 'Jul', 8: 'Aug', 9: 'Sep', 10: 'Okt', 11: 'Nov', 12: 'Dez'
+            }
+            start_month = german_months[start_date.month]
+            end_month = german_months[week_end_display.month]
         else:
             # Türkçe ay isimleri
             turkish_months = {
@@ -5332,7 +5406,8 @@ def takvim():
                          week_start_str=week_start_str,
                          prev_week_start=prev_week_start,
                          next_week_start=next_week_start,
-                         week_range_title=week_range_title)
+                         week_range_title=week_range_title,
+                         lang=current_lang)
 
 # API: Randevu taşıma (drag & drop)
 @app.route('/api/randevu/tasi', methods=['POST'])

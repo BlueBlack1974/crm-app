@@ -175,55 +175,10 @@
                     <h6 class="card-title mb-0">{{ todo.Baslik }}</h6>
                     <div class="todo-actions">
                         <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-primary btn-sm" onclick="
-                                console.log('Edit butonuna tıklandı');
-                                fetch('/todos/api')
-                                .then(response => response.json())
-                                .then(todos => {
-                                    const todo = todos.find(t => t.id === {{ todo.TodoID }});
-                                    if (todo) {
-                                        document.getElementById('todoId').value = todo.id;
-                                        document.getElementById('baslik').value = todo.baslik;
-                                        document.getElementById('aciklama').value = todo.aciklama || '';
-                                        document.getElementById('oncelik').value = todo.oncelik;
-                                        document.getElementById('durum').value = todo.durum;
-                                        document.getElementById('bitis_tarihi').value = todo.bitis_tarihi ? todo.bitis_tarihi.split('T')[0] : '';
-                                        document.getElementById('hatirlatma_tarihi').value = todo.hatirlatma_tarihi ? todo.hatirlatma_tarihi.split('T')[0] : '';
-                                        document.getElementById('todoModalLabel').textContent = '{{ _('Edit Todo') }}';
-                                        new bootstrap.Modal(document.getElementById('todoModal')).show();
-                                    }
-                                });
-                            " title="{{ _('Edit') }}">
+                            <button class="btn btn-outline-primary btn-sm" onclick="editTodo({{ todo.TodoID }})" title="{{ _('Edit') }}">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn btn-outline-danger btn-sm" onclick="
-                                console.log('Delete butonuna tıklandı');
-                                if (confirm('{{ _('Are you sure you want to delete this todo?') }}')) {
-                                    fetch('/todos/{{ todo.TodoID }}/sil', {
-                                        method: 'DELETE',
-                                        headers: {'X-Requested-With': 'XMLHttpRequest'}
-                                    })
-                                    .then(response => response.json())
-                                    .then(result => {
-                                        if (result.success) {
-                                            const currentLang = document.documentElement.lang || 'tr';
-                                            const message = currentLang === 'en' ? 'Todo deleted!' : 'Todo silindi!';
-                                            alert(message);
-                                            location.reload();
-                                        } else {
-                                            const currentLang = document.documentElement.lang || 'tr';
-                                            const errorMessage = currentLang === 'en' ? 'Error: ' : 'Hata: ';
-                                            alert(errorMessage + result.message);
-                                        }
-                                    })
-                                    .catch(error => {
-                                        console.error('Error:', error);
-                                        const currentLang = document.documentElement.lang || 'tr';
-                                        const errorMessage = currentLang === 'en' ? 'An error occurred!' : 'Bir hata oluştu!';
-                                        alert(errorMessage);
-                                    });
-                                }
-                            " title="{{ _('Delete') }}">
+                            <button class="btn btn-outline-danger btn-sm" onclick="deleteTodo({{ todo.TodoID }})" title="{{ _('Delete') }}">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -264,119 +219,17 @@
                 <div class="mt-3">
                     <div class="btn-group w-100" role="group">
                         <button type="button" class="btn btn-sm btn-outline-warning" 
-                                onclick="
-                                    console.log('Beklemede butonuna tıklandı');
-                                    fetch('/todos/{{ todo.TodoID }}/durum', {
-                                        method: 'POST',
-                                        headers: {'Content-Type': 'application/json'},
-                                        body: JSON.stringify({durum: 'Beklemede'})
-                                    })
-                                    .then(response => {
-                                        console.log('Response status:', response.status);
-                                        if (response.ok) {
-                                            return response.json();
-                                        } else {
-                                            throw new Error('HTTP ' + response.status);
-                                        }
-                                    })
-                                    .then(result => {
-                                        console.log('Response result:', result);
-                                        if (result.success) {
-                                            const currentLang = document.documentElement.lang || 'tr';
-                                            const message = currentLang === 'en' ? 'Status changed!' : 'Durum değiştirildi!';
-                                            alert(message);
-                                            location.reload();
-                                        } else {
-                                            const currentLang = document.documentElement.lang || 'tr';
-                                            const errorMessage = currentLang === 'en' ? 'Error: ' : 'Hata: ';
-                                            alert(errorMessage + result.message);
-                                        }
-                                    })
-                                    .catch(error => {
-                                        console.error('Error:', error);
-                                        const currentLang = document.documentElement.lang || 'tr';
-                                        const errorMessage = currentLang === 'en' ? 'An error occurred: ' : 'Bir hata oluştu: ';
-                                        alert(errorMessage + error.message);
-                                    });
-                                "
+                                onclick="changeStatus({{ todo.TodoID }}, 'Beklemede')"
                                 {% if todo.Durum == 'Beklemede' %}disabled{% endif %}>
                             {{ _('Pending') }}
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-info" 
-                                onclick="
-                                    console.log('Devam Ediyor butonuna tıklandı');
-                                    fetch('/todos/{{ todo.TodoID }}/durum', {
-                                        method: 'POST',
-                                        headers: {'Content-Type': 'application/json'},
-                                        body: JSON.stringify({durum: 'Devam Ediyor'})
-                                    })
-                                    .then(response => {
-                                        console.log('Response status:', response.status);
-                                        if (response.ok) {
-                                            return response.json();
-                                        } else {
-                                            throw new Error('HTTP ' + response.status);
-                                        }
-                                    })
-                                    .then(result => {
-                                        console.log('Response result:', result);
-                                        if (result.success) {
-                                            const currentLang = document.documentElement.lang || 'tr';
-                                            const message = currentLang === 'en' ? 'Status changed!' : 'Durum değiştirildi!';
-                                            alert(message);
-                                            location.reload();
-                                        } else {
-                                            const currentLang = document.documentElement.lang || 'tr';
-                                            const errorMessage = currentLang === 'en' ? 'Error: ' : 'Hata: ';
-                                            alert(errorMessage + result.message);
-                                        }
-                                    })
-                                    .catch(error => {
-                                        console.error('Error:', error);
-                                        const currentLang = document.documentElement.lang || 'tr';
-                                        const errorMessage = currentLang === 'en' ? 'An error occurred: ' : 'Bir hata oluştu: ';
-                                        alert(errorMessage + error.message);
-                                    });
-                                "
+                                onclick="changeStatus({{ todo.TodoID }}, 'Devam Ediyor')"
                                 {% if todo.Durum == 'Devam Ediyor' %}disabled{% endif %}>
                             {{ _('In Progress') }}
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-success" 
-                                onclick="
-                                    console.log('Tamamlandı butonuna tıklandı');
-                                    fetch('/todos/{{ todo.TodoID }}/durum', {
-                                        method: 'POST',
-                                        headers: {'Content-Type': 'application/json'},
-                                        body: JSON.stringify({durum: 'Tamamlandı'})
-                                    })
-                                    .then(response => {
-                                        console.log('Response status:', response.status);
-                                        if (response.ok) {
-                                            return response.json();
-                                        } else {
-                                            throw new Error('HTTP ' + response.status);
-                                        }
-                                    })
-                                    .then(result => {
-                                        console.log('Response result:', result);
-                                        if (result.success) {
-                                            const currentLang = document.documentElement.lang || 'tr';
-                                            const message = currentLang === 'en' ? 'Status changed!' : 'Durum değiştirildi!';
-                                            alert(message);
-                                            location.reload();
-                                        } else {
-                                            const currentLang = document.documentElement.lang || 'tr';
-                                            const errorMessage = currentLang === 'en' ? 'Error: ' : 'Hata: ';
-                                            alert(errorMessage + result.message);
-                                        }
-                                    })
-                                    .catch(error => {
-                                        console.error('Error:', error);
-                                        const currentLang = document.documentElement.lang || 'tr';
-                                        const errorMessage = currentLang === 'en' ? 'An error occurred: ' : 'Bir hata oluştu: ';
-                                        alert(errorMessage + error.message);
-                                    });
-                                "
+                                onclick="changeStatus({{ todo.TodoID }}, 'Tamamlandı')"
                                 {% if todo.Durum == 'Tamamlandı' %}disabled{% endif %}>
                             {{ _('Completed') }}
                         </button>
@@ -461,49 +314,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
-                    <button type="button" class="btn btn-primary" id="saveTodoBtn" onclick="
-                        console.log('Save butonuna tıklandı!');
-                        const data = {
-                            baslik: document.getElementById('baslik').value,
-                            aciklama: document.getElementById('aciklama').value,
-                            oncelik: document.getElementById('oncelik').value,
-                            durum: document.getElementById('durum').value,
-                            bitis_tarihi: document.getElementById('bitis_tarihi').value,
-                            hatirlatma_tarihi: document.getElementById('hatirlatma_tarihi').value
-                        };
-                        if (!data.baslik.trim()) {
-                            const currentLang = document.documentElement.lang || 'tr';
-                            const message = currentLang === 'en' ? 'Title is required!' : 'Başlık gerekli!';
-                            alert(message);
-                            return;
-                        }
-                        const todoId = document.getElementById('todoId').value;
-                        const url = todoId ? '/todos/' + todoId + '/guncelle' : '/todos/ekle';
-                        fetch(url, {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify(data)
-                        })
-                        .then(response => response.json())
-                        .then(result => {
-                            if (result.success) {
-                                const currentLang = document.documentElement.lang || 'tr';
-                                const message = currentLang === 'en' ? 'Success!' : 'Başarılı!';
-                                alert(message);
-                                location.reload();
-                            } else {
-                                const currentLang = document.documentElement.lang || 'tr';
-                                const errorMessage = currentLang === 'en' ? 'Error: ' : 'Hata: ';
-                                alert(errorMessage + result.message);
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            const currentLang = document.documentElement.lang || 'tr';
-                            const errorMessage = currentLang === 'en' ? 'An error occurred!' : 'Bir hata oluştu!';
-                            alert(errorMessage);
-                        });
-                    ">{{ _('Save') }}</button>
+                    <button type="button" class="btn btn-primary" id="saveTodoBtn" onclick="saveTodo()">{{ _('Save') }}</button>
                 </div>
             </div>
         </div>
@@ -726,11 +537,35 @@ function showAlert(type, message) {
 }
 
     // Durum ve öncelik çevirileri
-    function translateStatusAndPriority() {
-        const currentLang = document.documentElement.lang || 'tr';
-        console.log('🔍 Current language:', currentLang);
-        console.log('🔍 Found durum-text elements:', document.querySelectorAll('.durum-text').length);
-        console.log('🔍 Found oncelik-text elements:', document.querySelectorAll('.oncelik-text').length);
+function translateStatusAndPriority() {
+    const currentLang = document.documentElement.lang || 'tr';
+    console.log('🔍 Current language:', currentLang);
+    console.log('🔍 Found durum-text elements:', document.querySelectorAll('.durum-text').length);
+    console.log('🔍 Found oncelik-text elements:', document.querySelectorAll('.oncelik-text').length);
+    console.log('🔍 Document lang attribute:', document.documentElement.getAttribute('lang'));
+    console.log('🔍 Body lang attribute:', document.body.getAttribute('lang'));
+    
+    // Elementleri detaylı kontrol et
+    document.querySelectorAll('.durum-text').forEach((element, index) => {
+        console.log(`🔍 Durum element ${index}:`, element.textContent.trim());
+    });
+    document.querySelectorAll('.oncelik-text').forEach((element, index) => {
+        console.log(`🔍 Öncelik element ${index}:`, element.textContent.trim());
+    });
+    
+    // Eğer elementler bulunamadıysa, tüm sayfayı tara
+    if (document.querySelectorAll('.durum-text').length === 0) {
+        console.log('⚠️ Durum elementleri bulunamadı, tüm sayfa taranıyor...');
+        const allElements = document.querySelectorAll('*');
+        allElements.forEach((element, index) => {
+            if (element.textContent && element.textContent.includes('Beklemede')) {
+                console.log(`🔍 Beklemede bulundu element ${index}:`, element.textContent.trim());
+            }
+            if (element.textContent && element.textContent.includes('Orta')) {
+                console.log(`🔍 Orta bulundu element ${index}:`, element.textContent.trim());
+            }
+        });
+    }
         
         if (currentLang === 'en') {
             // Durum çevirileri
@@ -772,6 +607,77 @@ function showAlert(type, message) {
                         break;
                 }
             });
+        } else if (currentLang === 'fr') {
+            console.log('🇫🇷 Fransızca çeviri başlıyor...');
+            // Fransızca çeviriler
+            document.querySelectorAll('.durum-text').forEach(element => {
+                const text = element.textContent.trim();
+                console.log('🔄 Durum text (FR):', text);
+                switch(text) {
+                    case 'Beklemede':
+                        element.textContent = 'En Attente';
+                        console.log('✅ Çevrildi: Beklemede → En Attente');
+                        break;
+                    case 'Devam Ediyor':
+                        element.textContent = 'En Cours';
+                        console.log('✅ Çevrildi: Devam Ediyor → En Cours');
+                        break;
+                    case 'Tamamlandı':
+                        element.textContent = 'Terminé';
+                        console.log('✅ Çevrildi: Tamamlandı → Terminé');
+                        break;
+                }
+            });
+            
+            document.querySelectorAll('.oncelik-text').forEach(element => {
+                const text = element.textContent.trim();
+                console.log('🔄 Öncelik text (FR):', text);
+                switch(text) {
+                    case 'Yüksek':
+                        element.textContent = 'Élevé';
+                        console.log('✅ Çevrildi: Yüksek → Élevé');
+                        break;
+                    case 'Orta':
+                        element.textContent = 'Moyen';
+                        console.log('✅ Çevrildi: Orta → Moyen');
+                        break;
+                    case 'Düşük':
+                        element.textContent = 'Faible';
+                        console.log('✅ Çevrildi: Düşük → Faible');
+                        break;
+                }
+            });
+        } else if (currentLang === 'de') {
+            // Almanca çeviriler
+            document.querySelectorAll('.durum-text').forEach(element => {
+                const text = element.textContent.trim();
+                switch(text) {
+                    case 'Beklemede':
+                        element.textContent = 'Ausstehend';
+                        break;
+                    case 'Devam Ediyor':
+                        element.textContent = 'In Bearbeitung';
+                        break;
+                    case 'Tamamlandı':
+                        element.textContent = 'Abgeschlossen';
+                        break;
+                }
+            });
+            
+            document.querySelectorAll('.oncelik-text').forEach(element => {
+                const text = element.textContent.trim();
+                switch(text) {
+                    case 'Yüksek':
+                        element.textContent = 'Hoch';
+                        break;
+                    case 'Orta':
+                        element.textContent = 'Mittel';
+                        break;
+                    case 'Düşük':
+                        element.textContent = 'Niedrig';
+                        break;
+                }
+            });
         } else {
             // Türkçe'ye geri döndür
             document.querySelectorAll('.durum-text').forEach(element => {
@@ -805,13 +711,67 @@ function showAlert(type, message) {
             });
         }
     }
+}
+
+// Test fonksiyonu - manuel çeviri testi
+function testTranslation() {
+    console.log('🧪 Test çevirisi başlatılıyor...');
+    const testElement = document.querySelector('.durum-text');
+    if (testElement) {
+        console.log('🧪 Test element bulundu:', testElement.textContent);
+        testElement.textContent = 'TEST ÇEVİRİSİ';
+        console.log('🧪 Test çevirisi uygulandı');
+    } else {
+        console.log('🧪 Test element bulunamadı!');
+    }
+}
+
+// Sayfa yüklendiğinde çevirileri uygula
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOMContentLoaded - Çeviri sistemi başlatılıyor...');
+    console.log('🚀 Mevcut dil:', document.documentElement.lang);
+    console.log('🚀 Body lang:', document.body.getAttribute('lang'));
     
-    // Sayfa yüklendiğinde çevirileri uygula
-    translateStatusAndPriority();
+    // Test çevirisi
+    setTimeout(() => {
+        testTranslation();
+        translateStatusAndPriority();
+    }, 1000);
     
     // Dil değişikliklerini dinle
-    document.addEventListener('languageChanged', function() {
-        translateStatusAndPriority();
+    document.addEventListener('languageChanged', function(event) {
+        console.log('🌍 Language changed event received:', event.detail);
+        setTimeout(() => {
+            testTranslation();
+            translateStatusAndPriority();
+        }, 500);
+    });
+    
+    // Lang attribute değişikliklerini dinle
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'lang') {
+                console.log('🔄 Lang attribute değişti:', document.documentElement.lang);
+                console.log('🔄 Eski değer:', mutation.oldValue);
+                console.log('🔄 Yeni değer:', document.documentElement.getAttribute('lang'));
+                console.log('🔄 Body lang:', document.body.getAttribute('lang'));
+                setTimeout(() => {
+                    testTranslation();
+                    translateStatusAndPriority();
+                }, 500);
+            }
+        });
+    });
+    
+    // Hem documentElement hem de body'yi dinle
+    observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['lang']
+    });
+    
+    observer.observe(document.body, {
+        attributes: true,
+        attributeFilter: ['lang']
     });
     
 }); // DOMContentLoaded kapanışı
