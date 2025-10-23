@@ -348,14 +348,30 @@ def login_required(f):
                                     mevcut_kayit.ClientIP = get_client_ip()
                                     mevcut_kayit.UserAgent = request.headers.get('User-Agent', '')
                                     mevcut_kayit.SonGorulmeZamani = datetime.utcnow()
-                                    db.session.commit()
+                                    try:
+                                        db.session.commit()
+                                    except Exception as commit_error:
+                                        print(f"Oturum güncelleme hatası: {commit_error}")
+                                        db.session.rollback()
+                                # Güncelleme yapıldı, devam et (return yapma)
                         else:
-                            # Başka bir cihazda aktif oturum var: engelle
-                            session.clear()
-                            if _wants_json_response():
-                                return jsonify({"success": False, "message": "Oturum sonlandırıldı"}), 401
-                            flash('Oturumunuz başka bir cihazdan sonlandırıldı. Lütfen tekrar giriş yapın.', 'error')
-                            return redirect(url_for('login'))
+                            # Mevcut kayıt var ama token farklı
+                            # Aynı IP ve User-Agent ise güncelle (race condition olabilir)
+                            if mevcut_kayit.ClientIP == get_client_ip() and mevcut_kayit.UserAgent == request.headers.get('User-Agent', ''):
+                                # Aynı cihaz, token'ı güncelle
+                                mevcut_kayit.SessionToken = session_token
+                                mevcut_kayit.SonGorulmeZamani = datetime.utcnow()
+                                try:
+                                    db.session.commit()
+                                except:
+                                    db.session.rollback()
+                            else:
+                                # Başka bir cihazda aktif oturum var: engelle
+                                session.clear()
+                                if _wants_json_response():
+                                    return jsonify({"success": False, "message": "Oturum sonlandırıldı"}), 401
+                                flash('Oturumunuz başka bir cihazdan sonlandırıldı. Lütfen tekrar giriş yapın.', 'error')
+                                return redirect(url_for('login'))
                 except Exception as e:
                     print(f"Oturum kontrolü hatası: {e}")
                     session.clear()

@@ -217,6 +217,12 @@ if (fotoBtn) {
   if (currentLang === 'en') {
     fotoBtn.textContent = 'Browse';
     fotoDisplay.placeholder = 'Choose file...';
+  } else if (currentLang === 'fr') {
+    fotoBtn.textContent = 'Parcourir';
+    fotoDisplay.placeholder = 'Choisir un fichier...';
+  } else if (currentLang === 'de') {
+    fotoBtn.textContent = 'Durchsuchen';
+    fotoDisplay.placeholder = 'Datei auswählen...';
   } else {
     fotoBtn.textContent = 'Gözat';
     fotoDisplay.placeholder = 'Dosya seçin...';

@@ -510,6 +510,24 @@
     async function loadReminders() {
         try {
             const response = await fetch('/api/today-reminders');
+            
+            // Oturum kontrolü - eğer login sayfasına yönlendirilmişse
+            if (response.redirected && response.url.includes('/login')) {
+                return; // Sessizce çık
+            }
+            
+            if (!response.ok) {
+                console.warn('Reminder fetch failed:', response.status);
+                return;
+            }
+            
+            // Content-Type kontrolü - JSON değilse hata
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.warn('Beklenmeyen yanıt tipi:', contentType);
+                return;
+            }
+            
             const data = await response.json();
             
             const reminderList = document.getElementById('reminderList');
@@ -679,6 +697,22 @@
     async function checkReminderCount() {
         try {
             const response = await fetch('/api/today-reminders');
+            
+            // Oturum kontrolü - eğer login sayfasına yönlendirilmişse
+            if (response.redirected && response.url.includes('/login')) {
+                return; // Sessizce çık
+            }
+            
+            if (!response.ok) {
+                return; // Sessizce çık
+            }
+            
+            // Content-Type kontrolü - JSON değilse hata
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                return; // Sessizce çık
+            }
+            
             const data = await response.json();
             
             const reminderCount = document.getElementById('reminderCount');
