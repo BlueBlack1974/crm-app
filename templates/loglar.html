@@ -176,7 +176,7 @@
                         </td>
                         <td>
                             {% if log.EskiVeri or log.YeniVeri %}
-                            <button class="btn btn-sm btn-outline-info" onclick="showLogData({{ log.LogID }})">
+                            <button class="btn btn-sm btn-outline-info log-data-btn" data-log-id="{{ log.LogID }}">
                                 <i class="fas fa-eye"></i>
                             </button>
                             {% else %}
@@ -562,6 +562,19 @@ setTimeout(function() {
 setInterval(function() {
     checkAndTranslateTableData();
 }, 3000);
+
+// Log data butonları için event listener
+document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.log-data-btn')) {
+            const btn = e.target.closest('.log-data-btn');
+            const logId = btn.getAttribute('data-log-id');
+            if (logId) {
+                showLogData(logId);
+            }
+        }
+    });
+});
 
 function showLogData(logId) {
     // Bu fonksiyon AJAX ile log detaylarını getirecek
