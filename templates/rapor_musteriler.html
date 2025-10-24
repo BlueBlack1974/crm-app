@@ -35,6 +35,11 @@
     <h1 class="h2">{{ _('Customer Report') }}</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
+            <a href="/musteriler/import" class="btn btn-sm btn-success">
+                <i class="bi bi-file-earmark-excel me-1"></i>{{ _('Import from Excel') }}
+            </a>
+        </div>
+        <div class="btn-group me-2">
             <div class="dropdown">
                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="fas fa-download me-1"></i>{{ _('Export') }}
@@ -666,21 +671,40 @@ function initializeCustomerDetailCharts() {
     
     console.log('Chart.js yüklendi, grafikler oluşturuluyor...');
     
+    // Verileri data attribute'dan al (her iki grafik için)
+    const chartDataEl = document.getElementById('chartData');
+    let monthlyData = {};
+    let bookData = {};
+    
+    if (chartDataEl) {
+        try {
+            monthlyData = JSON.parse(chartDataEl.getAttribute('data-monthly') || '{}');
+            bookData = JSON.parse(chartDataEl.getAttribute('data-book') || '{}');
+        } catch (e) {
+            console.error('Data parse hatası:', e);
+        }
+    }
+    
+    console.log('Data attribute\'dan alınan monthlyData:', monthlyData);
+    console.log('Data attribute\'dan alınan bookData:', bookData);
+    
     // Aylık randevu dağılımı grafiği
     const monthlyCtx = document.getElementById('monthlyAppointmentChart');
     console.log('monthlyAppointmentChart elementi:', monthlyCtx);
     if (monthlyCtx) {
         try {
-            const monthlyData = window.monthlyData || {};
+            
             const monthlyLabels = Object.keys(monthlyData).sort();
             const monthlyValues = monthlyLabels.map(label => monthlyData[label]);
+            console.log('monthlyLabels:', monthlyLabels);
+            console.log('monthlyValues:', monthlyValues);
             
             new Chart(monthlyCtx, {
             type: 'line',
             data: {
-                labels: monthlyLabels.length > 0 ? monthlyLabels : ['Veri Yok'],
+                labels: monthlyLabels.length > 0 ? monthlyLabels : [{{ _('No Data')|tojson }}],
                 datasets: [{
-                    label: 'Randevular',
+                    label: {{ _('Appointments')|tojson }},
                     data: monthlyValues.length > 0 ? monthlyValues : [0],
                     borderColor: 'rgb(75, 192, 192)',
                     backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -693,7 +717,7 @@ function initializeCustomerDetailCharts() {
                 plugins: {
                     title: {
                         display: true,
-                        text: 'Aylık Randevu Dağılımı'
+                        text: {{ _('Monthly Appointment Distribution')|tojson }}
                     }
                 }
             }
@@ -708,14 +732,17 @@ function initializeCustomerDetailCharts() {
     console.log('bookDistributionChart elementi:', bookCtx);
     if (bookCtx) {
         try {
-            const bookData = window.bookData || {};
+            // Verileri data attribute'dan al (yukarıda zaten alındı)
+            console.log('bookData:', bookData);
             const bookLabels = Object.keys(bookData);
             const bookValues = Object.values(bookData);
+            console.log('bookLabels:', bookLabels);
+            console.log('bookValues:', bookValues);
             
             new Chart(bookCtx, {
             type: 'doughnut',
             data: {
-                labels: bookLabels.length > 0 ? bookLabels : ['Veri Yok'],
+                labels: bookLabels.length > 0 ? bookLabels : [{{ _('No Data')|tojson }}],
                 datasets: [{
                     data: bookValues.length > 0 ? bookValues : [1],
                     backgroundColor: [
@@ -734,7 +761,7 @@ function initializeCustomerDetailCharts() {
                 plugins: {
                     title: {
                         display: true,
-                        text: 'Defter Dağılımı'
+                        text: {{ _('Appointment Book Distribution')|tojson }}
                     }
                 }
             }

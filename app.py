@@ -32,9 +32,13 @@ from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
+import pandas as pd
+from werkzeug.utils import secure_filename
+import re
+import tempfile
 
 load_dotenv()
 app = Flask(__name__)
@@ -3463,13 +3467,33 @@ def musteri_arama():
     # Müşteri arama sorgusu
     musteriler = Musteri.query.filter(
         Musteri.FirmaID == firma_id,
+        Musteri.Aktif == True,
         or_(
             Musteri.MusteriAdi.ilike(f'%{query}%'),
             Musteri.MusteriSoyadi.ilike(f'%{query}%'),
             Musteri.Telefon.ilike(f'%{query}%'),
-            Musteri.Email.ilike(f'%{query}%')
+            Musteri.Email.ilike(f'%{query}%'),
+            # Tam isim araması (Ad + Soyad)
+            db.func.concat(Musteri.MusteriAdi, ' ', Musteri.MusteriSoyadi).ilike(f'%{query}%')
         )
     ).limit(10).all()
+    
+    # Eğer sonuç bulunamadıysa, kelime bazlı arama yap
+    if not musteriler and ' ' in query:
+        words = query.split()
+        if len(words) >= 2:
+            # İlk kelime ad, ikinci kelime soyad başlangıcı
+            first_word = words[0]
+            second_word = words[1]
+            
+            musteriler = Musteri.query.filter(
+                Musteri.FirmaID == firma_id,
+                Musteri.Aktif == True,
+                and_(
+                    Musteri.MusteriAdi.ilike(f'%{first_word}%'),
+                    Musteri.MusteriSoyadi.ilike(f'%{second_word}%')
+                )
+            ).limit(10).all()
     
     # Plaka kodlarını şehir isimlerine dönüştür
     plaka_to_sehir = {
@@ -3602,6 +3626,9 @@ def musteri_detay_modal(musteri_id):
     if not musteri:
         return '<div class="alert alert-danger">Müşteri bulunamadı.</div>'
     
+    print(f"DEBUG: Müşteri detay modal - Müşteri ID: {musteri_id}, Firma ID: {firma_id}")
+    print(f"DEBUG: Müşteri adı: {musteri.MusteriAdi} {musteri.MusteriSoyadi}")
+    
     # Plaka kodlarını şehir isimlerine dönüştür
     plaka_to_sehir = {
         '01': 'Adana', '02': 'Adıyaman', '03': 'Afyonkarahisar', '04': 'Ağrı', '05': 'Amasya',
@@ -3628,6 +3655,10 @@ def musteri_detay_modal(musteri_id):
         FirmaID=firma_id
     ).order_by(Randevu.RandevuTarihi.desc()).all()
     
+    print(f"DEBUG: Bulunan randevu sayısı: {len(randevular)}")
+    for r in randevular:
+        print(f"DEBUG: Randevu - ID: {r.RandevuID}, Tarih: {r.RandevuTarihi}, Durum: {r.Durum}")
+    
     # Randevu istatistikleri
     toplam_randevu = len(randevular)
     tamamlanan_randevu = len([r for r in randevular if r.Durum == 'Tamamlandı'])
@@ -3640,6 +3671,9 @@ def musteri_detay_modal(musteri_id):
         if randevu.RandevuTarihi:
             ay_key = randevu.RandevuTarihi.strftime('%Y-%m')
             aylik_randevu[ay_key] += 1
+            print(f"DEBUG: Aylık dağılım - {ay_key}: {aylik_randevu[ay_key]}")
+    
+    print(f"DEBUG: Aylık randevu dağılımı: {dict(aylik_randevu)}")
     
     # Defter dağılımı
     defter_dagilimi = defaultdict(int)
@@ -3648,6 +3682,9 @@ def musteri_detay_modal(musteri_id):
             defter = RandevuDefterAyar.query.filter_by(AyarID=randevu.DefterID).first()
             if defter:
                 defter_dagilimi[defter.DefterAdi] += 1
+                print(f"DEBUG: Defter dağılımı - {defter.DefterAdi}: {defter_dagilimi[defter.DefterAdi]}")
+    
+    print(f"DEBUG: Defter dağılımı: {dict(defter_dagilimi)}")
     
     # Şehir bilgisini dönüştür
     sehir_adi = plaka_to_sehir.get(musteri.Sehir, musteri.Sehir) if musteri.Sehir else 'Belirtilmemiş'
@@ -6794,6 +6831,659 @@ def api_musteri_ara():
         })
     
     return jsonify(sonuc)
+
+# ==================== EXCEL İMPORT SİSTEMİ ====================
+
+# Upload klasörü
+UPLOAD_FOLDER = 'uploads/excel_imports'
+ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def validate_phone(phone):
+    """Telefon numarası validasyonu"""
+    # Boş değer kontrolü
+    if phone is None or phone == '' or (isinstance(phone, float) and pd.isna(phone)):
+        return False, 'Telefon numarası boş olamaz'
+    
+    # String'e çevir ve boşlukları temizle
+    phone_str = str(phone).strip()
+    
+    # Boş string kontrolü (nan, None, empty string)
+    if not phone_str or phone_str.lower() in ['nan', 'none', '']:
+        return False, 'Telefon numarası boş olamaz'
+    
+    # Bilimsel notasyonu düzelt
+    if 'e' in phone_str.lower():
+        try:
+            phone_str = str(int(float(phone_str)))
+        except:
+            pass
+    
+    # Float formatındaysa (nokta varsa) int'e çevir
+    if '.' in phone_str:
+        try:
+            phone_str = str(int(float(phone_str)))
+        except:
+            pass
+    
+    # Sadece rakamları al
+    phone_clean = re.sub(r'\D', '', phone_str)
+    
+    # 10 haneli (5XXXXXXXXX) veya 11 haneli (05XXXXXXXXX) olmalı
+    if len(phone_clean) == 10 and phone_clean.startswith('5'):
+        # 10 haneli format kabul edilir, 0 eklenmez
+        pass
+    elif len(phone_clean) == 11 and phone_clean.startswith('05'):
+        # 11 haneli formatı 10 haneliye çevir (sıfırı kaldır)
+        phone_clean = phone_clean[1:]
+    else:
+        return False, f'Telefon 10 (5XXXXXXXXX) veya 11 (05XXXXXXXXX) haneli olmalıdır'
+    
+    return True, phone_clean
+
+def validate_email(email):
+    """Email validasyonu"""
+    if not email or pd.isna(email):
+        return True, None  # Email opsiyonel
+    
+    email = str(email).strip()
+    if not email:
+        return True, None
+    
+    # Basit email regex
+    email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_regex, email):
+        return False, 'Geçersiz email formatı'
+    
+    return True, email
+
+def validate_date(date_str):
+    """Tarih validasyonu"""
+    if not date_str or pd.isna(date_str):
+        return True, None  # Tarih opsiyonel
+    
+    date_str = str(date_str).strip()
+    if not date_str:
+        return True, None
+    
+    # Farklı tarih formatlarını dene (Türk formatı öncelikli)
+    date_formats = ['%d.%m.%Y', '%d/%m/%Y', '%Y-%m-%d', '%Y/%m/%d']
+    
+    for date_format in date_formats:
+        try:
+            parsed_date = datetime.strptime(date_str, date_format)
+            return True, parsed_date.strftime('%Y-%m-%d')
+        except ValueError:
+            continue
+    
+    return False, 'Geçersiz tarih formatı (GG.AA.YYYY veya GG/AA/YYYY kullanın, örn: 18.05.1974)'
+
+@app.route('/musteriler/import')
+@login_required
+def musteriler_import():
+    """Müşteri Excel import sayfası"""
+    return render_template('musteriler_import.html')
+
+@app.route('/api/musteri-import/template')
+@login_required
+def musteri_import_template():
+    """Excel template dosyasını kullanıcının diline göre oluştur ve indir"""
+    from flask_babel import get_locale
+    
+    # Kullanıcının dil seçimini al
+    locale = str(get_locale())
+    
+    # Dil bazlı çeviriler
+    translations = {
+        'tr': {
+            'columns': ['Ad', 'Soyad', 'Ülke Kodu', 'Telefon', 'Email', 'Cinsiyet', 'Doğum Tarihi', 'Adres'],
+            'sample_data': {
+                'Ad': ['Ahmet', 'Ayşe', 'Mehmet'],
+                'Soyad': ['Yılmaz', 'Demir', 'Kaya'],
+                'Ülke Kodu': ['90', '90', '90'],
+                'Telefon': ['5551234567', '5559876543', '5551112233'],
+                'Email': ['ahmet@mail.com', 'ayse@mail.com', 'mehmet@mail.com'],
+                'Cinsiyet': ['Erkek', 'Kadın', 'Erkek'],
+                'Doğum Tarihi': ['15.05.1990', '20.08.1985', '10.03.1995'],
+                'Adres': ['İstanbul, Kadıköy', 'Ankara, Çankaya', 'İzmir, Karşıyaka']
+            },
+            'guide_title': 'Müşteri İçe Aktarma - Kullanım Kılavuzu',
+            'guide_sheet': 'Kullanım Kılavuzu',
+            'customers_sheet': 'Müşteriler'
+        },
+        'en': {
+            'columns': ['Name', 'Surname', 'Country Code', 'Phone', 'Email', 'Gender', 'Birth Date', 'Address'],
+            'sample_data': {
+                'Name': ['John', 'Jane', 'Michael'],
+                'Surname': ['Smith', 'Doe', 'Johnson'],
+                'Country Code': ['90', '90', '90'],
+                'Phone': ['5551234567', '5559876543', '5551112233'],
+                'Email': ['john@mail.com', 'jane@mail.com', 'michael@mail.com'],
+                'Gender': ['Male', 'Female', 'Male'],
+                'Birth Date': ['15.05.1990', '20.08.1985', '10.03.1995'],
+                'Address': ['Istanbul, Kadikoy', 'Ankara, Cankaya', 'Izmir, Karsiyaka']
+            },
+            'guide_title': 'Customer Import - User Guide',
+            'guide_sheet': 'User Guide',
+            'customers_sheet': 'Customers'
+        },
+        'de': {
+            'columns': ['Vorname', 'Nachname', 'Ländercode', 'Telefon', 'E-Mail', 'Geschlecht', 'Geburtsdatum', 'Adresse'],
+            'sample_data': {
+                'Vorname': ['Hans', 'Anna', 'Michael'],
+                'Nachname': ['Schmidt', 'Müller', 'Weber'],
+                'Ländercode': ['90', '90', '90'],
+                'Telefon': ['5551234567', '5559876543', '5551112233'],
+                'E-Mail': ['hans@mail.com', 'anna@mail.com', 'michael@mail.com'],
+                'Geschlecht': ['Männlich', 'Weiblich', 'Männlich'],
+                'Geburtsdatum': ['15.05.1990', '20.08.1985', '10.03.1995'],
+                'Adresse': ['Istanbul, Kadikoy', 'Ankara, Cankaya', 'Izmir, Karsiyaka']
+            },
+            'guide_title': 'Kundenimport - Benutzerhandbuch',
+            'guide_sheet': 'Benutzerhandbuch',
+            'customers_sheet': 'Kunden'
+        },
+        'fr': {
+            'columns': ['Prénom', 'Nom', 'Code Pays', 'Téléphone', 'E-mail', 'Genre', 'Date de Naissance', 'Adresse'],
+            'sample_data': {
+                'Prénom': ['Pierre', 'Marie', 'Jean'],
+                'Nom': ['Martin', 'Dubois', 'Durand'],
+                'Code Pays': ['90', '90', '90'],
+                'Téléphone': ['5551234567', '5559876543', '5551112233'],
+                'E-mail': ['pierre@mail.com', 'marie@mail.com', 'jean@mail.com'],
+                'Genre': ['Homme', 'Femme', 'Homme'],
+                'Date de Naissance': ['15.05.1990', '20.08.1985', '10.03.1995'],
+                'Adresse': ['Istanbul, Kadikoy', 'Ankara, Cankaya', 'Izmir, Karsiyaka']
+            },
+            'guide_title': 'Importation de Clients - Guide d\'Utilisation',
+            'guide_sheet': 'Guide d\'Utilisation',
+            'customers_sheet': 'Clients'
+        }
+    }
+    
+    # Varsayılan olarak Türkçe
+    lang_data = translations.get(locale, translations['tr'])
+    
+    # DataFrame oluştur
+    df = pd.DataFrame(lang_data['sample_data'])
+    
+    # Geçici dosya oluştur
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx')
+    temp_path = temp_file.name
+    temp_file.close()
+    
+    # Excel'e yaz
+    df.to_excel(temp_path, index=False, sheet_name=lang_data['customers_sheet'])
+    
+    # Workbook'u yükle ve stil ekle
+    wb = load_workbook(temp_path)
+    ws = wb[lang_data['customers_sheet']]
+    
+    # Başlık stili
+    header_fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
+    header_font = Font(bold=True, color='FFFFFF', size=12)
+    header_alignment = Alignment(horizontal='center', vertical='center')
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Başlık satırına stil uygula
+    for col in range(1, len(df.columns) + 1):
+        cell = ws.cell(row=1, column=col)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+        cell.border = border
+    
+    # Kolon genişliklerini ayarla
+    for col in range(1, len(df.columns) + 1):
+        ws.column_dimensions[get_column_letter(col)].width = 20
+    
+    # Veri satırlarına border ekle ve telefon+ülke kodu kolonlarını TEXT formatına çevir
+    telefon_col_index = None
+    ulke_kodu_col_index = None
+    
+    for col_idx, col_name in enumerate(df.columns, start=1):
+        col_lower = str(col_name).lower()
+        if 'telefon' in col_lower or 'phone' in col_lower or 'téléphone' in col_lower:
+            if 'kod' not in col_lower and 'code' not in col_lower:  # "Ülke Kodu" değilse
+                telefon_col_index = col_idx
+        elif 'kod' in col_lower or 'code' in col_lower:
+            ulke_kodu_col_index = col_idx
+    
+    for row in range(2, len(df) + 2):
+        for col in range(1, len(df.columns) + 1):
+            cell = ws.cell(row=row, column=col)
+            cell.border = border
+            # Telefon ve ülke kodu kolonlarını TEXT olarak formatla
+            if col == telefon_col_index or col == ulke_kodu_col_index:
+                cell.number_format = '@'  # TEXT format
+    
+    # Kaydet
+    wb.save(temp_path)
+    
+    # Dosya adını dile göre ayarla
+    filename = f'customer_import_template_{locale}.xlsx'
+    
+    return send_file(temp_path, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/api/musteri-import/upload', methods=['POST'])
+@login_required
+def musteri_import_upload():
+    """Excel dosyasını yükle ve parse et"""
+    try:
+        # Dosya kontrolü
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'message': 'Dosya seçilmedi'}), 400
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'message': 'Dosya seçilmedi'}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({'success': False, 'message': 'Sadece .xlsx veya .xls dosyaları yüklenebilir'}), 400
+        
+        # Upload klasörünü oluştur
+        if not os.path.exists(UPLOAD_FOLDER):
+            os.makedirs(UPLOAD_FOLDER)
+        
+        # Güvenli dosya adı oluştur
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        unique_filename = f"{session['user_id']}_{timestamp}_{filename}"
+        filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
+        
+        # Dosyayı kaydet
+        file.save(filepath)
+        
+        # Excel'i oku - telefon kolonunu string olarak oku
+        df = pd.read_excel(filepath, sheet_name=0, dtype=str, keep_default_na=False)
+        
+        # Boş satırları temizle
+        df = df.dropna(how='all')
+        
+        # Kolonları al
+        columns = df.columns.tolist()
+        
+        # İlk 5 satırı önizleme için al
+        preview_data = df.head(5).fillna('').to_dict('records')
+        
+        return jsonify({
+            'success': True,
+            'filename': unique_filename,
+            'filepath': filepath,
+            'columns': columns,
+            'preview': preview_data,
+            'total_rows': len(df),
+            'message': f'{len(df)} satır müşteri verisi yüklendi'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Dosya yüklenirken hata: {str(e)}'}), 500
+
+@app.route('/api/musteri-import/preview', methods=['POST'])
+@login_required
+def musteri_import_preview():
+    """Kolon eşleştirmesi sonrası önizleme ve validasyon"""
+    try:
+        data = request.json
+        filepath = data.get('filepath')
+        column_mapping = data.get('column_mapping')  # {'excel_column': 'db_field'}
+        
+        if not filepath or not os.path.exists(filepath):
+            return jsonify({'success': False, 'message': 'Dosya bulunamadı'}), 400
+        
+        # Excel'i oku - tüm kolonları string olarak oku
+        df = pd.read_excel(filepath, sheet_name=0, dtype=str, keep_default_na=False)
+        df = df.dropna(how='all')
+        
+        # Validasyon sonuçları
+        validated_data = []
+        errors_count = 0
+        warnings_count = 0
+        
+        # Mevcut telefon numaralarını al (duplicate kontrolü için)
+        existing_phones = set()
+        mevcut_musteriler = Musteri.query.filter_by(
+            FirmaID=session['firma_id'],
+            Aktif=True
+        ).all()
+        for m in mevcut_musteriler:
+            if m.Telefon:
+                # Telefon numarasını normalize et (hem 10 hem 11 haneli formatları kabul et)
+                phone_normalized = m.Telefon.strip()
+                if phone_normalized.startswith('0') and len(phone_normalized) == 11:
+                    # 11 haneli: 0531714415 -> 531714415
+                    existing_phones.add(phone_normalized[1:])
+                    existing_phones.add(phone_normalized)  # Orijinal formatı da ekle
+                elif len(phone_normalized) == 10 and phone_normalized.startswith('5'):
+                    # 10 haneli: 531714415 -> 0531714415
+                    existing_phones.add(phone_normalized)
+                    existing_phones.add('0' + phone_normalized)  # 0 eklenmiş formatı da ekle
+                else:
+                    existing_phones.add(phone_normalized)
+        
+        # Dosyadaki telefon numaralarını takip et (dosya içi duplicate kontrolü)
+        file_phones = set()
+        
+        for idx, row in df.iterrows():
+            row_data = {
+                'row_number': idx + 2,  # Excel satır numarası (1=header)
+                'data': {},
+                'errors': [],
+                'warnings': [],
+                'status': 'valid'
+            }
+            
+            # Her kolon için veriyi al ve validate et
+            for excel_col, db_field in column_mapping.items():
+                if excel_col not in df.columns:
+                    continue
+                
+                value = row[excel_col]
+                
+                # Ad validasyonu
+                if db_field == 'MusteriAdi':
+                    if pd.isna(value) or str(value).strip() == '':
+                        row_data['errors'].append('Ad boş olamaz')
+                        row_data['status'] = 'error'
+                    else:
+                        row_data['data']['MusteriAdi'] = str(value).strip()
+                
+                # Soyad validasyonu
+                elif db_field == 'MusteriSoyadi':
+                    if pd.isna(value) or str(value).strip() == '':
+                        row_data['errors'].append('Soyad boş olamaz')
+                        row_data['status'] = 'error'
+                    else:
+                        row_data['data']['MusteriSoyadi'] = str(value).strip()
+                
+                # Telefon validasyonu
+                elif db_field == 'Telefon':
+                    valid, result = validate_phone(value)
+                    if not valid:
+                        row_data['errors'].append(result)
+                        row_data['status'] = 'error'
+                    else:
+                        row_data['data']['Telefon'] = result
+                        
+                        # Duplicate kontrolü - normalize edilmiş telefon ile kontrol et
+                        phone_for_check = result
+                        if len(result) == 10 and result.startswith('5'):
+                            # 10 haneli format için 11 haneli versiyonunu da kontrol et
+                            phone_11_digit = '0' + result
+                            if phone_for_check in existing_phones or phone_11_digit in existing_phones:
+                                row_data['warnings'].append('Bu telefon numarası sistemde zaten kayıtlı')
+                                if row_data['status'] != 'error':
+                                    row_data['status'] = 'duplicate'
+                        elif len(result) == 11 and result.startswith('05'):
+                            # 11 haneli format için 10 haneli versiyonunu da kontrol et
+                            phone_10_digit = result[1:]
+                            if phone_for_check in existing_phones or phone_10_digit in existing_phones:
+                                row_data['warnings'].append('Bu telefon numarası sistemde zaten kayıtlı')
+                                if row_data['status'] != 'error':
+                                    row_data['status'] = 'duplicate'
+                        elif result in existing_phones:
+                            row_data['warnings'].append('Bu telefon numarası sistemde zaten kayıtlı')
+                            if row_data['status'] != 'error':
+                                row_data['status'] = 'duplicate'
+                        elif result in file_phones:
+                            row_data['warnings'].append('Bu telefon numarası dosyada birden fazla kez var')
+                            if row_data['status'] != 'error':
+                                row_data['status'] = 'warning'
+                        else:
+                            file_phones.add(result)
+                
+                # Email validasyonu
+                elif db_field == 'Email':
+                    valid, result = validate_email(value)
+                    if not valid:
+                        row_data['errors'].append(result)
+                        row_data['status'] = 'error'
+                    else:
+                        row_data['data']['Email'] = result
+                
+                # Ülke Kodu (opsiyonel, sadece kaydet)
+                elif db_field == 'UlkeKodu':
+                    if not pd.isna(value) and str(value).strip():
+                        row_data['data']['UlkeKodu'] = str(value).strip()
+                
+                # Cinsiyet
+                elif db_field == 'Cinsiyet':
+                    if not pd.isna(value) and str(value).strip():
+                        cinsiyet = str(value).strip()
+                        cinsiyet_lower = cinsiyet.lower()
+                        
+                        # Erkek için tüm dillerdeki değerler
+                        erkek_values = [
+                            # Türkçe
+                            'erkek', 'e', 'e.',
+                            # İngilizce
+                            'male', 'm', 'm.', 'man', 'men',
+                            # Fransızca
+                            'homme', 'masculin', 'mâle',
+                            # Almanca
+                            'männlich', 'mann', 'm'
+                        ]
+                        
+                        # Kadın için tüm dillerdeki değerler
+                        kadin_values = [
+                            # Türkçe
+                            'kadın', 'kadýn', 'k', 'k.',
+                            # İngilizce
+                            'female', 'f', 'f.', 'woman', 'women',
+                            # Fransızca
+                            'femme', 'féminin', 'femelle',
+                            # Almanca
+                            'weiblich', 'frau', 'w'
+                        ]
+                        
+                        if cinsiyet_lower in erkek_values:
+                            row_data['data']['Cinsiyet'] = 'Erkek'
+                        elif cinsiyet_lower in kadin_values:
+                            row_data['data']['Cinsiyet'] = 'Kadın'
+                        else:
+                            row_data['warnings'].append(f'Bilinmeyen cinsiyet: {cinsiyet}')
+                            row_data['data']['Cinsiyet'] = None
+                
+                # Doğum tarihi
+                elif db_field == 'DogumTarihi':
+                    valid, result = validate_date(value)
+                    if not valid:
+                        row_data['errors'].append(result)
+                        if row_data['status'] != 'error':
+                            row_data['status'] = 'warning'
+                    else:
+                        row_data['data']['DogumTarihi'] = result
+                
+                # Diğer alanlar (Adres, Notlar)
+                else:
+                    if not pd.isna(value) and str(value).strip():
+                        row_data['data'][db_field] = str(value).strip()
+            
+            # İstatistikleri güncelle
+            if row_data['status'] == 'error':
+                errors_count += 1
+            elif row_data['status'] in ['duplicate', 'warning']:
+                warnings_count += 1
+            
+            validated_data.append(row_data)
+        
+        return jsonify({
+            'success': True,
+            'data': validated_data,
+            'stats': {
+                'total': len(validated_data),
+                'valid': len([d for d in validated_data if d['status'] == 'valid']),
+                'errors': errors_count,
+                'warnings': warnings_count,
+                'duplicates': len([d for d in validated_data if d['status'] == 'duplicate'])
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Önizleme hatası: {str(e)}'}), 500
+
+@app.route('/api/musteri-import/process', methods=['POST'])
+@login_required
+def musteri_import_process():
+    """Validasyondan geçen verileri işle ve kaydet"""
+    try:
+        data = request.json
+        validated_data = data.get('data', [])
+        import_options = data.get('options', {})
+        
+        # Import seçenekleri
+        skip_errors = import_options.get('skip_errors', True)
+        update_duplicates = import_options.get('update_duplicates', False)
+        skip_duplicates = import_options.get('skip_duplicates', True)
+        
+        # Sonuçlar
+        results = {
+            'success': 0,
+            'skipped': 0,
+            'updated': 0,
+            'errors': 0,
+            'details': []
+        }
+        
+        for row in validated_data:
+            row_number = row['row_number']
+            status = row['status']
+            row_data = row['data']
+            
+            try:
+                # Hatalı kayıtları atla
+                if status == 'error':
+                    if skip_errors:
+                        results['skipped'] += 1
+                        results['details'].append({
+                            'row': row_number,
+                            'status': 'skipped',
+                            'message': 'Validasyon hatası nedeniyle atlandı'
+                        })
+                        continue
+                    else:
+                        results['errors'] += 1
+                        results['details'].append({
+                            'row': row_number,
+                            'status': 'error',
+                            'message': ', '.join(row['errors'])
+                        })
+                        continue
+                
+                # Duplicate kontrolü
+                if status == 'duplicate':
+                    telefon = row_data.get('Telefon')
+                    existing = Musteri.query.filter_by(
+                        FirmaID=session['firma_id'],
+                        Telefon=telefon,
+                        Aktif=True
+                    ).first()
+                    
+                    if existing and update_duplicates:
+                        # Mevcut kaydı güncelle
+                        for key, value in row_data.items():
+                            if value is not None:
+                                setattr(existing, key, value)
+                        
+                        db.session.commit()
+                        
+                        # Güncellenen müşteri için log
+                        update_log = KullaniciLog(
+                            KullaniciID=session['user_id'],
+                            IslemTipi='musteri_excel_import_update',
+                            TabloAdi='Musteri',
+                            IslemDetayi=f'Excel import ile müşteri güncellendi: {row_data.get("MusteriAdi")} {row_data.get("MusteriSoyadi")} (Telefon: {row_data.get("Telefon")})'
+                        )
+                        db.session.add(update_log)
+                        db.session.commit()
+                        
+                        results['updated'] += 1
+                        results['details'].append({
+                            'row': row_number,
+                            'status': 'updated',
+                            'message': f'Mevcut müşteri güncellendi: {row_data.get("MusteriAdi")} {row_data.get("MusteriSoyadi")}'
+                        })
+                        continue
+                    elif skip_duplicates:
+                        results['skipped'] += 1
+                        results['details'].append({
+                            'row': row_number,
+                            'status': 'skipped',
+                            'message': 'Duplicate kayıt atlandı'
+                        })
+                        continue
+                
+                # Yeni müşteri oluştur
+                yeni_musteri = Musteri(
+                    FirmaID=session['firma_id'],
+                    MusteriAdi=row_data.get('MusteriAdi'),
+                    MusteriSoyadi=row_data.get('MusteriSoyadi'),
+                    Telefon=row_data.get('Telefon'),
+                    Email=row_data.get('Email'),
+                    Cinsiyet=row_data.get('Cinsiyet'),
+                    DogumTarihi=row_data.get('DogumTarihi'),
+                    Adres=row_data.get('Adres'),
+                    Notlar=row_data.get('Notlar'),
+                    Aktif=True
+                )
+                
+                db.session.add(yeni_musteri)
+                db.session.commit()
+                
+                # Her müşteri için ayrı log
+                musteri_log = KullaniciLog(
+                    KullaniciID=session['user_id'],
+                    IslemTipi='musteri_excel_import_add',
+                    TabloAdi='Musteri',
+                    IslemDetayi=f'Excel import ile müşteri eklendi: {row_data.get("MusteriAdi")} {row_data.get("MusteriSoyadi")} (Telefon: {row_data.get("Telefon")})'
+                )
+                db.session.add(musteri_log)
+                db.session.commit()
+                
+                results['success'] += 1
+                results['details'].append({
+                    'row': row_number,
+                    'status': 'success',
+                    'message': f'Müşteri eklendi: {row_data.get("MusteriAdi")} {row_data.get("MusteriSoyadi")}'
+                })
+                
+            except Exception as e:
+                db.session.rollback()
+                results['errors'] += 1
+                results['details'].append({
+                    'row': row_number,
+                    'status': 'error',
+                    'message': f'Kayıt hatası: {str(e)}'
+                })
+        
+        # Genel Excel import log kaydı
+        log_mesaj = f"Excel import tamamlandı: {results['success']} müşteri eklendi, {results['updated']} müşteri güncellendi, {results['skipped']} kayıt atlandı, {results['errors']} hata oluştu"
+        yeni_log = KullaniciLog(
+            KullaniciID=session['user_id'],
+            IslemTipi='musteri_excel_import_summary',
+            TabloAdi='Musteri',
+            IslemDetayi=log_mesaj
+        )
+        db.session.add(yeni_log)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'message': log_mesaj
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'İşlem hatası: {str(e)}'}), 500
 
 # ==================== TODO SİSTEMİ ====================
 

@@ -737,9 +737,14 @@ msgid "Notes"
 msgstr "Notlar"
 
 #: templates/musteri_detay_modal.html:112
-#, fuzzy
 msgid "Appointment Statistics"
-msgstr "Randevu Durumları"
+msgstr "Randevu İstatistikleri"
+
+msgid "No Data"
+msgstr "Veri Yok"
+
+msgid "Appointments"
+msgstr "Randevular"
 
 #: templates/musteri_detay_modal.html:152
 #: templates/musteri_detay_raporu.html:148
@@ -2147,6 +2152,16 @@ msgstr "Kullanıcı Fotoğrafı (opsiyonel)"
 msgid "Choose file..."
 msgstr "Dosya seçin..."
 
+# Excel Import Log Messages
+msgid "Excel import ile müşteri eklendi: {name} {surname} (Telefon: {phone})"
+msgstr "Excel import ile müşteri eklendi: {name} {surname} (Telefon: {phone})"
+
+msgid "Excel import ile müşteri güncellendi: {name} {surname} (Telefon: {phone})"
+msgstr "Excel import ile müşteri güncellendi: {name} {surname} (Telefon: {phone})"
+
+msgid "Excel import tamamlandı: {success} müşteri eklendi, {updated} müşteri güncellendi, {skipped} kayıt atlandı, {errors} hata oluştu"
+msgstr "Excel import tamamlandı: {success} müşteri eklendi, {updated} müşteri güncellendi, {skipped} kayıt atlandı, {errors} hata oluştu"
+
 #: templates/ayarlar/kullanicilar.html:52
 msgid "Browse"
 msgstr "Gözat"
@@ -2777,4 +2792,233 @@ msgstr "Müşteri Raporu"
 #: templates/base.html
 msgid "Todos"
 msgstr "Görevler"
+
+# Excel Import
+msgid "Customer Excel Import"
+msgstr "Müşteri Excel İçe Aktarma"
+
+msgid "Upload File"
+msgstr "Dosya Yükle"
+
+msgid "Map Columns"
+msgstr "Kolon Eşleştirme"
+
+msgid "Preview & Validate"
+msgstr "Önizleme ve Doğrulama"
+
+msgid "Import"
+msgstr "İçe Aktar"
+
+msgid "Results"
+msgstr "Sonuçlar"
+
+msgid "Step 1: Upload Excel File"
+msgstr "Adım 1: Excel Dosyası Yükle"
+
+msgid "Important Notes:"
+msgstr "Önemli Notlar:"
+
+msgid "Excel file must be in .xlsx or .xls format"
+msgstr "Excel dosyası .xlsx veya .xls formatında olmalıdır"
+
+msgid "First row must contain column headers"
+msgstr "İlk satır kolon başlıklarını içermelidir"
+
+msgid "Required columns: Name, Surname, Phone"
+msgstr "Zorunlu kolonlar: Ad, Soyad, Telefon"
+
+msgid "Phone numbers must be in 05XX format (11 digits)"
+msgstr "Telefon numaraları 05XX formatında olmalıdır (11 hane)"
+
+msgid "Download Template"
+msgstr "Şablonu İndir"
+
+msgid "Download the Excel template with example data and instructions"
+msgstr "Örnek veriler ve talimatlar içeren Excel şablonunu indirin"
+
+msgid "Upload Your File"
+msgstr "Dosyanızı Yükleyin"
+
+msgid "Drag & drop Excel file here"
+msgstr "Excel dosyasını buraya sürükleyip bırakın"
+
+msgid "or"
+msgstr "veya"
+
+msgid "Select File"
+msgstr "Dosya Seç"
+
+msgid "Uploading..."
+msgstr "Yükleniyor..."
+
+msgid "Next"
+msgstr "İleri"
+
+msgid "Step 2: Map Excel Columns to Database Fields"
+msgstr "Adım 2: Excel Kolonlarını Veritabanı Alanlarına Eşleştir"
+
+msgid "Match your Excel columns with database fields. System will auto-detect common column names."
+msgstr "Excel kolonlarınızı veritabanı alanlarıyla eşleştirin. Sistem yaygın kolon isimlerini otomatik algılar."
+
+msgid "Excel Column"
+msgstr "Excel Kolonu"
+
+msgid "Database Field"
+msgstr "Veritabanı Alanı"
+
+msgid "Preview"
+msgstr "Önizleme"
+
+msgid "Back"
+msgstr "Geri"
+
+msgid "Step 3: Preview and Validate Data"
+msgstr "Adım 3: Verileri Önizle ve Doğrula"
+
+msgid "Total Rows"
+msgstr "Toplam Satır"
+
+msgid "Valid"
+msgstr "Geçerli"
+
+msgid "Warnings"
+msgstr "Uyarılar"
+
+msgid "Errors"
+msgstr "Hatalar"
+
+msgid "All"
+msgstr "Tümü"
+
+msgid "Row"
+msgstr "Satır"
+
+msgid "Name"
+msgstr "Ad"
+
+msgid "Surname"
+msgstr "Soyad"
+
+msgid "Phone"
+msgstr "Telefon"
+
+msgid "Country Code"
+msgstr "Ülke Kodu"
+
+msgid "Status"
+msgstr "Durum"
+
+msgid "Messages"
+msgstr "Mesajlar"
+
+msgid "Step 4: Import Options"
+msgstr "Adım 4: İçe Aktarma Seçenekleri"
+
+msgid "How should we handle different situations?"
+msgstr "Farklı durumları nasıl ele almalıyız?"
+
+msgid "Skip rows with errors"
+msgstr "Hatalı satırları atla"
+
+msgid "Rows with validation errors will be skipped"
+msgstr "Doğrulama hatası olan satırlar atlanacak"
+
+msgid "Update existing customers"
+msgstr "Mevcut müşterileri güncelle"
+
+msgid "If phone number exists, update customer information"
+msgstr "Telefon numarası mevcutsa, müşteri bilgilerini güncelle"
+
+msgid "Skip duplicate customers"
+msgstr "Duplicate müşterileri atla"
+
+msgid "If phone number exists and update is disabled, skip"
+msgstr "Telefon numarası mevcutsa ve güncelleme kapalıysa, atla"
+
+msgid "Warning:"
+msgstr "Uyarı:"
+
+msgid "Start Import"
+msgstr "İçe Aktarmayı Başlat"
+
+msgid "Step 5: Import Results"
+msgstr "Adım 5: İçe Aktarma Sonuçları"
+
+msgid "Successfully Added"
+msgstr "Başarıyla Eklendi"
+
+msgid "Updated"
+msgstr "Güncellendi"
+
+msgid "Skipped"
+msgstr "Atlandı"
+
+msgid "Detailed Results"
+msgstr "Detaylı Sonuçlar"
+
+msgid "Message"
+msgstr "Mesaj"
+
+msgid "Go to Customers"
+msgstr "Müşterilere Git"
+
+msgid "Import Another File"
+msgstr "Başka Dosya İçe Aktar"
+
+msgid "Import from Excel"
+msgstr "Excel'den İçe Aktar"
+
+msgid "Please select a valid Excel file (.xlsx or .xls)"
+msgstr "Lütfen geçerli bir Excel dosyası seçin (.xlsx veya .xls)"
+
+msgid "Error"
+msgstr "Hata"
+
+msgid "An error occurred while uploading the file"
+msgstr "Dosya yüklenirken bir hata oluştu"
+
+msgid "Please map required fields"
+msgstr "Lütfen zorunlu alanları eşleştirin"
+
+msgid "An error occurred during validation"
+msgstr "Doğrulama sırasında bir hata oluştu"
+
+msgid "Warning"
+msgstr "Uyarı"
+
+msgid "Duplicate"
+msgstr "Tekrar Eden"
+
+msgid "Appointment Statistics"
+msgstr "Randevu İstatistikleri"
+
+msgid "An error occurred during import"
+msgstr "İçe aktarma sırasında bir hata oluştu"
+
+msgid "Success"
+msgstr "Başarılı"
+
+msgid "Approximately"
+msgstr "Yaklaşık"
+
+msgid "of"
+msgstr "içinden"
+
+msgid "customers will be imported"
+msgstr "müşteri içe aktarılacak"
+
+msgid "-- Not Mapped --"
+msgstr "-- Eşleştirilmedi --"
+
+msgid "Gender"
+msgstr "Cinsiyet"
+
+msgid "Birth Date"
+msgstr "Doğum Tarihi"
+
+msgid "Address"
+msgstr "Adres"
+
+msgid "Notes"
+msgstr "Notlar"
 

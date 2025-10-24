@@ -2148,6 +2148,16 @@ msgstr "Settings Module"
 msgid "Logs Module"
 msgstr "Reports Module"
 
+# Excel Import Log Messages
+msgid "Excel import ile müşteri eklendi: {name} {surname} (Telefon: {phone})"
+msgstr "Customer added via Excel import: {name} {surname} (Phone: {phone})"
+
+msgid "Excel import ile müşteri güncellendi: {name} {surname} (Telefon: {phone})"
+msgstr "Customer updated via Excel import: {name} {surname} (Phone: {phone})"
+
+msgid "Excel import tamamlandı: {success} müşteri eklendi, {updated} müşteri güncellendi, {skipped} kayıt atlandı, {errors} hata oluştu"
+msgstr "Excel import completed: {success} customers added, {updated} customers updated, {skipped} records skipped, {errors} errors occurred"
+
 #: templates/ayarlar/kullanici_duzenle.html:224
 #: templates/ayarlar/kullanicilar.html:177
 msgid "Adjust Photo"
@@ -2787,4 +2797,239 @@ msgstr "Customer Report"
 #: templates/base.html
 msgid "Todos"
 msgstr "Todos"
+
+# Excel Import
+msgid "Customer Excel Import"
+msgstr "Customer Excel Import"
+
+msgid "Upload File"
+msgstr "Upload File"
+
+msgid "Map Columns"
+msgstr "Map Columns"
+
+msgid "Preview & Validate"
+msgstr "Preview & Validate"
+
+msgid "Import"
+msgstr "Import"
+
+msgid "Results"
+msgstr "Results"
+
+msgid "Step 1: Upload Excel File"
+msgstr "Step 1: Upload Excel File"
+
+msgid "Important Notes:"
+msgstr "Important Notes:"
+
+msgid "Excel file must be in .xlsx or .xls format"
+msgstr "Excel file must be in .xlsx or .xls format"
+
+msgid "First row must contain column headers"
+msgstr "First row must contain column headers"
+
+msgid "Required columns: Name, Surname, Phone"
+msgstr "Required columns: Name, Surname, Phone"
+
+msgid "Phone numbers must be in 05XX format (11 digits)"
+msgstr "Phone numbers must be in 05XX format (11 digits)"
+
+msgid "Download Template"
+msgstr "Download Template"
+
+msgid "Download the Excel template with example data and instructions"
+msgstr "Download the Excel template with example data and instructions"
+
+msgid "Upload Your File"
+msgstr "Upload Your File"
+
+msgid "Drag & drop Excel file here"
+msgstr "Drag & drop Excel file here"
+
+msgid "or"
+msgstr "or"
+
+msgid "Select File"
+msgstr "Select File"
+
+msgid "Uploading..."
+msgstr "Uploading..."
+
+msgid "Next"
+msgstr "Next"
+
+msgid "Step 2: Map Excel Columns to Database Fields"
+msgstr "Step 2: Map Excel Columns to Database Fields"
+
+msgid "Match your Excel columns with database fields. System will auto-detect common column names."
+msgstr "Match your Excel columns with database fields. System will auto-detect common column names."
+
+msgid "Excel Column"
+msgstr "Excel Column"
+
+msgid "Database Field"
+msgstr "Database Field"
+
+msgid "Preview"
+msgstr "Preview"
+
+msgid "Back"
+msgstr "Back"
+
+msgid "Step 3: Preview and Validate Data"
+msgstr "Step 3: Preview and Validate Data"
+
+msgid "Total Rows"
+msgstr "Total Rows"
+
+msgid "Valid"
+msgstr "Valid"
+
+msgid "Warnings"
+msgstr "Warnings"
+
+msgid "Errors"
+msgstr "Errors"
+
+msgid "All"
+msgstr "All"
+
+msgid "Row"
+msgstr "Row"
+
+msgid "Name"
+msgstr "Name"
+
+msgid "Surname"
+msgstr "Surname"
+
+msgid "Phone"
+msgstr "Phone"
+
+msgid "Country Code"
+msgstr "Country Code"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Messages"
+msgstr "Messages"
+
+msgid "Step 4: Import Options"
+msgstr "Step 4: Import Options"
+
+msgid "How should we handle different situations?"
+msgstr "How should we handle different situations?"
+
+msgid "Skip rows with errors"
+msgstr "Skip rows with errors"
+
+msgid "Rows with validation errors will be skipped"
+msgstr "Rows with validation errors will be skipped"
+
+msgid "Update existing customers"
+msgstr "Update existing customers"
+
+msgid "If phone number exists, update customer information"
+msgstr "If phone number exists, update customer information"
+
+msgid "Skip duplicate customers"
+msgstr "Skip duplicate customers"
+
+msgid "If phone number exists and update is disabled, skip"
+msgstr "If phone number exists and update is disabled, skip"
+
+msgid "Warning:"
+msgstr "Warning:"
+
+msgid "Start Import"
+msgstr "Start Import"
+
+msgid "Step 5: Import Results"
+msgstr "Step 5: Import Results"
+
+msgid "Successfully Added"
+msgstr "Successfully Added"
+
+msgid "Updated"
+msgstr "Updated"
+
+msgid "Skipped"
+msgstr "Skipped"
+
+msgid "Detailed Results"
+msgstr "Detailed Results"
+
+msgid "Message"
+msgstr "Message"
+
+msgid "Go to Customers"
+msgstr "Go to Customers"
+
+msgid "Import Another File"
+msgstr "Import Another File"
+
+msgid "Import from Excel"
+msgstr "Import from Excel"
+
+msgid "Please select a valid Excel file (.xlsx or .xls)"
+msgstr "Please select a valid Excel file (.xlsx or .xls)"
+
+msgid "Error"
+msgstr "Error"
+
+msgid "An error occurred while uploading the file"
+msgstr "An error occurred while uploading the file"
+
+msgid "Please map required fields"
+msgstr "Please map required fields"
+
+msgid "An error occurred during validation"
+msgstr "An error occurred during validation"
+
+msgid "Warning"
+msgstr "Warning"
+
+msgid "Duplicate"
+msgstr "Duplicate"
+
+msgid "Appointment Statistics"
+msgstr "Appointment Statistics"
+
+msgid "No Data"
+msgstr "No Data"
+
+msgid "Appointments"
+msgstr "Appointments"
+
+msgid "An error occurred during import"
+msgstr "An error occurred during import"
+
+msgid "Success"
+msgstr "Success"
+
+msgid "Approximately"
+msgstr "Approximately"
+
+msgid "of"
+msgstr "of"
+
+msgid "customers will be imported"
+msgstr "customers will be imported"
+
+msgid "-- Not Mapped --"
+msgstr "-- Not Mapped --"
+
+msgid "Gender"
+msgstr "Gender"
+
+msgid "Birth Date"
+msgstr "Birth Date"
+
+msgid "Address"
+msgstr "Address"
+
+msgid "Notes"
+msgstr "Notes"
 

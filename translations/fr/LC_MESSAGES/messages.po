@@ -736,9 +736,14 @@ msgid "Notes"
 msgstr "Notes"
 
 #: templates/musteri_detay_modal.html:112
-#, fuzzy
 msgid "Appointment Statistics"
-msgstr "Appointment Statuses"
+msgstr "Statistiques de Rendez-vous"
+
+msgid "No Data"
+msgstr "Aucune Donnée"
+
+msgid "Appointments"
+msgstr "Rendez-vous"
 
 #: templates/musteri_detay_modal.html:152
 #: templates/musteri_detay_raporu.html:148
@@ -2133,6 +2138,16 @@ msgstr "Module Paramètres"
 msgid "Logs Module"
 msgstr "Module Journaux"
 
+# Excel Import Log Messages
+msgid "Excel import ile müşteri eklendi: {name} {surname} (Telefon: {phone})"
+msgstr "Client ajouté via import Excel : {name} {surname} (Téléphone : {phone})"
+
+msgid "Excel import ile müşteri güncellendi: {name} {surname} (Telefon: {phone})"
+msgstr "Client mis à jour via import Excel : {name} {surname} (Téléphone : {phone})"
+
+msgid "Excel import tamamlandı: {success} müşteri eklendi, {updated} müşteri güncellendi, {skipped} kayıt atlandı, {errors} hata oluştu"
+msgstr "Import Excel terminé : {success} clients ajoutés, {updated} clients mis à jour, {skipped} enregistrements ignorés, {errors} erreurs survenues"
+
 #: templates/ayarlar/kullanici_duzenle.html:224
 #: templates/ayarlar/kullanicilar.html:177
 msgid "Adjust Photo"
@@ -2858,4 +2873,233 @@ msgstr "Rapport Client"
 #: templates/base.html
 msgid "Todos"
 msgstr "Tâches"
+
+# Excel Import
+msgid "Customer Excel Import"
+msgstr "Importation Excel des Clients"
+
+msgid "Upload File"
+msgstr "Télécharger le Fichier"
+
+msgid "Map Columns"
+msgstr "Mapper les Colonnes"
+
+msgid "Preview & Validate"
+msgstr "Aperçu et Validation"
+
+msgid "Import"
+msgstr "Importer"
+
+msgid "Results"
+msgstr "Résultats"
+
+msgid "Step 1: Upload Excel File"
+msgstr "Étape 1 : Télécharger le Fichier Excel"
+
+msgid "Important Notes:"
+msgstr "Notes Importantes :"
+
+msgid "Excel file must be in .xlsx or .xls format"
+msgstr "Le fichier Excel doit être au format .xlsx ou .xls"
+
+msgid "First row must contain column headers"
+msgstr "La première ligne doit contenir les en-têtes de colonne"
+
+msgid "Required columns: Name, Surname, Phone"
+msgstr "Colonnes requises : Prénom, Nom, Téléphone"
+
+msgid "Phone numbers must be in 05XX format (11 digits)"
+msgstr "Les numéros de téléphone doivent être au format 05XX (11 chiffres)"
+
+msgid "Download Template"
+msgstr "Télécharger le Modèle"
+
+msgid "Download the Excel template with example data and instructions"
+msgstr "Téléchargez le modèle Excel avec des données d'exemple et des instructions"
+
+msgid "Upload Your File"
+msgstr "Téléchargez Votre Fichier"
+
+msgid "Drag & drop Excel file here"
+msgstr "Glissez-déposez le fichier Excel ici"
+
+msgid "or"
+msgstr "ou"
+
+msgid "Select File"
+msgstr "Sélectionner un Fichier"
+
+msgid "Uploading..."
+msgstr "Téléchargement en cours..."
+
+msgid "Next"
+msgstr "Suivant"
+
+msgid "Step 2: Map Excel Columns to Database Fields"
+msgstr "Étape 2 : Mapper les Colonnes Excel aux Champs de Base de Données"
+
+msgid "Match your Excel columns with database fields. System will auto-detect common column names."
+msgstr "Associez vos colonnes Excel aux champs de la base de données. Le système détectera automatiquement les noms de colonnes courants."
+
+msgid "Excel Column"
+msgstr "Colonne Excel"
+
+msgid "Database Field"
+msgstr "Champ de Base de Données"
+
+msgid "Preview"
+msgstr "Aperçu"
+
+msgid "Back"
+msgstr "Retour"
+
+msgid "Step 3: Preview and Validate Data"
+msgstr "Étape 3 : Aperçu et Validation des Données"
+
+msgid "Total Rows"
+msgstr "Total des Lignes"
+
+msgid "Valid"
+msgstr "Valide"
+
+msgid "Warnings"
+msgstr "Avertissements"
+
+msgid "Errors"
+msgstr "Erreurs"
+
+msgid "All"
+msgstr "Tout"
+
+msgid "Row"
+msgstr "Ligne"
+
+msgid "Name"
+msgstr "Prénom"
+
+msgid "Surname"
+msgstr "Nom"
+
+msgid "Phone"
+msgstr "Téléphone"
+
+msgid "Country Code"
+msgstr "Code Pays"
+
+msgid "Status"
+msgstr "Statut"
+
+msgid "Messages"
+msgstr "Messages"
+
+msgid "Step 4: Import Options"
+msgstr "Étape 4 : Options d'Importation"
+
+msgid "How should we handle different situations?"
+msgstr "Comment devons-nous gérer différentes situations ?"
+
+msgid "Skip rows with errors"
+msgstr "Ignorer les lignes avec des erreurs"
+
+msgid "Rows with validation errors will be skipped"
+msgstr "Les lignes avec des erreurs de validation seront ignorées"
+
+msgid "Update existing customers"
+msgstr "Mettre à jour les clients existants"
+
+msgid "If phone number exists, update customer information"
+msgstr "Si le numéro de téléphone existe, mettre à jour les informations du client"
+
+msgid "Skip duplicate customers"
+msgstr "Ignorer les clients en double"
+
+msgid "If phone number exists and update is disabled, skip"
+msgstr "Si le numéro de téléphone existe et la mise à jour est désactivée, ignorer"
+
+msgid "Warning:"
+msgstr "Attention :"
+
+msgid "Start Import"
+msgstr "Démarrer l'Importation"
+
+msgid "Step 5: Import Results"
+msgstr "Étape 5 : Résultats de l'Importation"
+
+msgid "Successfully Added"
+msgstr "Ajouté avec Succès"
+
+msgid "Updated"
+msgstr "Mis à Jour"
+
+msgid "Skipped"
+msgstr "Ignoré"
+
+msgid "Detailed Results"
+msgstr "Résultats Détaillés"
+
+msgid "Message"
+msgstr "Message"
+
+msgid "Go to Customers"
+msgstr "Aller aux Clients"
+
+msgid "Import Another File"
+msgstr "Importer un Autre Fichier"
+
+msgid "Import from Excel"
+msgstr "Importer depuis Excel"
+
+msgid "Please select a valid Excel file (.xlsx or .xls)"
+msgstr "Veuillez sélectionner un fichier Excel valide (.xlsx ou .xls)"
+
+msgid "Error"
+msgstr "Erreur"
+
+msgid "An error occurred while uploading the file"
+msgstr "Une erreur s'est produite lors du téléchargement du fichier"
+
+msgid "Please map required fields"
+msgstr "Veuillez mapper les champs requis"
+
+msgid "An error occurred during validation"
+msgstr "Une erreur s'est produite lors de la validation"
+
+msgid "Warning"
+msgstr "Avertissement"
+
+msgid "Duplicate"
+msgstr "Doublon"
+
+msgid "Appointment Statistics"
+msgstr "Statistiques de Rendez-vous"
+
+msgid "An error occurred during import"
+msgstr "Une erreur s'est produite lors de l'importation"
+
+msgid "Success"
+msgstr "Succès"
+
+msgid "Approximately"
+msgstr "Environ"
+
+msgid "of"
+msgstr "de"
+
+msgid "customers will be imported"
+msgstr "clients seront importés"
+
+msgid "-- Not Mapped --"
+msgstr "-- Non Mappé --"
+
+msgid "Gender"
+msgstr "Genre"
+
+msgid "Birth Date"
+msgstr "Date de Naissance"
+
+msgid "Address"
+msgstr "Adresse"
+
+msgid "Notes"
+msgstr "Notes"
 

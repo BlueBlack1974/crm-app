@@ -1,24 +1,8 @@
 <!-- Müşteri Detay Raporu Modal İçeriği -->
-<script>
-// Grafik verilerini JavaScript'e aktar
-window.monthlyData = {{ aylik_randevu | tojson }};
-window.bookData = {{ defter_dagilimi | tojson }};
-
-// Chart.js yüklenip yüklenmediğini kontrol et
-if (typeof Chart === 'undefined') {
-    console.error('Modal: Chart.js kütüphanesi yüklenemedi!');
-    // Chart.js'i dinamik olarak yükle
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-    script.onload = function() {
-        console.log('Modal: Chart.js dinamik olarak yüklendi');
-    };
-    script.onerror = function() {
-        console.error('Modal: Chart.js yüklenemedi');
-    };
-    document.head.appendChild(script);
-}
-</script>
+<div id="chartData" 
+     data-monthly='{{ aylik_randevu | tojson }}' 
+     data-book='{{ defter_dagilimi | tojson }}' 
+     style="display: none;"></div>
 <div class="row mb-4">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center">
