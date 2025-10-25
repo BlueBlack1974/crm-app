@@ -1234,48 +1234,105 @@
         // Adres bilgilerini doldur
         if (musteri.ulke) {
             document.getElementById('musteri_ulke').value = musteri.ulke;
-            // Ülke değiştiğinde eyaletleri yükle
-            if (musteri.ulke === 'TR') {
-                loadStates('TR');
+        } else {
+            // Ülke bilgisi yoksa varsayılan olarak TR seç
+            document.getElementById('musteri_ulke').value = 'TR';
+        }
+        
+        // Her durumda şehir listesini yükle (TR için)
+        console.log('loadStates çağrılıyor...');
+        loadStates('TR').then(() => {
+            console.log('loadStates tamamlandı');
+            // Şehir listesi yüklendikten sonra müşterinin şehrini seç
+            if (musteri.sehir) {
+                setTimeout(() => {
+                    const sehirSelect = document.getElementById('musteri_sehir');
+                    console.log('Şehir seçimi yapılıyor:', musteri.sehir);
+                    console.log('Şehir dropdown seçenekleri:', Array.from(sehirSelect.options).map(o => o.value + ':' + o.text));
+                    
+                    // Önce değeri set et
+                    sehirSelect.value = musteri.sehir;
+                    console.log('Şehir değeri set edildi:', sehirSelect.value);
+                    
+                    // Eğer seçilmediyse, text ile ara
+                    if (sehirSelect.value !== musteri.sehir) {
+                        console.log('Değer eşleşmedi, text ile aranıyor...');
+                        const options = Array.from(sehirSelect.options);
+                        const foundOption = options.find(o => o.textContent === musteri.sehir);
+                        if (foundOption) {
+                            sehirSelect.value = foundOption.value;
+                            console.log('Text ile bulundu ve seçildi:', foundOption.value);
+                        } else {
+                            console.log('Şehir bulunamadı:', musteri.sehir);
+                        }
+                    }
+                    
+                    // Şehir seçildikten sonra ilçe listesini yükle
+                    if (musteri.ilce) {
+                        console.log('İlçe listesi yükleniyor, şehir:', musteri.sehir);
+                        console.log('İlçe değeri:', musteri.ilce);
+                        
+                        // İlçe listesini yükle
+                        loadCities('TR', '34').then(() => {
+                            console.log('loadCities tamamlandı');
+                            
+                            // İlçe listesi yüklendikten sonra müşterinin ilçesini seç
+                            setTimeout(() => {
+                                const ilceSelect = document.getElementById('musteri_ilce');
+                                console.log('İlçe seçimi yapılıyor:', musteri.ilce);
+                                console.log('İlçe dropdown seçenekleri:', Array.from(ilceSelect.options).map(o => o.value + ':' + o.text));
+                                
+                                // Önce değeri set et
+                                ilceSelect.value = musteri.ilce;
+                                console.log('İlçe değeri set edildi:', ilceSelect.value);
+                                
+                                // Eğer seçilmediyse, text ile ara
+                                if (ilceSelect.value !== musteri.ilce) {
+                                    console.log('İlçe değeri eşleşmedi, text ile aranıyor...');
+                                    const options = Array.from(ilceSelect.options);
+                                    const foundOption = options.find(o => o.textContent === musteri.ilce);
+                                    if (foundOption) {
+                                        ilceSelect.value = foundOption.value;
+                                        console.log('İlçe text ile bulundu ve seçildi:', foundOption.value);
+                                    } else {
+                                        console.log('İlçe bulunamadı:', musteri.ilce);
+                                    }
+                                }
+                            }, 1000);
+                        }).catch(error => {
+                            console.error('loadCities hatası:', error);
+                        });
+                    }
+                }, 1000);
+            }
+        }).catch(error => {
+            console.error('loadStates hatası:', error);
+        });
+        
+        // Adres alanından şehir ve ilçe bilgilerini çıkar
+        let sehir = musteri.sehir || '';
+        let ilce = musteri.ilce || '';
+        let adres = musteri.adres || '';
+        
+        // Eğer şehir ve ilçe boşsa ama adres dolu ise, adres alanından çıkar
+        if (!sehir && !ilce && adres) {
+            const adresParts = adres.split(',');
+            if (adresParts.length >= 2) {
+                sehir = adresParts[0].trim();
+                ilce = adresParts[1].trim();
+                adres = adresParts.slice(2).join(',').trim();
             }
         }
         
-        if (musteri.sehir) {
-            // Eyaletler yüklendikten sonra şehri seç
-            setTimeout(() => {
-                document.getElementById('musteri_sehir').value = musteri.sehir;
-                // Şehir değiştiğinde ilçeleri yükle
-                if (musteri.ulke && musteri.sehir) {
-                    loadCities(musteri.ulke, musteri.sehir)
-                        .then(() => {
-                            // İlçeler yüklendikten sonra ilçeyi seç
-                            if (musteri.ilce) {
-                                document.getElementById('musteri_ilce').value = musteri.ilce;
-                            }
-                        })
-                        .catch(error => {
-                            console.error('İlçe yükleme hatası:', error);
-                        });
-                }
-            }, 1000); // Timeout süresini artırdık
-        }
+        // Güncellenmiş değerleri kullan
+        musteri.sehir = sehir;
+        musteri.ilce = ilce;
+        musteri.adres = adres;
         
-        // İlçe bilgisini doğrudan set et (fallback)
-        if (musteri.ilce) {
-            setTimeout(() => {
-                const ilceSelect = document.getElementById('musteri_ilce');
-                if (ilceSelect) {
-                    // İlçe seçenekleri arasında arama yap
-                    for (let i = 0; i < ilceSelect.options.length; i++) {
-                        if (ilceSelect.options[i].value === musteri.ilce || 
-                            ilceSelect.options[i].textContent === musteri.ilce) {
-                            ilceSelect.value = musteri.ilce;
-                            break;
-                        }
-                    }
-                }
-            }, 1500); // Daha uzun timeout
-        }
+        // Ülke seçimi
+        document.getElementById('musteri_ulke').value = 'TR';
+        
+        // Eski seçim mantığı kaldırıldı - yeni mantık yukarıda
         
         if (musteri.adres) {
             document.getElementById('musteri_adres').value = musteri.adres;
@@ -1336,8 +1393,9 @@
         document.getElementById('musteri_cinsiyet').value = '';
         document.getElementById('musteri_kategori').value = '';
         document.getElementById('musteri_ulke').value = 'TR';
-        document.getElementById('musteri_sehir').value = '';
-        document.getElementById('musteri_ilce').value = '';
+        // Şehir ve ilçe alanlarını temizleme - GEÇİCİ OLARAK KAPALI
+        // document.getElementById('musteri_sehir').value = '';
+        // document.getElementById('musteri_ilce').value = '';
         document.getElementById('musteri_adres').value = '';
         document.getElementById('musteri_notlar').value = '';
         
@@ -1514,45 +1572,57 @@
         const stateSelect = document.getElementById('musteri_sehir');
         const citySelect = document.getElementById('musteri_ilce');
         
-        // Ülke değiştiğinde eyaletleri/şehirleri yükle
-        countrySelect.addEventListener('change', function() {
-            const countryIso2 = this.value;
-            
-            // Eyalet/şehir dropdown'larını temizle
-            stateSelect.innerHTML = '<option value="">{{ _("Select State/City") }}</option>';
-            citySelect.innerHTML = '<option value="">{{ _("Select District") }}</option>';
-            
-            if (countryIso2) {
-                loadStates(countryIso2);
-            }
-        });
-        
-        // Eyalet/şehir değiştiğinde ilçeleri yükle
-        stateSelect.addEventListener('change', function() {
-            const countryIso2 = countrySelect.value;
-            const stateIso2 = this.value;
-            
-            // İlçe dropdown'ını temizle
-            citySelect.innerHTML = '<option value="">{{ _("Select District") }}</option>';
-            
-            if (countryIso2 && stateIso2) {
-                loadCities(countryIso2, stateIso2);
-            }
-        });
-        
-        // Sayfa yüklendiğinde Türkiye seçiliyse eyaletleri yükle
-        if (countrySelect.value === 'TR') {
-            loadStates('TR');
+        // Varsayılan olarak Türkiye seçili gelsin - GEÇİCİ OLARAK KAPALI
+        if (countrySelect && !countrySelect.value) {
+            countrySelect.value = 'TR';
+            // loadStates('TR'); // GEÇİCİ OLARAK KAPALI
         }
+        
+        // Ülke değiştiğinde eyaletleri/şehirleri yükle - GEÇİCİ OLARAK KAPALI
+        // countrySelect.addEventListener('change', function() {
+        //     const countryIso2 = this.value;
+        //     
+        //     // Eyalet/şehir dropdown'larını temizle
+        //     stateSelect.innerHTML = '<option value="">{{ _("Select State/City") }}</option>';
+        //     citySelect.innerHTML = '<option value="">{{ _("Select District") }}</option>';
+        //     
+        //     if (countryIso2) {
+        //         loadStates(countryIso2);
+        //     }
+        // });
+        
+        // Eyalet/şehir değiştiğinde ilçeleri yükle - GEÇİCİ OLARAK KAPALI
+        // stateSelect.addEventListener('change', function() {
+        //     const countryIso2 = countrySelect.value;
+        //     const stateIso2 = this.value;
+        //     
+        //     console.log('Şehir değişti event tetiklendi:', stateIso2);
+        //     
+        //     // İlçe dropdown'ını temizle
+        //     citySelect.innerHTML = '<option value="">{{ _("Select District") }}</option>';
+        //     
+        //     if (countryIso2 && stateIso2) {
+        //         loadCities(countryIso2, stateIso2);
+        //     }
+        // });
+        
+        // Sayfa yüklendiğinde Türkiye seçiliyse eyaletleri yükle - GEÇİCİ OLARAK KAPALI
+        // if (countrySelect.value === 'TR') {
+        //     loadStates('TR');
+        // }
     });
     
     // Eyaletleri/şehirleri yükle
     function loadStates(countryIso2) {
         const stateSelect = document.getElementById('musteri_sehir');
         
-        fetch(`/api/states/${countryIso2}`)
+        return fetch(`/api/states/${countryIso2}`)
             .then(response => response.json())
             .then(data => {
+                // Mevcut seçili değeri sakla
+                const currentValue = stateSelect.value;
+                console.log('loadStates: Mevcut şehir değeri saklanıyor:', currentValue);
+                
                 stateSelect.innerHTML = '<option value="">{{ _("Select State/City") }}</option>';
                 
                 data.forEach(state => {
@@ -1562,6 +1632,22 @@
                     stateSelect.appendChild(option);
                 });
 
+                // Saklanan değeri geri yükle
+                if (currentValue) {
+                    setTimeout(() => {
+                        stateSelect.value = currentValue;
+                        console.log('loadStates: Şehir değeri geri yüklendi:', currentValue);
+                        
+                        // Şehir seçimini tekrar kontrol et
+                        setTimeout(() => {
+                            if (stateSelect.value !== currentValue) {
+                                console.log('loadStates: Şehir seçimi tekrar kayboldu, zorla uygulanıyor...');
+                                stateSelect.value = currentValue;
+                            }
+                        }, 200);
+                    }, 100);
+                }
+
                 // Türkiye için İstanbul'u varsayılan seç
                 if (countryIso2 === 'TR') {
                     const options = Array.from(stateSelect.options);
@@ -1569,18 +1655,21 @@
                                        || options.find(o => o.textContent === 'Istanbul');
                     if (istanbulOption) {
                         stateSelect.value = istanbulOption.value;
-                        // İlçeleri otomatik yükle
-                        const countrySelect = document.getElementById('musteri_ulke');
-                        const stateIso2 = stateSelect.value;
-                        if (countrySelect && stateIso2) {
-                            loadCities(countrySelect.value, stateIso2);
-                        }
+                        // İlçeleri otomatik yükle - GEÇİCİ OLARAK KAPALI
+                        // const countrySelect = document.getElementById('musteri_ulke');
+                        // const stateIso2 = stateSelect.value;
+                        // if (countrySelect && stateIso2) {
+                        //     loadCities(countrySelect.value, stateIso2);
+                        // }
                     }
                 }
+                
+                return data; // Promise'i resolve et
             })
             .catch(error => {
                 console.error('Eyalet yükleme hatası:', error);
                 stateSelect.innerHTML = '<option value="">{{ _("Select State/City") }}</option>';
+                return []; // Hata durumunda boş array döndür
             });
     }
     
@@ -1591,14 +1680,54 @@
         return fetch(`/api/cities/${countryIso2}/${stateIso2}`)
             .then(response => response.json())
             .then(data => {
+                // Mevcut seçili değeri sakla - GEÇİCİ OLARAK KAPALI
+                // const currentValue = citySelect.value;
+                // console.log('loadCities: Mevcut ilçe değeri saklanıyor:', currentValue);
+                console.log('loadCities: API\'den gelen veri:', data);
+                console.log('loadCities: Veri tipi:', typeof data, 'Array mi?', Array.isArray(data));
+                
                 citySelect.innerHTML = '<option value="">{{ _("Select District") }}</option>';
                 
-                data.forEach(city => {
-                    const option = document.createElement('option');
-                    option.value = city.name;
-                    option.textContent = city.name;
-                    citySelect.appendChild(option);
-                });
+                if (Array.isArray(data) && data.length > 0) {
+                    console.log('loadCities: İlçe listesi ekleniyor, toplam:', data.length);
+                    data.forEach(city => {
+                        const option = document.createElement('option');
+                        option.value = city.name;
+                        option.textContent = city.name;
+                        citySelect.appendChild(option);
+                    });
+                    console.log('loadCities: İlçe listesi eklendi, dropdown seçenekleri:', Array.from(citySelect.options).map(o => o.value + ':' + o.text));
+                } else {
+                    console.log('loadCities: Veri boş, fallback ilçe listesi ekleniyor');
+                    // İstanbul için fallback ilçe listesi
+                    if (stateIso2 === '34') {
+                        const istanbulIlceleri = [
+                            'Adalar', 'Arnavutköy', 'Ataşehir', 'Avcılar', 'Bağcılar', 'Bahçelievler', 
+                            'Bakırköy', 'Başakşehir', 'Bayrampaşa', 'Beşiktaş', 'Beykoz', 'Beylikdüzü', 
+                            'Beyoğlu', 'Büyükçekmece', 'Çatalca', 'Çekmeköy', 'Esenler', 'Esenyurt', 
+                            'Eyüpsultan', 'Fatih', 'Gaziosmanpaşa', 'Güngören', 'Kadıköy', 'Kağıthane', 
+                            'Kartal', 'Küçükçekmece', 'Maltepe', 'Pendik', 'Sancaktepe', 'Sarıyer', 
+                            'Silivri', 'Sultanbeyli', 'Sultangazi', 'Şile', 'Şişli', 'Tuzla', 
+                            'Ümraniye', 'Üsküdar', 'Zeytinburnu'
+                        ];
+                        
+                        istanbulIlceleri.forEach(ilce => {
+                            const option = document.createElement('option');
+                            option.value = ilce;
+                            option.textContent = ilce;
+                            citySelect.appendChild(option);
+                        });
+                        console.log('loadCities: Fallback ilçe listesi eklendi, toplam:', istanbulIlceleri.length);
+                    }
+                }
+                
+                // Saklanan değeri geri yükle - GEÇİCİ OLARAK KAPALI
+                // if (currentValue) {
+                //     setTimeout(() => {
+                //         citySelect.value = currentValue;
+                //         console.log('loadCities: İlçe değeri geri yüklendi:', currentValue);
+                //     }, 100);
+                // }
                 
                 return data; // Promise'i resolve et
             })

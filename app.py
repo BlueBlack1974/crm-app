@@ -1641,7 +1641,6 @@ def api_countries():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/states/<country_iso2>')
-@login_required
 def api_states(country_iso2):
     """Belirli bir ülkenin eyaletlerini/şehirlerini getir"""
     try:
@@ -1652,7 +1651,6 @@ def api_states(country_iso2):
 
 @app.route('/api/cities/<country_iso2>')
 @app.route('/api/cities/<country_iso2>/<state_iso2>')
-@login_required
 def api_cities(country_iso2, state_iso2=None):
     """Belirli bir ülke/eyaletin şehirlerini getir"""
     try:
@@ -6825,6 +6823,8 @@ def api_musteri_ara():
             'ilce': musteri.Ilce or '',
             'adres': musteri.Adres or '',
             'notlar': musteri.Notlar or '',
+            'dogum_tarihi': musteri.DogumTarihi.strftime('%Y-%m-%d') if musteri.DogumTarihi else '',
+            'yas': musteri.Yas or '',
             'kategori': musteri.kategori.KategoriAdi if musteri.kategori else 'Kategori Yok',
             'kategori_id': musteri.kategori.KategoriID if musteri.kategori else None,
             'kategori_rengi': musteri.kategori.Renk if musteri.kategori else '#6c757d'
