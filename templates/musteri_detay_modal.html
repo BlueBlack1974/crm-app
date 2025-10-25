@@ -11,6 +11,9 @@
                 <p class="text-muted mb-0">{{ _('Detailed analysis for') }} {{ musteri.MusteriAdi }} {{ musteri.MusteriSoyadi }}</p>
             </div>
             <div class="d-flex gap-2">
+                <button type="button" class="btn btn-primary btn-sm" onclick="editCustomer({{ musteri.MusteriID }})">
+                    <i class="fas fa-edit me-1"></i> {{ _('Edit Customer') }}
+                </button>
                 <a href="{{ url_for('musteri_detay_pdf', musteri_id=musteri.MusteriID) }}" class="btn btn-danger btn-sm">
                     <i class="fas fa-file-pdf me-1"></i> {{ _('PDF Report') }}
                 </a>
@@ -220,3 +223,4 @@
         </div>
     </div>
 </div>
+

@@ -23,7 +23,7 @@ import time
 from collections import Counter, defaultdict
 from io import BytesIO, StringIO
 import csv
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -4828,7 +4828,7 @@ def randevu_ekle():
                 return redirect(url_for('randevu_ekle'))
 
         # 2) Bloklarla çakışma
-        from sqlalchemy import or_
+        from sqlalchemy import or_, and_
         gun = randevu_dt.date()
         bloklar = db.session.query(RandevuDefterBlok).filter(
             RandevuDefterBlok.FirmaID == session['firma_id'],
@@ -5907,7 +5907,7 @@ def api_slots():
     end_dt = datetime(target_date.year, target_date.month, target_date.day, eh, em)
 
     # Bloklar (kapatilan araliklar)
-    from sqlalchemy import or_, and_
+    from sqlalchemy import or_, and_, and_
     bloklar = db.session.query(RandevuDefterBlok).filter(
         RandevuDefterBlok.FirmaID == firma_id,
         RandevuDefterBlok.Aktif == True,
@@ -6056,7 +6056,7 @@ def api_slot_check():
                 }), 200
         
         # Blok kontrolü
-        from sqlalchemy import or_
+        from sqlalchemy import or_, and_
         gun = randevu_dt.date()
         bloklar = db.session.query(RandevuDefterBlok).filter(
             RandevuDefterBlok.FirmaID == session['firma_id'],
@@ -6832,6 +6832,174 @@ def api_musteri_ara():
     
     return jsonify(sonuc)
 
+# ==================== MÜŞTERİ DÜZENLEME API ====================
+
+@app.route('/api/musteri/<int:musteri_id>')
+def api_musteri_get(musteri_id):
+    """Müşteri bilgilerini getir"""
+    try:
+        # Manuel session kontrolü - daha esnek
+        # user_id kullan, kullanici_id değil
+        kullanici_id = session.get('user_id')
+        if not kullanici_id or not session.get('firma_id'):
+            return jsonify({'success': False, 'message': 'Oturum süresi dolmuş. Lütfen tekrar giriş yapın.', 'redirect': '/login'}), 401
+        
+        firma_id = session.get('firma_id')
+        
+        # Müşteriyi bul
+        musteri = Musteri.query.filter(
+            Musteri.MusteriID == musteri_id,
+            Musteri.FirmaID == firma_id,
+            Musteri.Aktif == True
+        ).first()
+        
+        if not musteri:
+            return jsonify({'success': False, 'message': 'Müşteri bulunamadı'}), 404
+        
+        # Müşteri bilgilerini döndür
+        return jsonify({
+            'success': True,
+            'musteri': {
+                'MusteriID': musteri.MusteriID,
+                'MusteriAdi': musteri.MusteriAdi,
+                'MusteriSoyadi': musteri.MusteriSoyadi,
+                'Telefon': musteri.Telefon,
+                'Email': musteri.Email,
+                'Yas': musteri.Yas,
+                'Cinsiyet': musteri.Cinsiyet,
+                'DogumTarihi': musteri.DogumTarihi.isoformat() if musteri.DogumTarihi else None,
+                'Sehir': musteri.Sehir,
+                'Ilce': musteri.Ilce,
+                'Adres': musteri.Adres,
+                'Notlar': musteri.Notlar
+            }
+        })
+        
+    except Exception as e:
+        print(f"Müşteri getirme hatası: {e}")
+        return jsonify({'success': False, 'message': 'Sunucu hatası'}), 500
+
+@app.route('/api/musteri/<int:musteri_id>/update', methods=['POST'])
+def api_musteri_update(musteri_id):
+    """Müşteri bilgilerini güncelle"""
+    try:
+        # Manuel session kontrolü - daha esnek
+        # user_id kullan, kullanici_id değil
+        kullanici_id = session.get('user_id')
+        if not kullanici_id or not session.get('firma_id'):
+            return jsonify({'success': False, 'message': 'Oturum süresi dolmuş. Lütfen tekrar giriş yapın.', 'redirect': '/login'}), 401
+        
+        firma_id = session.get('firma_id')
+        kullanici_id = session.get('user_id')
+        
+        # Müşteriyi bul
+        musteri = Musteri.query.filter(
+            Musteri.MusteriID == musteri_id,
+            Musteri.FirmaID == firma_id,
+            Musteri.Aktif == True
+        ).first()
+        
+        if not musteri:
+            return jsonify({'success': False, 'message': 'Müşteri bulunamadı'}), 404
+        
+        # Form verilerini al
+        data = request.get_json()
+        
+        # Eski verileri kaydet (log için)
+        old_data = {
+            'MusteriAdi': musteri.MusteriAdi,
+            'MusteriSoyadi': musteri.MusteriSoyadi,
+            'Telefon': musteri.Telefon,
+            'Email': musteri.Email,
+            'Yas': musteri.Yas,
+            'Cinsiyet': musteri.Cinsiyet,
+            'DogumTarihi': musteri.DogumTarihi.isoformat() if musteri.DogumTarihi else None,
+            'Sehir': musteri.Sehir,
+            'Ilce': musteri.Ilce,
+            'Adres': musteri.Adres,
+            'Notlar': musteri.Notlar
+        }
+        
+        # Validasyon
+        if not data.get('musteri_adi') or not data.get('musteri_soyadi'):
+            return jsonify({'success': False, 'message': 'Ad ve soyad zorunludur'}), 400
+        
+        # Telefon validasyonu
+        if data.get('telefon'):
+            phone = str(data['telefon']).strip()
+            if phone:
+                # Sıfırları temizle
+                if phone.startswith('0'):
+                    phone = phone[1:]
+                if len(phone) == 10 and phone.startswith('5'):
+                    data['telefon'] = phone
+                else:
+                    return jsonify({'success': False, 'message': 'Geçersiz telefon numarası formatı'}), 400
+        
+        # Müşteri bilgilerini güncelle
+        musteri.MusteriAdi = data.get('musteri_adi', '').strip()
+        musteri.MusteriSoyadi = data.get('musteri_soyadi', '').strip()
+        musteri.Telefon = data.get('telefon', '').strip() or None
+        musteri.Email = data.get('email', '').strip() or None
+        musteri.Yas = data.get('yas') or None
+        musteri.Cinsiyet = data.get('cinsiyet', '').strip() or None
+        musteri.Sehir = data.get('sehir', '').strip() or None
+        musteri.Ilce = data.get('ilce', '').strip() or None
+        musteri.Adres = data.get('adres', '').strip() or None
+        musteri.Notlar = data.get('notlar', '').strip() or None
+        
+        # Doğum tarihi
+        if data.get('dogum_tarihi'):
+            try:
+                musteri.DogumTarihi = datetime.strptime(data['dogum_tarihi'], '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({'success': False, 'message': 'Geçersiz doğum tarihi formatı'}), 400
+        else:
+            musteri.DogumTarihi = None
+        
+        # Veritabanına kaydet
+        db.session.commit()
+        
+        # Log kaydı
+        new_data = {
+            'MusteriAdi': musteri.MusteriAdi,
+            'MusteriSoyadi': musteri.MusteriSoyadi,
+            'Telefon': musteri.Telefon,
+            'Email': musteri.Email,
+            'Yas': musteri.Yas,
+            'Cinsiyet': musteri.Cinsiyet,
+            'DogumTarihi': musteri.DogumTarihi.isoformat() if musteri.DogumTarihi else None,
+            'Sehir': musteri.Sehir,
+            'Ilce': musteri.Ilce,
+            'Adres': musteri.Adres,
+            'Notlar': musteri.Notlar
+        }
+        
+        # Log kaydı oluştur
+        log_entry = KullaniciLog(
+            KullaniciID=session['user_id'],
+            IslemTipi='UPDATE',
+            TabloAdi='Musteri',
+            KayitID=musteri_id,
+            IPAdresi=request.remote_addr,
+            EskiVeri=json.dumps(old_data, ensure_ascii=False),
+            YeniVeri=json.dumps(new_data, ensure_ascii=False),
+            IslemDetayi=f'Müşteri güncellendi: {musteri.MusteriAdi} {musteri.MusteriSoyadi}',
+            OlusturmaTarihi=datetime.utcnow()
+        )
+        db.session.add(log_entry)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Müşteri başarıyla güncellendi'
+        })
+        
+    except Exception as e:
+        print(f"Müşteri güncelleme hatası: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Sunucu hatası'}), 500
+
 # ==================== EXCEL İMPORT SİSTEMİ ====================
 
 # Upload klasörü
@@ -7400,7 +7568,22 @@ def musteri_import_process():
                             KullaniciID=session['user_id'],
                             IslemTipi='musteri_excel_import_update',
                             TabloAdi='Musteri',
-                            IslemDetayi=f'Excel import ile müşteri güncellendi: {row_data.get("MusteriAdi")} {row_data.get("MusteriSoyadi")} (Telefon: {row_data.get("Telefon")})'
+                            KayitID=existing.MusteriID,
+                            EskiVeri=json.dumps({
+                                'MusteriAdi': existing.MusteriAdi,
+                                'MusteriSoyadi': existing.MusteriSoyadi,
+                                'Telefon': existing.Telefon,
+                                'Email': existing.Email
+                            }, ensure_ascii=False),
+                            YeniVeri=json.dumps({
+                                'MusteriAdi': row_data.get('MusteriAdi'),
+                                'MusteriSoyadi': row_data.get('MusteriSoyadi'),
+                                'Telefon': row_data.get('Telefon'),
+                                'Email': row_data.get('Email')
+                            }, ensure_ascii=False),
+                            IslemDetayi=f'Excel import ile müşteri güncellendi: {row_data.get("MusteriAdi")} {row_data.get("MusteriSoyadi")} (Telefon: {row_data.get("Telefon")})',
+                            IPAdresi=get_client_ip(),
+                            UserAgent=request.headers.get('User-Agent', '')
                         )
                         db.session.add(update_log)
                         db.session.commit()
@@ -7443,7 +7626,20 @@ def musteri_import_process():
                     KullaniciID=session['user_id'],
                     IslemTipi='musteri_excel_import_add',
                     TabloAdi='Musteri',
-                    IslemDetayi=f'Excel import ile müşteri eklendi: {row_data.get("MusteriAdi")} {row_data.get("MusteriSoyadi")} (Telefon: {row_data.get("Telefon")})'
+                    KayitID=yeni_musteri.MusteriID,
+                    YeniVeri=json.dumps({
+                        'MusteriAdi': row_data.get('MusteriAdi'),
+                        'MusteriSoyadi': row_data.get('MusteriSoyadi'),
+                        'Telefon': row_data.get('Telefon'),
+                        'Email': row_data.get('Email'),
+                        'Cinsiyet': row_data.get('Cinsiyet'),
+                        'DogumTarihi': row_data.get('DogumTarihi'),
+                        'Adres': row_data.get('Adres'),
+                        'Notlar': row_data.get('Notlar')
+                    }, ensure_ascii=False),
+                    IslemDetayi=f'Excel import ile müşteri eklendi: {row_data.get("MusteriAdi")} {row_data.get("MusteriSoyadi")} (Telefon: {row_data.get("Telefon")})',
+                    IPAdresi=get_client_ip(),
+                    UserAgent=request.headers.get('User-Agent', '')
                 )
                 db.session.add(musteri_log)
                 db.session.commit()
@@ -7470,7 +7666,9 @@ def musteri_import_process():
             KullaniciID=session['user_id'],
             IslemTipi='musteri_excel_import_summary',
             TabloAdi='Musteri',
-            IslemDetayi=log_mesaj
+            IslemDetayi=log_mesaj,
+            IPAdresi=get_client_ip(),
+            UserAgent=request.headers.get('User-Agent', '')
         )
         db.session.add(yeni_log)
         db.session.commit()

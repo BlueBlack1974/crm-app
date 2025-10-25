@@ -481,9 +481,8 @@ msgid "Send Reset Link"
 msgstr "Sıfırlama Bağlantısı Gönder"
 
 #: templates/loglar.html:3
-#, fuzzy
 msgid "User Logs"
-msgstr "Kullanıcılar"
+msgstr "Kullanıcı Logları"
 
 #: templates/loglar.html:37
 msgid "User Activity Logs"
@@ -597,14 +596,12 @@ msgid "Data"
 msgstr "Veri"
 
 #: templates/loglar.html:198
-#, fuzzy
 msgid "Previous"
-msgstr "Önizleme"
+msgstr "Önceki"
 
 #: templates/loglar.html:210
-#, fuzzy
 msgid "Next"
-msgstr "Dışa Aktar"
+msgstr "Sonraki"
 
 #: templates/loglar.html:220
 msgid "No logs found"
@@ -745,6 +742,38 @@ msgstr "Veri Yok"
 
 msgid "Appointments"
 msgstr "Randevular"
+
+# Excel Import Log Operations
+msgid "musteri_excel_import_summary"
+msgstr "Excel İçe Aktarım Özeti"
+
+msgid "musteri_excel_import_add"
+msgstr "Excel İçe Aktarım Ekleme"
+
+msgid "musteri_excel_import_update"
+msgstr "Excel İçe Aktarım Güncelleme"
+
+# Log Operation Types
+msgid "CREATE"
+msgstr "Oluştur"
+
+msgid "UPDATE"
+msgstr "Güncelle"
+
+msgid "DELETE"
+msgstr "Sil"
+
+msgid "VIEW"
+msgstr "Görüntüle"
+
+msgid "CANCEL"
+msgstr "İptal"
+
+msgid "LOGIN"
+msgstr "Giriş"
+
+msgid "LOGOUT"
+msgstr "Çıkış"
 
 #: templates/musteri_detay_modal.html:152
 #: templates/musteri_detay_raporu.html:148
@@ -3022,3 +3051,24 @@ msgstr "Adres"
 msgid "Notes"
 msgstr "Notlar"
 
+
+msgid "Edit Customer"
+msgstr "Müşteri Düzenle"
+
+msgid "Save Changes"
+msgstr "Değişiklikleri Kaydet"
+
+msgid "Select Gender"
+msgstr "Cinsiyet Seçin"
+
+msgid "Error loading customer data"
+msgstr "Müşteri verileri yüklenirken hata"
+
+msgid "Customer ID not found"
+msgstr "Müşteri ID bulunamadı"
+
+msgid "Customer updated successfully"
+msgstr "Müşteri başarıyla güncellendi"
+
+msgid "Error updating customer"
+msgstr "Müşteri güncellenirken hata"

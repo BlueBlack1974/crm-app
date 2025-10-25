@@ -770,6 +770,38 @@ msgstr "Keine Daten"
 msgid "Appointments"
 msgstr "Termine"
 
+# Excel Import Log Operations
+msgid "musteri_excel_import_summary"
+msgstr "Excel-Import Zusammenfassung"
+
+msgid "musteri_excel_import_add"
+msgstr "Excel-Import Hinzufügung"
+
+msgid "musteri_excel_import_update"
+msgstr "Excel-Import Aktualisierung"
+
+# Log Operation Types
+msgid "CREATE"
+msgstr "Erstellen"
+
+msgid "UPDATE"
+msgstr "Aktualisieren"
+
+msgid "DELETE"
+msgstr "Löschen"
+
+msgid "VIEW"
+msgstr "Anzeigen"
+
+msgid "CANCEL"
+msgstr "Abbrechen"
+
+msgid "LOGIN"
+msgstr "Anmelden"
+
+msgid "LOGOUT"
+msgstr "Abmelden"
+
 #: templates/musteri_detay_modal.html:152
 #: templates/musteri_detay_raporu.html:148
 msgid "Monthly Appointment Distribution"
@@ -3253,3 +3285,24 @@ msgstr "Adresse"
 msgid "Notes"
 msgstr "Notizen"
 
+
+msgid "Edit Customer"
+msgstr "Kunde Bearbeiten"
+
+msgid "Save Changes"
+msgstr "Änderungen Speichern"
+
+msgid "Select Gender"
+msgstr "Geschlecht Auswählen"
+
+msgid "Error loading customer data"
+msgstr "Fehler beim Laden der Kundendaten"
+
+msgid "Customer ID not found"
+msgstr "Kunden-ID nicht gefunden"
+
+msgid "Customer updated successfully"
+msgstr "Kunde erfolgreich aktualisiert"
+
+msgid "Error updating customer"
+msgstr "Fehler beim Aktualisieren des Kunden"

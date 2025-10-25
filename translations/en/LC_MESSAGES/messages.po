@@ -3003,6 +3003,38 @@ msgstr "No Data"
 msgid "Appointments"
 msgstr "Appointments"
 
+# Excel Import Log Operations
+msgid "musteri_excel_import_summary"
+msgstr "Excel Import Summary"
+
+msgid "musteri_excel_import_add"
+msgstr "Excel Import Addition"
+
+msgid "musteri_excel_import_update"
+msgstr "Excel Import Update"
+
+# Log Operation Types
+msgid "CREATE"
+msgstr "Create"
+
+msgid "UPDATE"
+msgstr "Update"
+
+msgid "DELETE"
+msgstr "Delete"
+
+msgid "VIEW"
+msgstr "View"
+
+msgid "CANCEL"
+msgstr "Cancel"
+
+msgid "LOGIN"
+msgstr "Login"
+
+msgid "LOGOUT"
+msgstr "Logout"
+
 msgid "An error occurred during import"
 msgstr "An error occurred during import"
 
@@ -3033,3 +3065,24 @@ msgstr "Address"
 msgid "Notes"
 msgstr "Notes"
 
+
+msgid "Edit Customer"
+msgstr "Edit Customer"
+
+msgid "Save Changes"
+msgstr "Save Changes"
+
+msgid "Select Gender"
+msgstr "Select Gender"
+
+msgid "Error loading customer data"
+msgstr "Error loading customer data"
+
+msgid "Customer ID not found"
+msgstr "Customer ID not found"
+
+msgid "Customer updated successfully"
+msgstr "Customer updated successfully"
+
+msgid "Error updating customer"
+msgstr "Error updating customer"

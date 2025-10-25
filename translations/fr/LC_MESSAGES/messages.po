@@ -594,7 +594,6 @@ msgid "Data"
 msgstr "Données"
 
 #: templates/loglar.html:198
-#, fuzzy
 msgid "Previous"
 msgstr "Précédent"
 
@@ -603,9 +602,8 @@ msgid "Next"
 msgstr "Suivant"
 
 #: templates/loglar.html:220
-#, fuzzy
 msgid "No logs found"
-msgstr "Aucune opération trouvée."
+msgstr "Aucun log trouvé"
 
 #: templates/loglar.html:221
 msgid "Try adjusting your filters"
@@ -616,12 +614,10 @@ msgid "Log Data"
 msgstr "Données de Journal"
 
 #: templates/loglar.html:252
-#, fuzzy
 msgid "Old Data"
 msgstr "Anciennes Données"
 
 #: templates/loglar.html:256
-#, fuzzy
 msgid "New Data"
 msgstr "Nouvelles Données"
 
@@ -744,6 +740,38 @@ msgstr "Aucune Donnée"
 
 msgid "Appointments"
 msgstr "Rendez-vous"
+
+# Excel Import Log Operations
+msgid "musteri_excel_import_summary"
+msgstr "Résumé d'Import Excel"
+
+msgid "musteri_excel_import_add"
+msgstr "Ajout par Import Excel"
+
+msgid "musteri_excel_import_update"
+msgstr "Mise à jour par Import Excel"
+
+# Log Operation Types
+msgid "CREATE"
+msgstr "Créer"
+
+msgid "UPDATE"
+msgstr "Mettre à jour"
+
+msgid "DELETE"
+msgstr "Supprimer"
+
+msgid "VIEW"
+msgstr "Voir"
+
+msgid "CANCEL"
+msgstr "Annuler"
+
+msgid "LOGIN"
+msgstr "Connexion"
+
+msgid "LOGOUT"
+msgstr "Déconnexion"
 
 #: templates/musteri_detay_modal.html:152
 #: templates/musteri_detay_raporu.html:148
@@ -3103,3 +3131,24 @@ msgstr "Adresse"
 msgid "Notes"
 msgstr "Notes"
 
+
+msgid "Edit Customer"
+msgstr "Modifier le Client"
+
+msgid "Save Changes"
+msgstr "Enregistrer les Modifications"
+
+msgid "Select Gender"
+msgstr "Sélectionner le Sexe"
+
+msgid "Error loading customer data"
+msgstr "Erreur lors du chargement des données client"
+
+msgid "Customer ID not found"
+msgstr "ID client introuvable"
+
+msgid "Customer updated successfully"
+msgstr "Client mis à jour avec succès"
+
+msgid "Error updating customer"
+msgstr "Erreur lors de la mise à jour du client"

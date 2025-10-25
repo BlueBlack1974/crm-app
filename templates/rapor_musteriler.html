@@ -1308,7 +1308,342 @@ function exportReport(format) {
     params.set('format', format);
     window.location.href = '{{ url_for("rapor_musteriler") }}?' + params.toString();
 }
+
+// Müşteri düzenleme fonksiyonları
+function editCustomer(musteriId) {
+    console.log('Müşteri düzenleme başlatılıyor:', musteriId);
+    
+    // Müşteri bilgilerini getir
+    fetch(`/api/musteri/${musteriId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Müşteri ID'sini set et
+                document.getElementById('edit_musteri_id').value = musteriId;
+                
+                // Form alanlarını doldur ve aktif hale getir
+                // Adres alanından şehir ve ilçe bilgilerini çıkar
+                let sehir = data.musteri.Sehir || '';
+                let ilce = data.musteri.Ilce || '';
+                let adres = data.musteri.Adres || '';
+                
+                // Eğer şehir ve ilçe boşsa ama adres dolu ise, adres alanından çıkar
+                if (!sehir && !ilce && adres) {
+                    const adresParts = adres.split(',');
+                    if (adresParts.length >= 2) {
+                        sehir = adresParts[0].trim();
+                        ilce = adresParts[1].trim();
+                        // Adres alanından şehir ve ilçe bilgilerini çıkar
+                        adres = adresParts.slice(2).join(',').trim();
+                    }
+                }
+                
+                const fields = {
+                    'edit_musteri_adi': data.musteri.MusteriAdi || '',
+                    'edit_musteri_soyadi': data.musteri.MusteriSoyadi || '',
+                    'edit_telefon': data.musteri.Telefon || '',
+                    'edit_email': data.musteri.Email || '',
+                    'edit_yas': data.musteri.Yas || '',
+                    'edit_cinsiyet': data.musteri.Cinsiyet || '',
+                    'edit_dogum_tarihi': data.musteri.DogumTarihi ? data.musteri.DogumTarihi.split('T')[0] : '',
+                    'edit_il': sehir,
+                    'edit_ilce': ilce,
+                    'edit_adres': adres,
+                    'edit_notlar': data.musteri.Notlar || ''
+                };
+                
+                // Tüm alanları doldur ve aktif hale getir
+                Object.keys(fields).forEach(fieldId => {
+                    const element = document.getElementById(fieldId);
+                    if (element) {
+                        // Önce tüm kısıtlamaları kaldır
+                        element.removeAttribute('disabled');
+                        element.removeAttribute('readonly');
+                        element.disabled = false;
+                        element.readOnly = false;
+                        
+                        // Değeri set et
+                        element.value = fields[fieldId];
+                        
+                        // CSS sınıflarını kontrol et
+                        element.classList.remove('disabled');
+                        element.style.pointerEvents = 'auto';
+                        element.style.opacity = '1';
+                        
+                    }
+                });
+                
+                // Modalı göster
+                const modal = new bootstrap.Modal(document.getElementById('editCustomerModal'));
+                modal.show();
+                
+                // Modal tamamen açıldıktan sonra alanları tekrar aktif hale getir
+                setTimeout(() => {
+                    Object.keys(fields).forEach(fieldId => {
+                        const element = document.getElementById(fieldId);
+                        if (element) {
+                            // Tüm kısıtlamaları kaldır
+                            element.removeAttribute('disabled');
+                            element.removeAttribute('readonly');
+                            element.removeAttribute('tabindex');
+                            element.disabled = false;
+                            element.readOnly = false;
+                            
+                            // CSS stillerini sıfırla
+                            element.style.pointerEvents = 'auto';
+                            element.style.opacity = '1';
+                            element.style.cursor = 'text';
+                            element.style.backgroundColor = '#fff';
+                            element.style.color = '#000';
+                            
+                            // Bootstrap sınıflarını kaldır
+                            element.classList.remove('disabled', 'form-control-plaintext');
+                            element.classList.add('form-control');
+                            
+                            // Focus edilebilir hale getir
+                            element.tabIndex = 0;
+                            
+                        }
+                    });
+                    
+                    // Modal backdrop'u kontrol et
+                    const modalBackdrop = document.querySelector('.modal-backdrop');
+                    if (modalBackdrop) {
+                        modalBackdrop.style.pointerEvents = 'none';
+                    }
+                    
+                    // Modal dialog'u kontrol et
+                    const modalDialog = document.querySelector('#editCustomerModal .modal-dialog');
+                    if (modalDialog) {
+                        modalDialog.style.pointerEvents = 'auto';
+                    }
+                    
+                    // Doğum tarihi event listener'ını ekle
+                    const dogumTarihiElement = document.getElementById('edit_dogum_tarihi');
+                    if (dogumTarihiElement) {
+                        // Mevcut event listener'ları temizle
+                        dogumTarihiElement.removeEventListener('change', calculateAge);
+                        
+                        // Yeni event listener ekle
+                        dogumTarihiElement.addEventListener('change', calculateAge);
+                        
+                        // Eğer doğum tarihi zaten dolu ise yaşı hesapla
+                        if (dogumTarihiElement.value) {
+                            calculateAge();
+                        }
+                    }
+                    
+                }, 1000);
+                
+            } else {
+                if (data.redirect) {
+                    alert('Session süresi dolmuş. Sayfa yenileniyor...');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    alert('{{ _("Error loading customer data") }}');
+                }
+            }
+        })
+        .catch(error => {
+            alert('{{ _("Error loading customer data") }}');
+        });
+}
+
+// Yaş hesaplama fonksiyonu
+function calculateAge() {
+    const dogumTarihiElement = document.getElementById('edit_dogum_tarihi');
+    const yasElement = document.getElementById('edit_yas');
+    
+    if (dogumTarihiElement && yasElement && dogumTarihiElement.value) {
+        const dogumTarihi = dogumTarihiElement.value;
+        const today = new Date();
+        const birthDate = new Date(dogumTarihi);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        
+        // Ay kontrolü
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        
+        yasElement.value = age;
+    }
+}
+
+// Doğum tarihi değiştiğinde yaşı hesapla
+document.addEventListener('DOMContentLoaded', function() {
+    // Doğum tarihi event listener'ı
+    const dogumTarihiElement = document.getElementById('edit_dogum_tarihi');
+    if (dogumTarihiElement) {
+        dogumTarihiElement.addEventListener('change', calculateAge);
+    }
+});
+
+// Form submit handler
+document.addEventListener('DOMContentLoaded', function() {
+    const editForm = document.getElementById('editCustomerForm');
+    if (editForm) {
+        editForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(editForm);
+            const data = Object.fromEntries(formData);
+            
+            // Müşteri ID'yi formdan al (hidden input olarak eklenmeli)
+            const musteriId = document.getElementById('edit_musteri_id')?.value;
+            if (!musteriId) {
+                alert('{{ _("Customer ID not found") }}');
+                return;
+            }
+            
+            // API'ye gönder
+            fetch(`/api/musteri/${musteriId}/update`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    // Başarılı mesajı göster
+                    alert('{{ _("Customer updated successfully") }}');
+                    
+                    // Modalı kapat
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editCustomerModal'));
+                    modal.hide();
+                    
+                    // Sayfayı yenile
+                    location.reload();
+                } else {
+                    if (result.redirect) {
+                        alert(result.message + ' Sayfa yenileniyor...');
+                        location.reload();
+                    } else {
+                        alert(result.message || '{{ _("Error updating customer") }}');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('{{ _("Error updating customer") }}');
+            });
+        });
+    }
+});
 </script>
+
+<!-- Müşteri Düzenleme Modalı -->
+<div class="modal fade" id="editCustomerModal" tabindex="-1" aria-labelledby="editCustomerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editCustomerModalLabel">
+                    <i class="fas fa-edit me-2"></i>{{ _('Edit Customer') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editCustomerForm">
+                <input type="hidden" id="edit_musteri_id" name="musteri_id">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_musteri_adi" class="form-label">{{ _('First Name') }} <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="edit_musteri_adi" name="musteri_adi" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_musteri_soyadi" class="form-label">{{ _('Last Name') }} <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="edit_musteri_soyadi" name="musteri_soyadi" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_telefon" class="form-label">{{ _('Phone') }}</label>
+                                <input type="tel" class="form-control" id="edit_telefon" name="telefon" placeholder="5XXXXXXXXX">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_email" class="form-label">{{ _('Email') }}</label>
+                                <input type="email" class="form-control" id="edit_email" name="email">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="edit_yas" class="form-label">{{ _('Age') }}</label>
+                                <input type="number" class="form-control" id="edit_yas" name="yas" min="0" max="120">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="edit_cinsiyet" class="form-label">{{ _('Gender') }}</label>
+                                <select class="form-select" id="edit_cinsiyet" name="cinsiyet">
+                                    <option value="">{{ _('Select Gender') }}</option>
+                                    <option value="Erkek">{{ _('Male') }}</option>
+                                    <option value="Kadın">{{ _('Female') }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="edit_dogum_tarihi" class="form-label">{{ _('Birth Date') }}</label>
+                                <input type="date" class="form-control" id="edit_dogum_tarihi" name="dogum_tarihi">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_il" class="form-label">{{ _('City') }}</label>
+                                <select class="form-select" id="edit_il" name="sehir">
+                                    <option value="">{{ _('Select City') }}</option>
+                                    {% for sehir in sehir_listesi %}
+                                    <option value="{{ sehir }}">{{ sehir }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_ilce" class="form-label">{{ _('District') }}</label>
+                                <input type="text" class="form-control" id="edit_ilce" name="ilce">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit_adres" class="form-label">{{ _('Address') }}</label>
+                        <textarea class="form-control" id="edit_adres" name="adres" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit_notlar" class="form-label">{{ _('Notes') }}</label>
+                        <textarea class="form-control" id="edit_notlar" name="notlar" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>{{ _('Save Changes') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
  
 {% endblock %}
 
