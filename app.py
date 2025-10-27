@@ -3,6 +3,10 @@ Crandyx CRM - Ana Dosya
 Randevu Defteri ve Kullanici Yonetimi
 """
 
+# Python 3.13 timezone fix
+import os
+os.environ.setdefault('PYTHONTZPATH', '')
+
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_babel import Babel, gettext, ngettext, get_locale
@@ -351,7 +355,7 @@ def login_required(f):
                                     mevcut_kayit.SessionToken = session_token
                                     mevcut_kayit.ClientIP = get_client_ip()
                                     mevcut_kayit.UserAgent = request.headers.get('User-Agent', '')
-                                    mevcut_kayit.SonGorulmeZamani = datetime.utcnow()
+                                    mevcut_kayit.SonGorulmeZamani = datetime.now()
                                     try:
                                         db.session.commit()
                                     except Exception as commit_error:
@@ -364,7 +368,7 @@ def login_required(f):
                             if mevcut_kayit.ClientIP == get_client_ip() and mevcut_kayit.UserAgent == request.headers.get('User-Agent', ''):
                                 # Aynı cihaz, token'ı güncelle
                                 mevcut_kayit.SessionToken = session_token
-                                mevcut_kayit.SonGorulmeZamani = datetime.utcnow()
+                                mevcut_kayit.SonGorulmeZamani = datetime.now()
                                 try:
                                     db.session.commit()
                                 except:
@@ -476,8 +480,8 @@ class Firma(db.Model):
     Telefon = db.Column(db.NVARCHAR(20))
     Email = db.Column(db.NVARCHAR(100))
     Aktif = db.Column(db.Boolean, default=True)
-    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
-    GuncellemeTarihi = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
+    GuncellemeTarihi = db.Column(db.DateTime, default=lambda: datetime.now(), onupdate=lambda: datetime.now())
     
     def __repr__(self):
         return f'<Firma {self.FirmaAdi}>'
@@ -498,8 +502,8 @@ class Kullanici(db.Model):
     RaporlarModulu = db.Column(db.Boolean, default=True)  # Raporlar modülüne erişim
     AyarlarModulu = db.Column(db.Boolean, default=False)  # Ayarlar modülüne erişim
     LogModulu = db.Column(db.Boolean, default=False)      # Log modülüne erişim
-    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
-    GuncellemeTarihi = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
+    GuncellemeTarihi = db.Column(db.DateTime, default=lambda: datetime.now(), onupdate=lambda: datetime.now())
     
     # İlişkiler
     firma = db.relationship('Firma', backref='kullanicilar')
@@ -514,8 +518,8 @@ class AktifOturum(db.Model):
     AktifOturumID = db.Column(db.Integer, primary_key=True)
     KullaniciID = db.Column(db.Integer, db.ForeignKey('Kullanicilar.KullaniciID'), nullable=False, unique=True)
     SessionToken = db.Column(db.String(64), nullable=False)
-    GirisZamani = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    SonGorulmeZamani = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    GirisZamani = db.Column(db.DateTime, default=lambda: datetime.now(), nullable=False)
+    SonGorulmeZamani = db.Column(db.DateTime, default=lambda: datetime.now(), onupdate=lambda: datetime.now(), nullable=False)
     ClientIP = db.Column(db.String(64))
     UserAgent = db.Column(db.String(255))
 
@@ -537,7 +541,7 @@ class KullaniciLog(db.Model):
     IslemDetayi = db.Column(db.NVARCHAR(500))               # İnsan okunabilir açıklama
     IPAdresi = db.Column(db.NVARCHAR(45))
     UserAgent = db.Column(db.NVARCHAR(500))
-    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now(), nullable=False)
 
     kullanici = db.relationship('Kullanici', backref='loglar')
 
@@ -562,7 +566,7 @@ class KullaniciYetki(db.Model):
     KullaniciID = db.Column(db.Integer, db.ForeignKey('Kullanicilar.KullaniciID'), nullable=False)
     YetkiID = db.Column(db.Integer, db.ForeignKey('YetkiTipleri.YetkiID'), nullable=False)
     Aktif = db.Column(db.Boolean, default=True)
-    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
     
     # İlişkiler
     kullanici = db.relationship('Kullanici', backref='kullanici_yetkileri')
@@ -591,8 +595,8 @@ class Randevu(db.Model):
     OlusturanKullaniciID = db.Column(db.Integer, db.ForeignKey('Kullanicilar.KullaniciID'), nullable=False)
     FirmaID = db.Column(db.Integer, db.ForeignKey('Firmalar.FirmaID'), nullable=False)
     DefterID = db.Column(db.Integer, db.ForeignKey('RandevuDefterAyarlar.AyarID'), nullable=True)
-    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
-    GuncellemeTarihi = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
+    GuncellemeTarihi = db.Column(db.DateTime, default=lambda: datetime.now(), onupdate=lambda: datetime.now())
     
     # İlişkiler
     olusturan_kullanici = db.relationship('Kullanici', backref='olusturulan_randevular')
@@ -616,7 +620,7 @@ class RandevuYetki(db.Model):
     GoruntulemeYetkisi = db.Column(db.Boolean, default=True)
     DuzenlemeYetkisi = db.Column(db.Boolean, default=False)
     SilmeYetkisi = db.Column(db.Boolean, default=False)
-    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
     
     # İlişkiler
     randevu = db.relationship('Randevu', overlaps="yetkiler")
@@ -658,7 +662,7 @@ class RandevuDefterBlok(db.Model):
     SaatBitis = db.Column(db.NVARCHAR(5), nullable=True)
     Aciklama = db.Column(db.NVARCHAR(200), nullable=True)
     Aktif = db.Column(db.Boolean, default=True)
-    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
 
     firma = db.relationship('Firma')
     defter = db.relationship('RandevuDefterAyar')
@@ -686,7 +690,7 @@ class RandevuIslem(db.Model):
     DefterID = db.Column(db.Integer, db.ForeignKey('RandevuDefterAyarlar.AyarID'), nullable=True)
     IslemAdi = db.Column(db.NVARCHAR(100), nullable=False)
     Aktif = db.Column(db.Boolean, default=True)
-    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
     
     # İlişkiler
     firma = db.relationship('Firma', backref='randevu_islemleri')
@@ -706,7 +710,7 @@ class Bildirim(db.Model):
     Okundu = db.Column(db.Boolean, default=False)
     Tip = db.Column(db.NVARCHAR(30), default='genel')
     IlgiliRandevuID = db.Column(db.Integer, db.ForeignKey('Randevular.RandevuID'))
-    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
 
     kullanici = db.relationship('Kullanici')
     firma = db.relationship('Firma')
@@ -725,7 +729,7 @@ class RandevuHatirlatma(db.Model):
     RecipientEmail = db.Column(db.NVARCHAR(200))
     MinutesBefore = db.Column(db.Integer, default=60)
     Gonderildi = db.Column(db.Boolean, default=False)
-    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
     GonderimTarihi = db.Column(db.DateTime)
 
     randevu = db.relationship('Randevu', overlaps="hatirlatmalar")
@@ -743,7 +747,7 @@ class RandevuSMSHatirlatma(db.Model):
     RecipientPhone = db.Column(db.NVARCHAR(20))
     MinutesBefore = db.Column(db.Integer, default=1440)
     Gonderildi = db.Column(db.Boolean, default=False)
-    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
     GonderimTarihi = db.Column(db.DateTime)
 
     randevu = db.relationship('Randevu')
@@ -768,7 +772,7 @@ class FirmaEmailAyar(db.Model):
     VarsayilanEmailKonu = db.Column(db.NVARCHAR(200))
     VarsayilanEmailMetni = db.Column(db.NVARCHAR(max))
     Aktif = db.Column(db.Boolean, default=True)
-    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
     
     firma = db.relationship('Firma', backref='email_ayarlar')
     
@@ -794,7 +798,7 @@ class FirmaSMSAyar(db.Model):
     SMSGonderOnCreate = db.Column(db.Boolean, default=False)
     SMSGonder24SaatOnce = db.Column(db.Boolean, default=False)
     Aktif = db.Column(db.Boolean, default=True)
-    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
     
     firma = db.relationship('Firma', backref='sms_ayarlar')
     
@@ -820,8 +824,8 @@ class FirmaWhatsAppAyar(db.Model):
     MesajGonder24SaatOnce = db.Column(db.Boolean, default=False)
     MesajGonder1SaatOnce = db.Column(db.Boolean, default=False)
     Aktif = db.Column(db.Boolean, default=True)
-    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
-    GuncellemeTarihi = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
+    GuncellemeTarihi = db.Column(db.DateTime, default=lambda: datetime.now(), onupdate=lambda: datetime.now())
     
     firma = db.relationship('Firma', backref='whatsapp_ayarlar')
     
@@ -838,7 +842,7 @@ class MusteriKategori(db.Model):
     Renk = db.Column(db.NVARCHAR(20), default='#007bff')
     Aciklama = db.Column(db.NVARCHAR(500))
     Aktif = db.Column(db.Boolean, default=True)
-    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
 
     firma = db.relationship('Firma', backref='musteri_kategoriler')
 
@@ -868,8 +872,8 @@ class Musteri(db.Model):
     ProfilFotografi = db.Column(db.NVARCHAR(500))
     Aktif = db.Column(db.Boolean, default=True)
     OlusturanKullaniciID = db.Column(db.Integer, db.ForeignKey('Kullanicilar.KullaniciID'))
-    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
-    GuncellemeTarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
+    GuncellemeTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
 
     firma = db.relationship('Firma', backref='musteriler')
     kategori = db.relationship('MusteriKategori', backref='musteriler')
@@ -882,6 +886,25 @@ class Musteri(db.Model):
     def __repr__(self):
         return f'<Musteri {self.MusteriID} {self.tam_adi}>'
 
+# Görev Durumları
+class TodoDurum(db.Model):
+    __tablename__ = 'TodoDurumlar'
+    
+    DurumID = db.Column(db.Integer, primary_key=True)
+    FirmaID = db.Column(db.Integer, db.ForeignKey('Firmalar.FirmaID'), nullable=False)
+    DurumAdi = db.Column(db.NVARCHAR(50), nullable=False)
+    DurumAciklamasi = db.Column(db.NVARCHAR(200))
+    Renk = db.Column(db.NVARCHAR(7), default='#007bff')  # Hex renk kodu
+    Sira = db.Column(db.Integer, default=0)  # Sıralama için
+    Aktif = db.Column(db.Boolean, default=True)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
+    
+    # İlişkiler
+    firma = db.relationship('Firma', backref='todo_durumlar', lazy=True)
+    
+    def __repr__(self):
+        return f'<TodoDurum {self.DurumAdi}>'
+
 class Todo(db.Model):
     __tablename__ = 'Todos'
     
@@ -890,15 +913,28 @@ class Todo(db.Model):
     Baslik = db.Column(db.NVARCHAR(200), nullable=False)
     Aciklama = db.Column(db.Text)
     Oncelik = db.Column(db.Enum('Düşük', 'Orta', 'Yüksek', name='oncelik_enum'), default='Orta')
-    Durum = db.Column(db.Enum('Beklemede', 'Devam Ediyor', 'Tamamlandı', name='durum_enum'), default='Beklemede')
+    DurumID = db.Column(db.Integer, db.ForeignKey('TodoDurumlar.DurumID'), nullable=True)  # Yeni alan
+    Tip = db.Column(db.Enum('Kisisel', 'Randevu', name='todo_tip_enum'), default='Kisisel')  # Yeni alan
     BitisTarihi = db.Column(db.DateTime)
     HatirlatmaTarihi = db.Column(db.DateTime)
-    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
-    GuncellemeTarihi = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
+    GuncellemeTarihi = db.Column(db.DateTime, default=lambda: datetime.now(), onupdate=lambda: datetime.now())
     TamamlanmaTarihi = db.Column(db.DateTime)
+    # Müşteri bilgileri
+    MusteriAdi = db.Column(db.NVARCHAR(100))
+    MusteriSoyadi = db.Column(db.NVARCHAR(100))
+    MusteriTelefon = db.Column(db.NVARCHAR(20))
+    MusteriEmail = db.Column(db.NVARCHAR(100))
+    # Randevu alanları
+    RandevuTarihi = db.Column(db.Date)
+    RandevuSaati = db.Column(db.NVARCHAR(10))  # HH:MM formatında
+    RandevuDefteriID = db.Column(db.Integer, db.ForeignKey('RandevuDefterAyarlar.AyarID'), nullable=True)
+    AtananKullaniciID = db.Column(db.Integer, db.ForeignKey('Kullanicilar.KullaniciID'), nullable=True)
     
     # İlişkiler
-    kullanici = db.relationship('Kullanici', backref='todos', lazy=True)
+    kullanici = db.relationship('Kullanici', foreign_keys=[KullaniciID], backref='todos', lazy=True)
+    atanan_kullanici = db.relationship('Kullanici', foreign_keys=[AtananKullaniciID], backref='atanan_todos', lazy=True)
+    durum = db.relationship('TodoDurum', backref='todos', lazy=True)
     
     def __repr__(self):
         return f'<Todo {self.Baslik}>'
@@ -1533,7 +1569,7 @@ def reminder_worker():
     with app.app_context():
         while True:
             try:
-                now = datetime.utcnow()
+                now = datetime.now()
                 
                 # Sadece gelecekteki randevular için hatırlatma kontrol et (24 saat içinde)
                 future_limit = now + timedelta(hours=24)
@@ -1586,7 +1622,7 @@ def reminder_worker():
                             ok = send_email_simple(h.RecipientEmail, subject, body)
                         if ok:
                             h.Gonderildi = True
-                            h.GonderimTarihi = datetime.utcnow()
+                            h.GonderimTarihi = datetime.now()
                             db.session.commit()
 
                 # SMS hatirlatmalarini isleme
@@ -1620,7 +1656,7 @@ def reminder_worker():
                         ok = send_sms_with_firma_settings(s.FirmaID, s.RecipientPhone, sms_text)
                         if ok:
                             s.Gonderildi = True
-                            s.GonderimTarihi = datetime.utcnow()
+                            s.GonderimTarihi = datetime.now()
                             db.session.commit()
             except Exception as e:
                 print(f"Hatirlatma isci hatasi: {e}")
@@ -1740,9 +1776,11 @@ def api_today_reminders():
         # Bugün hatırlatma tarihi olan ve tamamlanmamış todoları bul
         reminders = Todo.query.filter(
             Todo.HatirlatmaTarihi == bugun,
-            Todo.Durum != 'Tamamlandı',
             Todo.KullaniciID == session['user_id']
         ).all()
+        
+        # Tamamlanmamış todoları filtrele
+        reminders = [todo for todo in reminders if not todo.durum or todo.durum.DurumAdi != 'Tamamlandı']
         
         reminder_data = []
         for todo in reminders:
@@ -1751,7 +1789,7 @@ def api_today_reminders():
                 'baslik': todo.Baslik,
                 'aciklama': todo.Aciklama,
                 'hatirlatma_tarihi': todo.HatirlatmaTarihi.strftime('%d.%m.%Y'),
-                'durum': todo.Durum,
+                'durum': todo.durum.DurumAdi if todo.durum else 'Durum Yok',
                 'oncelik': todo.Oncelik
             })
         
@@ -1788,7 +1826,7 @@ def api_update_last_seen():
             token = session.get('session_token')
             kayit = AktifOturum.query.filter_by(KullaniciID=user_id).first()
             if kayit and (not token or kayit.SessionToken == token):
-                kayit.SonGorulmeZamani = datetime.utcnow()
+                kayit.SonGorulmeZamani = datetime.now()
                 db.session.commit()
     except Exception:
         db.session.rollback()
@@ -1843,7 +1881,7 @@ def login():
         if user and user.Sifre == password:  # Geçici olarak düz metin karşılaştırma
             # Eski oturumları temizle (24 saatten eski)
             eski_oturumlar = AktifOturum.query.filter(
-                AktifOturum.SonGorulmeZamani < datetime.utcnow() - timedelta(hours=24)
+                AktifOturum.SonGorulmeZamani < datetime.now() - timedelta(hours=24)
             ).all()
             for oturum in eski_oturumlar:
                 db.session.delete(oturum)
@@ -2071,16 +2109,58 @@ def dashboard():
             Randevu.FirmaID == session['firma_id']
         ).order_by(Randevu.RandevuTarihi.desc()).limit(10).all()
     
-    # Todo verilerini getir
-    user_todos = Todo.query.filter_by(KullaniciID=session['user_id']).order_by(
+    # Yapılacaklar (Kişisel) verilerini getir
+    user_todos = Todo.query.filter_by(KullaniciID=session['user_id'], Tip='Kisisel').order_by(
         Todo.Oncelik.desc(), Todo.OlusturmaTarihi.desc()
     ).limit(5).all()
     
-    # Todo istatistikleri
-    toplam_todo = Todo.query.filter_by(KullaniciID=session['user_id']).count()
-    tamamlanan_todo = Todo.query.filter_by(KullaniciID=session['user_id'], Durum='Tamamlandı').count()
-    beklemede_todo = Todo.query.filter_by(KullaniciID=session['user_id'], Durum='Beklemede').count()
-    devam_eden_todo = Todo.query.filter_by(KullaniciID=session['user_id'], Durum='Devam Ediyor').count()
+    # Görevler (Randevu) verilerini getir
+    user_gorevler = Todo.query.filter_by(KullaniciID=session['user_id'], Tip='Randevu').order_by(
+        Todo.Oncelik.desc(), Todo.OlusturmaTarihi.desc()
+    ).limit(5).all()
+    
+    # Yapılacaklar (Kişisel) istatistikleri
+    toplam_todo = Todo.query.filter_by(KullaniciID=session['user_id'], Tip='Kisisel').count()
+    
+    # Yapılacaklar durum istatistikleri için join kullan
+    tamamlanan_todo = db.session.query(Todo).join(TodoDurum).filter(
+        Todo.KullaniciID == session['user_id'],
+        Todo.Tip == 'Kisisel',
+        TodoDurum.DurumAdi == 'Tamamlandı'
+    ).count()
+    
+    beklemede_todo = db.session.query(Todo).join(TodoDurum).filter(
+        Todo.KullaniciID == session['user_id'],
+        Todo.Tip == 'Kisisel',
+        TodoDurum.DurumAdi == 'Beklemede'
+    ).count()
+    
+    devam_eden_todo = db.session.query(Todo).join(TodoDurum).filter(
+        Todo.KullaniciID == session['user_id'],
+        Todo.Tip == 'Kisisel',
+        TodoDurum.DurumAdi == 'Devam Ediyor'
+    ).count()
+    
+    # Görevler (Randevu) istatistikleri
+    toplam_gorev = Todo.query.filter_by(KullaniciID=session['user_id'], Tip='Randevu').count()
+    
+    tamamlanan_gorev = db.session.query(Todo).join(TodoDurum).filter(
+        Todo.KullaniciID == session['user_id'],
+        Todo.Tip == 'Randevu',
+        TodoDurum.DurumAdi == 'Tamamlandı'
+    ).count()
+    
+    beklemede_gorev = db.session.query(Todo).join(TodoDurum).filter(
+        Todo.KullaniciID == session['user_id'],
+        Todo.Tip == 'Randevu',
+        TodoDurum.DurumAdi == 'Beklemede'
+    ).count()
+    
+    devam_eden_gorev = db.session.query(Todo).join(TodoDurum).filter(
+        Todo.KullaniciID == session['user_id'],
+        Todo.Tip == 'Randevu',
+        TodoDurum.DurumAdi == 'Devam Ediyor'
+    ).count()
     
     # Okunmamiş bildirim sayısı
     unread_count = Bildirim.query.filter_by(KullaniciID=session['user_id'], Okundu=False).count()
@@ -2089,10 +2169,15 @@ def dashboard():
                          randevular=randevular, 
                          unread_count=unread_count,
                          user_todos=user_todos,
+                         user_gorevler=user_gorevler,
                          toplam_todo=toplam_todo,
                          tamamlanan_todo=tamamlanan_todo,
                          beklemede_todo=beklemede_todo,
-                         devam_eden_todo=devam_eden_todo)
+                         devam_eden_todo=devam_eden_todo,
+                         toplam_gorev=toplam_gorev,
+                         tamamlanan_gorev=tamamlanan_gorev,
+                         beklemede_gorev=beklemede_gorev,
+                         devam_eden_gorev=devam_eden_gorev)
 
 
 @app.route('/profil')
@@ -2184,7 +2269,7 @@ def ayarlar_firma_guncelle():
         firma.Adres = request.form.get('adres', '')
         firma.Telefon = request.form.get('telefon', '')
         firma.Email = request.form.get('email', '')
-        firma.GuncellemeTarihi = datetime.utcnow()
+        firma.GuncellemeTarihi = datetime.now()
         
         db.session.commit()
         flash('Firma başarıyla güncellendi', 'success')
@@ -2779,7 +2864,7 @@ def ayarlar_islemler():
                 DefterID=defter_id,
                 IslemAdi=islem_adi,
                 Aktif=True,
-                OlusturmaTarihi=datetime.utcnow()
+                OlusturmaTarihi=datetime.now()
             )
             db.session.add(islem)
             db.session.commit()
@@ -3234,7 +3319,7 @@ def ayarlar_whatsapp_guncelle(ayar_id):
         whatsapp_ayar.MesajGonderOnCreate = bool(request.form.get('mesaj_gonder_on_create'))
         whatsapp_ayar.MesajGonder24SaatOnce = bool(request.form.get('mesaj_gonder_24_saat_once'))
         whatsapp_ayar.MesajGonder1SaatOnce = bool(request.form.get('mesaj_gonder_1_saat_once'))
-        whatsapp_ayar.GuncellemeTarihi = datetime.utcnow()
+        whatsapp_ayar.GuncellemeTarihi = datetime.now()
         
         db.session.commit()
         flash('WhatsApp ayarları başarıyla güncellendi!', 'success')
@@ -3273,6 +3358,158 @@ def ayarlar_whatsapp_sil(ayar_id):
         if hedef_firma_id:
             return redirect(url_for('ayarlar_whatsapp', firma_id=hedef_firma_id))
     return redirect(url_for('ayarlar_whatsapp'))
+
+# Görev Durumları Ayarları
+@app.route('/ayarlar/gorev-durumlar')
+@login_required
+def ayarlar_gorev_durumlar():
+    firma_id = session['firma_id']
+    durumlar = TodoDurum.query.filter_by(FirmaID=firma_id).order_by(TodoDurum.Sira, TodoDurum.DurumAdi).all()
+    return render_template('ayarlar/gorev_durumlar.html', durumlar=durumlar)
+
+# Görev Durumları API
+@app.route('/api/gorev-durumlar', methods=['POST'])
+@login_required
+def api_gorev_durum_ekle():
+    try:
+        firma_id = session['firma_id']
+        data = request.get_json()
+        
+        # Aktif değerini boolean'a çevir
+        aktif_deger = data.get('Aktif', True)
+        print(f"DEBUG: Aktif değeri: {aktif_deger}, tip: {type(aktif_deger)}")
+        if isinstance(aktif_deger, str):
+            aktif_deger = aktif_deger.lower() in ['true', '1', 'on', 'yes']
+        elif isinstance(aktif_deger, bool):
+            aktif_deger = aktif_deger
+        else:
+            aktif_deger = bool(aktif_deger)
+        print(f"DEBUG: Dönüştürülmüş Aktif değeri: {aktif_deger}")
+        
+        # Yeni durum oluştur
+        yeni_durum = TodoDurum(
+            FirmaID=firma_id,
+            DurumAdi=data.get('durum_adi'),
+            DurumAciklamasi=data.get('durum_aciklamasi'),
+            Renk=data.get('durum_renk', '#007bff'),
+            Sira=int(data.get('durum_sira', 0)),
+            Aktif=aktif_deger
+        )
+        
+        db.session.add(yeni_durum)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Durum başarıyla eklendi'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/gorev-durumlar/<int:durum_id>', methods=['GET'])
+@login_required
+def api_gorev_durum_get(durum_id):
+    try:
+        firma_id = session['firma_id']
+        durum = TodoDurum.query.filter_by(DurumID=durum_id, FirmaID=firma_id).first()
+        
+        if not durum:
+            return jsonify({'success': False, 'message': 'Durum bulunamadı'})
+        
+        return jsonify({
+            'success': True,
+            'durum': {
+                'DurumID': durum.DurumID,
+                'DurumAdi': durum.DurumAdi,
+                'DurumAciklamasi': durum.DurumAciklamasi,
+                'Renk': durum.Renk,
+                'Sira': durum.Sira,
+                'Aktif': durum.Aktif
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/gorev-durumlar/<int:durum_id>', methods=['PUT'])
+@login_required
+def api_gorev_durum_guncelle(durum_id):
+    try:
+        firma_id = session['firma_id']
+        durum = TodoDurum.query.filter_by(DurumID=durum_id, FirmaID=firma_id).first()
+        
+        if not durum:
+            return jsonify({'success': False, 'message': 'Durum bulunamadı'})
+        
+        data = request.get_json()
+        
+        # Aktif değerini boolean'a çevir
+        aktif_deger = data.get('Aktif', durum.Aktif)
+        if isinstance(aktif_deger, str):
+            aktif_deger = aktif_deger.lower() in ['true', '1', 'on', 'yes']
+        elif isinstance(aktif_deger, bool):
+            aktif_deger = aktif_deger
+        else:
+            aktif_deger = bool(aktif_deger)
+        
+        # Durumu güncelle
+        durum.DurumAdi = data.get('durum_adi', durum.DurumAdi)
+        durum.DurumAciklamasi = data.get('durum_aciklamasi', durum.DurumAciklamasi)
+        durum.Renk = data.get('durum_renk', durum.Renk)
+        durum.Sira = int(data.get('durum_sira', durum.Sira))
+        durum.Aktif = aktif_deger
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Durum başarıyla güncellendi'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/gorev-durumlar/<int:durum_id>', methods=['DELETE'])
+@login_required
+def api_gorev_durum_sil(durum_id):
+    try:
+        firma_id = session['firma_id']
+        durum = TodoDurum.query.filter_by(DurumID=durum_id, FirmaID=firma_id).first()
+        
+        if not durum:
+            return jsonify({'success': False, 'message': 'Durum bulunamadı'})
+        
+        # Bu durumu kullanan görevler var mı kontrol et
+        kullanan_todos = Todo.query.filter_by(DurumID=durum_id).count()
+        if kullanan_todos > 0:
+            return jsonify({'success': False, 'message': f'Bu durum {kullanan_todos} görevde kullanılıyor. Önce bu görevlerin durumunu değiştirin.'})
+        
+        db.session.delete(durum)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Durum başarıyla silindi'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+# Görev Durumları Listesi API
+@app.route('/api/gorev-durumlar', methods=['GET'])
+@login_required
+def api_gorev_durumlar_list():
+    try:
+        firma_id = session['firma_id']
+        durumlar = TodoDurum.query.filter_by(FirmaID=firma_id, Aktif=True).order_by(TodoDurum.Sira, TodoDurum.DurumAdi).all()
+        
+        durum_list = []
+        for durum in durumlar:
+            durum_list.append({
+                'DurumID': durum.DurumID,
+                'DurumAdi': durum.DurumAdi,
+                'Renk': durum.Renk
+            })
+        
+        return jsonify({'success': True, 'durumlar': durum_list})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
 
 # WhatsApp Sohbet Ekranı
 @app.route('/whatsapp')
@@ -4616,6 +4853,7 @@ def randevu_duzenle(randevu_id):
             referans_id = request.form.get('referans_id', type=int)
             randevu_suresi = request.form.get('randevu_suresi', type=int)
             randevu_notlar = request.form.get('randevu_notlar', '').strip()
+            atanan_kullanici_id = request.form.get('atanan_kullanici', type=int)
             
             if not tarih_gun or not saat or not randevu_suresi:
                 flash('Lütfen tüm zorunlu alanları doldurun', 'error')
@@ -4641,7 +4879,7 @@ def randevu_duzenle(randevu_id):
             randevu.RandevuTarihi = randevu_dt
             randevu.RandevuSuresi = randevu_suresi
             randevu.RandevuNotlar = randevu_notlar
-            randevu.GuncellemeTarihi = datetime.utcnow()
+            randevu.GuncellemeTarihi = datetime.now()
             
             # Referans güncelle - başlık otomatik olarak referans adı olur
             if ref:
@@ -4692,7 +4930,7 @@ def randevu_duzenle(randevu_id):
                 if musteri_cinsiyet:
                     randevu.musteri.Cinsiyet = musteri_cinsiyet
                 
-                randevu.musteri.GuncellemeTarihi = datetime.utcnow()
+                randevu.musteri.GuncellemeTarihi = datetime.now()
 
                 # Yeni müşteri değerleri ve farkları hesapla
                 new_musteri = {
@@ -4722,6 +4960,58 @@ def randevu_duzenle(randevu_id):
             # (taşıma API'sinde olduğu gibi detay mesajı oluşturulacak)
             
             db.session.commit()
+            
+            # Otomatik görev oluşturma - Seçilen kullanıcıya
+            if atanan_kullanici_id:
+                try:
+                    # Görev başlığı oluştur
+                    musteri_adi = f"{randevu.MusteriAdi} {randevu.MusteriSoyadi}".strip() if randevu.MusteriAdi else "Müşteri"
+                    gorev_baslik = f"Randevu: {musteri_adi} - {randevu_dt.strftime('%d.%m.%Y %H:%M')}"
+                    
+                    # Görev açıklaması oluştur
+                    gorev_aciklama = f"Randevu Detayları:\n"
+                    gorev_aciklama += f"• Müşteri: {musteri_adi}\n"
+                    gorev_aciklama += f"• Tarih: {randevu_dt.strftime('%d.%m.%Y %H:%M')}\n"
+                    gorev_aciklama += f"• Süre: {randevu_suresi} dakika\n"
+                    if randevu_notlar:
+                        gorev_aciklama += f"• Açıklama: {randevu_notlar}\n"
+                    if ref:
+                        gorev_aciklama += f"• Referans: {ref.Ad}\n"
+                    
+                    # Yeni görev oluştur (randevu bazlı)
+                    yeni_gorev = Todo(
+                        KullaniciID=atanan_kullanici_id,
+                        Baslik=gorev_baslik,
+                        Aciklama=gorev_aciklama,
+                        Oncelik='Orta',
+                        Durum='Beklemede',
+                        Tip='Randevu',  # Randevu bazlı görev
+                        BitisTarihi=randevu_dt,  # DateTime olarak
+                        HatirlatmaTarihi=randevu_dt  # DateTime olarak
+                    )
+                    
+                    db.session.add(yeni_gorev)
+                    db.session.commit()
+                    
+                    # Log ekle
+                    try:
+                        log_user_action(
+                            action_type='Görev Oluşturuldu',
+                            table_name='Todos',
+                            record_id=yeni_gorev.TodoID,
+                            old_data=None,
+                            new_data={'baslik': gorev_baslik, 'kullanici_id': atanan_kullanici_id},
+                            detail=f"Randevu bazlı görev: {musteri_adi}"
+                        )
+                    except Exception as log_error:
+                        print(f"Görev log hatası (önemli değil): {log_error}")
+                    
+                    print(f"Randevu bazlı görev oluşturuldu: {gorev_baslik} (Kullanıcı: {atanan_kullanici_id})")
+                    
+                except Exception as gorev_error:
+                    print(f"Görev oluşturma hatası: {gorev_error}")
+                    # Görev oluşturma hatası randevu güncellemeyi etkilemesin
+            
             # Değişiklik varsa logla
             try:
                 detail_msg = 'Randevu ve/veya müşteri bilgileri güncellendi'
@@ -4762,12 +5052,35 @@ def randevu_duzenle(randevu_id):
 @login_required
 def randevu_ekle():
     if request.method == 'POST':
-        # Form alanlarini guvenle al
-        tarih_gun = request.form.get('tarih_gun')
-        saat = request.form.get('saat')
-        defter_id = request.form.get('defter_id', type=int)
-        referans_id = request.form.get('referans_id', type=int)
-        islem_id = request.form.get('islem_id', type=int)
+        # JSON veya form verilerini al
+        if request.is_json:
+            data = request.get_json()
+            tarih_gun = data.get('tarih_gun')
+            saat = data.get('selected_saat')
+            defter_id = data.get('defter_id', type=int)
+            referans_id = data.get('referans_id', type=int)
+            islem_id = data.get('islem_id', type=int)
+            gorev_id = data.get('gorev_id', type=int)
+            musteri_adi = data.get('musteri_adi', '')
+            musteri_soyadi = data.get('musteri_soyadi', '')
+            telefon = data.get('telefon', '')
+            email = data.get('email', '')
+            aciklama = data.get('aciklama', '')
+            randevu_suresi = data.get('sure', 60)
+        else:
+            # Form alanlarini guvenle al
+            tarih_gun = request.form.get('tarih_gun')
+            saat = request.form.get('saat')
+            defter_id = request.form.get('defter_id', type=int)
+            referans_id = request.form.get('referans_id', type=int)
+            islem_id = request.form.get('islem_id', type=int)
+            gorev_id = request.form.get('gorev_id', type=int)  # Görev ID'si
+            musteri_adi = request.form.get('musteri_adi', '')
+            musteri_soyadi = request.form.get('musteri_soyadi', '')
+            telefon = request.form.get('telefon', '')
+            email = request.form.get('email', '')
+            aciklama = request.form.get('aciklama', '')
+            randevu_suresi = int(request.form.get('sure', 60))
         if not tarih_gun or not saat or not defter_id:
             flash('Lütfen tarih, saat ve randevu defteri seçin', 'error')
             return redirect(url_for('randevu_ekle'))
@@ -4795,7 +5108,6 @@ def randevu_ekle():
             return redirect(url_for('randevu_ekle'))
         
         # Süre validation - slot dakikasının katı olmalı
-        randevu_suresi = int(request.form.get('sure', 10))
         if randevu_suresi % defter_ayar.SlotDakika != 0:
             flash(f'Randevu süresi {defter_ayar.SlotDakika} dakikanın katları olmalı', 'error')
             return redirect(url_for('randevu_ekle'))
@@ -4954,15 +5266,24 @@ def randevu_ekle():
                 flash('Bu slot başka bir kullanıcı tarafından rezerve edildi. Lütfen başka bir saat seçin.', 'error')
                 return redirect(url_for('randevu_ekle'))
 
+        # Görev bilgilerini al (eğer görev ID'si varsa)
+        gorev_baslik = 'Yok'
+        gorev_aciklama = ''
+        if gorev_id:
+            gorev = Todo.query.filter_by(TodoID=gorev_id, KullaniciID=session['user_id'], Tip='Randevu').first()
+            if gorev:
+                gorev_baslik = gorev.Baslik
+                gorev_aciklama = gorev.Aciklama or ''
+        
         randevu = Randevu(
-            RandevuBaslik=(ref.Ad if ref else 'Yok'),
-            RandevuAciklamasi=request.form['aciklama'],
+            RandevuBaslik=(ref.Ad if ref else gorev_baslik),
+            RandevuAciklamasi=aciklama or gorev_aciklama,
             RandevuTarihi=randevu_dt,
             RandevuSuresi=randevu_suresi,
-            MusteriAdi=request.form['musteri_adi'],
-            MusteriSoyadi=request.form.get('musteri_soyadi', 'Müşteri'),
-            MusteriTelefon=request.form.get('musteri_telefon', ''),
-            MusteriEmail=request.form.get('musteri_email', ''),
+            MusteriAdi=musteri_adi,
+            MusteriSoyadi=musteri_soyadi or 'Müşteri',
+            MusteriTelefon=telefon,
+            MusteriEmail=email,
             MusteriID=musteri_id,  # Müşteri ID'sini ekle
             IslemID=islem_id,  # İşlem ID'sini ekle
             OlusturanKullaniciID=session['user_id'],
@@ -4975,8 +5296,72 @@ def randevu_ekle():
             db.session.commit()
         except Exception as e:
             db.session.rollback()
+            if request.is_json:
+                return jsonify({'success': False, 'message': 'Randevu oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.'})
             flash('Randevu oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.', 'error')
             return redirect(url_for('randevu_ekle'))
+
+        # Eğer görev ID'si varsa, görevi sil (randevu oluşturuldu)
+        if gorev_id:
+            try:
+                gorev = Todo.query.filter_by(TodoID=gorev_id, KullaniciID=session['user_id'], Tip='Randevu').first()
+                if gorev:
+                    db.session.delete(gorev)
+                    print(f"Görev silindi: {gorev.Baslik}")
+            except Exception as e:
+                print(f"Görev silinirken hata: {e}")
+
+        # Otomatik görev oluşturma - Seçilen kullanıcıya
+        atanan_kullanici_id = request.form.get('atanan_kullanici', type=int)
+        if atanan_kullanici_id:
+            try:
+                # Görev başlığı oluştur
+                musteri_adi = f"{request.form['musteri_adi']} {request.form.get('musteri_soyadi', '')}".strip()
+                gorev_baslik = f"Randevu: {musteri_adi} - {randevu_dt.strftime('%d.%m.%Y %H:%M')}"
+                
+                # Görev açıklaması oluştur
+                gorev_aciklama = f"Randevu Detayları:\n"
+                gorev_aciklama += f"• Müşteri: {musteri_adi}\n"
+                gorev_aciklama += f"• Tarih: {randevu_dt.strftime('%d.%m.%Y %H:%M')}\n"
+                gorev_aciklama += f"• Süre: {randevu_suresi} dakika\n"
+                if request.form.get('aciklama'):
+                    gorev_aciklama += f"• Açıklama: {request.form.get('aciklama')}\n"
+                if ref:
+                    gorev_aciklama += f"• Referans: {ref.Ad}\n"
+                
+                # Yeni görev oluştur (randevu bazlı)
+                yeni_gorev = Todo(
+                    KullaniciID=atanan_kullanici_id,
+                    Baslik=gorev_baslik,
+                    Aciklama=gorev_aciklama,
+                    Oncelik='Orta',
+                    Durum='Beklemede',
+                    Tip='Randevu',  # Randevu bazlı görev
+                    BitisTarihi=randevu_dt,  # DateTime olarak
+                    HatirlatmaTarihi=randevu_dt  # DateTime olarak
+                )
+                
+                db.session.add(yeni_gorev)
+                db.session.commit()
+                
+                # Log ekle
+                try:
+                    log_user_action(
+                        action_type='Görev Oluşturuldu',
+                        table_name='Todos',
+                        record_id=yeni_gorev.TodoID,
+                        old_data=None,
+                        new_data={'baslik': gorev_baslik, 'kullanici_id': atanan_kullanici_id},
+                        detail=f"Randevu bazlı görev: {musteri_adi}"
+                    )
+                except Exception as log_error:
+                    print(f"Görev log hatası (önemli değil): {log_error}")
+                
+                print(f"Randevu bazlı görev oluşturuldu: {gorev_baslik} (Kullanıcı: {atanan_kullanici_id})")
+                
+            except Exception as gorev_error:
+                print(f"Görev oluşturma hatası: {gorev_error}")
+                # Görev oluşturma hatası randevu oluşturmayı etkilemesin
 
         # SMS: randevu olusturuldugunda gonder
         try:
@@ -5106,6 +5491,8 @@ def randevu_ekle():
         log_user_action('CREATE', 'Randevu', randevu.RandevuID, 
                        detail=f"Randevu oluşturuldu: {randevu.RandevuTarihi.strftime('%d.%m.%Y %H:%M')} - {randevu.MusteriAdi}")
         
+        if request.is_json:
+            return jsonify({'success': True, 'message': 'Randevu başarıyla oluşturuldu!'})
         flash('Randevu başarıyla oluşturuldu!', 'success')
         return redirect(url_for('randevular'))
     # GET isteği
@@ -5166,6 +5553,237 @@ def randevu_ekle():
                          varsayilan_defter=varsayilan_defter,
                          min_sure=min_sure,
                          countries=countries)
+
+@app.route('/api/kullanicilar')
+@login_required
+def api_kullanicilar():
+    """Firma kullanıcılarını getir"""
+    try:
+        firma_id = session.get('firma_id')
+        if not firma_id:
+            return jsonify({'success': False, 'message': 'Firma bilgisi bulunamadı'}), 400
+        
+        # Firma kullanıcılarını getir
+        kullanicilar = Kullanici.query.filter_by(FirmaID=firma_id, Aktif=True).all()
+        
+        kullanici_listesi = []
+        for kullanici in kullanicilar:
+            kullanici_listesi.append({
+                'id': kullanici.KullaniciID,
+                'adi': kullanici.Ad,
+                'soyadi': kullanici.Soyad,
+                'tam_adi': f"{kullanici.Ad} {kullanici.Soyad}".strip(),
+                'email': kullanici.Email
+            })
+        
+        return jsonify({'success': True, 'kullanicilar': kullanici_listesi})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
+
+@app.route('/api/gorevler/calendar')
+@login_required
+def api_gorevler_calendar():
+    """Görevler için takvim API'si"""
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'success': False, 'message': 'Kullanıcı bilgisi bulunamadı'}), 400
+        
+        # Tarih aralığı parametreleri
+        start_date = request.args.get('start')
+        end_date = request.args.get('end')
+        
+        # Filtre parametreleri
+        search_term = request.args.get('search', '').strip()
+        status_filter = request.args.get('status', 'all')
+        priority_filter = request.args.get('priority', 'all')
+        date_filter = request.args.get('date', '')
+        
+        # Görevleri getir (sadece randevu bazlı görevler)
+        query = Todo.query.filter_by(KullaniciID=user_id, Tip='Randevu')
+        
+        # Arama filtresi
+        if search_term:
+            query = query.filter(
+                or_(
+                    Todo.Baslik.ilike(f'%{search_term}%'),
+                    Todo.Aciklama.ilike(f'%{search_term}%')
+                )
+            )
+        
+        # Durum filtresi
+        if status_filter != 'all':
+            query = query.filter(Todo.DurumID == status_filter)
+        
+        # Öncelik filtresi
+        if priority_filter != 'all':
+            query = query.filter(Todo.Oncelik == priority_filter.title())
+        
+        # Tarih filtresi
+        if date_filter:
+            try:
+                filter_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
+                query = query.filter(
+                    or_(
+                        func.date(Todo.BitisTarihi) == filter_date,
+                        func.date(Todo.HatirlatmaTarihi) == filter_date
+                    )
+                )
+            except ValueError:
+                pass  # Geçersiz tarih formatı
+        
+        if start_date and end_date:
+            try:
+                start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+                end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+                query = query.filter(
+                    or_(
+                        Todo.BitisTarihi.between(start_dt, end_dt),
+                        Todo.HatirlatmaTarihi.between(start_dt, end_dt)
+                    )
+                )
+            except ValueError:
+                pass  # Geçersiz tarih formatı, tüm görevleri getir
+        
+        gorevler = query.all()
+        
+        # FullCalendar formatında events oluştur
+        events = []
+        for gorev in gorevler:
+            # Bitiş tarihi varsa onu kullan, yoksa hatırlatma tarihini kullan
+            event_date = gorev.BitisTarihi or gorev.HatirlatmaTarihi
+            
+            if event_date:
+                # Öncelik rengi belirle
+                oncelik_class = 'oncelik-dusuk'
+                if gorev.Oncelik == 'Yüksek':
+                    oncelik_class = 'oncelik-yuksek'
+                elif gorev.Oncelik == 'Orta':
+                    oncelik_class = 'oncelik-orta'
+                
+                # Durum class'ı ve rengi
+                durum_class = ''
+                durum_color = '#007bff'  # Varsayılan renk
+                if gorev.durum:
+                    # Veritabanındaki renk kodunu kullan
+                    durum_color = gorev.durum.Renk if gorev.durum.Renk else '#007bff'
+                    
+                    # Tamamlandı durumu için özel class
+                    if gorev.durum.DurumAdi == 'Tamamlandı':
+                        durum_class = 'tamamlandi'
+                
+                # Durum adını title'a ekle
+                durum_adi = gorev.durum.DurumAdi if gorev.durum else 'Durum Yok'
+                title_with_status = f"{gorev.Baslik} - {durum_adi}"
+                
+                events.append({
+                    'id': f'gorev_{gorev.TodoID}',
+                    'title': title_with_status,
+                    'start': event_date.strftime('%Y-%m-%d'),
+                    'allDay': True,
+                    'backgroundColor': durum_color,
+                    'borderColor': durum_color,
+                    'textColor': '#ffffff',
+                    'className': f'{oncelik_class} {durum_class}',
+                    'extendedProps': {
+                        'gorev_id': gorev.TodoID,
+                        'aciklama': gorev.Aciklama,
+                        'oncelik': gorev.Oncelik,
+                        'durum': durum_adi,
+                        'durum_rengi': durum_color,
+                        'tip': 'gorev'
+                    }
+                })
+        
+        return jsonify(events)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
+
+@app.route('/api/musteri-ara')
+@login_required
+def api_musteri_ara():
+    """Müşteri arama API'si - Sadece aktif müşteriler"""
+    try:
+        query = request.args.get('q', '').strip()
+        if len(query) < 2:
+            return jsonify([])
+        
+        firma_id = session.get('firma_id')
+        if not firma_id:
+            return jsonify([])
+        
+        # Sadece aktif müşterileri ara
+        musteriler = Musteri.query.filter(
+            Musteri.FirmaID == firma_id,
+            Musteri.Aktif == True,
+            or_(
+                Musteri.MusteriAdi.ilike(f'%{query}%'),
+                Musteri.MusteriSoyadi.ilike(f'%{query}%'),
+                Musteri.Telefon.ilike(f'%{query}%'),
+                Musteri.Email.ilike(f'%{query}%'),
+                # Tam isim araması (Ad + Soyad)
+                db.func.concat(Musteri.MusteriAdi, ' ', Musteri.MusteriSoyadi).ilike(f'%{query}%')
+            )
+        ).limit(10).all()
+        
+        results = []
+        for musteri in musteriler:
+            results.append({
+                'id': musteri.MusteriID,
+                'ad': musteri.MusteriAdi or '',
+                'soyad': musteri.MusteriSoyadi or '',
+                'telefon': musteri.Telefon or '',
+                'email': musteri.Email or '',
+                'display': f"{musteri.MusteriAdi or ''} {musteri.MusteriSoyadi or ''}".strip()
+            })
+        
+        return jsonify(results)
+        
+    except Exception as e:
+        print(f"Müşteri arama hatası: {e}")
+        return jsonify([])
+
+@app.route('/api/musteri-bilgi')
+@login_required
+def api_musteri_bilgi():
+    """Müşteri bilgilerini ad ve soyada göre getir"""
+    try:
+        ad = request.args.get('ad', '').strip()
+        soyad = request.args.get('soyad', '').strip()
+        
+        if not ad or not soyad:
+            return jsonify({'success': False, 'message': 'Ad ve soyad gerekli'})
+        
+        firma_id = session.get('firma_id')
+        if not firma_id:
+            return jsonify({'success': False, 'message': 'Firma ID bulunamadı'})
+        
+        # Müşteriyi ad ve soyada göre bul
+        musteri = Musteri.query.filter(
+            Musteri.FirmaID == firma_id,
+            Musteri.MusteriAdi.ilike(ad),
+            Musteri.MusteriSoyadi.ilike(soyad)
+        ).first()
+        
+        if musteri:
+            return jsonify({
+                'success': True,
+                'musteri': {
+                    'id': musteri.MusteriID,
+                    'ad': musteri.MusteriAdi,
+                    'soyad': musteri.MusteriSoyadi,
+                    'telefon': musteri.Telefon or '',
+                    'email': musteri.Email or ''
+                }
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Müşteri bulunamadı'})
+        
+    except Exception as e:
+        print(f"Müşteri bilgi hatası: {e}")
+        return jsonify({'success': False, 'message': 'Hata oluştu'})
 
 @app.route('/api/islemler')
 @login_required
@@ -5940,11 +6558,12 @@ def api_slots():
                 return True
         return False
 
-    # O gun var olan randevular (firma icinde)
+    # O gun var olan randevular (sadece seçili defter için)
     day_start = datetime(target_date.year, target_date.month, target_date.day, 0, 0)
     day_end = day_start + timedelta(days=1)
     existing = Randevu.query.filter(
         Randevu.FirmaID == firma_id,
+        Randevu.DefterID == defter_id,  # Sadece seçili defter
         Randevu.RandevuTarihi >= day_start,
         Randevu.RandevuTarihi < day_end,
         Randevu.Durum != 'iptal'  # İptal edilen randevuları hariç tut
@@ -6788,49 +7407,7 @@ def api_raporlar_personel_performans():
         'rows': rows
     })
 
-@app.route('/api/musteri/ara')
-@login_required
-def api_musteri_ara():
-    """Müşteri arama API endpoint'i"""
-    query = request.args.get('q', '').strip()
-    
-    if len(query) < 2:  # En az 2 karakter gerekli
-        return jsonify([])
-    
-    # Mevcut firmanın müşterilerini ara
-    musteriler = Musteri.query.filter(
-        Musteri.FirmaID == session['firma_id'],
-        Musteri.Aktif == True,
-        db.or_(
-            Musteri.MusteriAdi.ilike(f'%{query}%'),
-            Musteri.MusteriSoyadi.ilike(f'%{query}%'),
-            db.func.concat(Musteri.MusteriAdi, ' ', Musteri.MusteriSoyadi).ilike(f'%{query}%')
-        )
-    ).limit(10).all()
-    
-    sonuc = []
-    for musteri in musteriler:
-        sonuc.append({
-            'id': musteri.MusteriID,
-            'adi': musteri.MusteriAdi,
-            'soyadi': musteri.MusteriSoyadi,
-            'tam_adi': musteri.tam_adi,
-            'telefon': musteri.Telefon or '',
-            'email': musteri.Email or '',
-            'cinsiyet': musteri.Cinsiyet or '',
-            'ulke': musteri.Ulke or 'TR',
-            'sehir': musteri.Sehir or '',
-            'ilce': musteri.Ilce or '',
-            'adres': musteri.Adres or '',
-            'notlar': musteri.Notlar or '',
-            'dogum_tarihi': musteri.DogumTarihi.strftime('%Y-%m-%d') if musteri.DogumTarihi else '',
-            'yas': musteri.Yas or '',
-            'kategori': musteri.kategori.KategoriAdi if musteri.kategori else 'Kategori Yok',
-            'kategori_id': musteri.kategori.KategoriID if musteri.kategori else None,
-            'kategori_rengi': musteri.kategori.Renk if musteri.kategori else '#6c757d'
-        })
-    
-    return jsonify(sonuc)
+# Duplicate endpoint removed - using /api/musteri-ara instead
 
 # ==================== MÜŞTERİ DÜZENLEME API ====================
 
@@ -6985,7 +7562,7 @@ def api_musteri_update(musteri_id):
             EskiVeri=json.dumps(old_data, ensure_ascii=False),
             YeniVeri=json.dumps(new_data, ensure_ascii=False),
             IslemDetayi=f'Müşteri güncellendi: {musteri.MusteriAdi} {musteri.MusteriSoyadi}',
-            OlusturmaTarihi=datetime.utcnow()
+            OlusturmaTarihi=datetime.now()
         )
         db.session.add(log_entry)
         db.session.commit()
@@ -7685,26 +8262,65 @@ def musteri_import_process():
 
 # ==================== TODO SİSTEMİ ====================
 
+@app.route('/gorevler')
+@login_required
+def gorevler():
+    """Görev listesi sayfası - Randevu bazlı görevler"""
+    firma_id = session['firma_id']
+    
+    # Kullanıcının sadece randevu bazlı görevlerini getir
+    user_todos = Todo.query.filter_by(KullaniciID=session['user_id'], Tip='Randevu').order_by(
+        Todo.Oncelik.desc(), Todo.OlusturmaTarihi.desc()
+    ).all()
+    
+    # Firma bazlı durumları getir
+    durumlar = TodoDurum.query.filter_by(FirmaID=firma_id, Aktif=True).order_by(TodoDurum.Sira).all()
+    
+    # Her durum için sayıları hesapla
+    durum_istatistikleri = []
+    for durum in durumlar:
+        sayi = len([t for t in user_todos if t.durum and t.durum.DurumID == durum.DurumID])
+        durum_istatistikleri.append({
+            'durum': durum,
+            'sayi': sayi
+        })
+    
+    # Toplam görev sayısı
+    toplam_gorev = len(user_todos)
+    
+    # Yaklaşan hatırlatmalar (bugünden itibaren 3 gün)
+    bugun = datetime.now().date()
+    uc_gun_sonra = bugun + timedelta(days=3)
+    yaklasan_gorevler = [t for t in user_todos 
+                        if t.HatirlatmaTarihi and (not t.durum or t.durum.DurumAdi != 'Tamamlandı')
+                        and bugun <= t.HatirlatmaTarihi.date() <= uc_gun_sonra]
+    
+    return render_template('gorevler.html', 
+                         gorevler=user_todos,
+                         toplam_gorev=toplam_gorev,
+                         durum_istatistikleri=durum_istatistikleri,
+                         yaklasan_gorevler=yaklasan_gorevler)
+
 @app.route('/todos')
 @login_required
 def todos():
-    """Todo listesi sayfası"""
-    # Kullanıcının todolarını getir
-    user_todos = Todo.query.filter_by(KullaniciID=session['user_id']).order_by(
+    """Todo listesi sayfası - Kişisel yapılacaklar"""
+    # Kullanıcının sadece kişisel yapılacaklarını getir
+    user_todos = Todo.query.filter_by(KullaniciID=session['user_id'], Tip='Kisisel').order_by(
         Todo.Oncelik.desc(), Todo.OlusturmaTarihi.desc()
     ).all()
     
     # İstatistikler
     toplam_todo = len(user_todos)
-    tamamlanan_todo = len([t for t in user_todos if t.Durum == 'Tamamlandı'])
-    beklemede_todo = len([t for t in user_todos if t.Durum == 'Beklemede'])
-    devam_eden_todo = len([t for t in user_todos if t.Durum == 'Devam Ediyor'])
+    tamamlanan_todo = len([t for t in user_todos if t.durum and t.durum.DurumAdi == 'Tamamlandı'])
+    beklemede_todo = len([t for t in user_todos if t.durum and t.durum.DurumAdi == 'Beklemede'])
+    devam_eden_todo = len([t for t in user_todos if t.durum and t.durum.DurumAdi == 'Devam Ediyor'])
     
     # Yaklaşan hatırlatmalar (bugünden itibaren 3 gün)
     bugun = datetime.now().date()
     uc_gun_sonra = bugun + timedelta(days=3)
     yaklasan_todos = [t for t in user_todos 
-                     if t.HatirlatmaTarihi and t.Durum != 'Tamamlandı'
+                     if t.HatirlatmaTarihi and (not t.durum or t.durum.DurumAdi != 'Tamamlandı')
                      and bugun <= t.HatirlatmaTarihi.date() <= uc_gun_sonra]
     
     return render_template('todos.html', 
@@ -7714,6 +8330,44 @@ def todos():
                          beklemede_todo=beklemede_todo,
                          devam_eden_todo=devam_eden_todo,
                          yaklasan_todos=yaklasan_todos)
+
+def create_default_todo_durumlar(firma_id, durum_adi):
+    """Yapılacaklar için varsayılan durumları oluştur"""
+    try:
+        # Varsayılan durumları oluştur
+        default_durumlar = [
+            {'DurumAdi': 'Beklemede', 'Renk': '#ffc107', 'Sira': 1, 'Aktif': True},
+            {'DurumAdi': 'Devam Ediyor', 'Renk': '#17a2b8', 'Sira': 2, 'Aktif': True},
+            {'DurumAdi': 'Tamamlandı', 'Renk': '#28a745', 'Sira': 3, 'Aktif': True}
+        ]
+        
+        for durum_data in default_durumlar:
+            # Durum zaten var mı kontrol et
+            existing = TodoDurum.query.filter_by(
+                DurumAdi=durum_data['DurumAdi'], 
+                FirmaID=firma_id
+            ).first()
+            
+            if not existing:
+                yeni_durum = TodoDurum(
+                    DurumAdi=durum_data['DurumAdi'],
+                    Renk=durum_data['Renk'],
+                    Sira=durum_data['Sira'],
+                    Aktif=durum_data['Aktif'],
+                    FirmaID=firma_id
+                )
+                db.session.add(yeni_durum)
+        
+        db.session.commit()
+        
+        # İstenen durumun ID'sini döndür
+        durum = TodoDurum.query.filter_by(DurumAdi=durum_adi, FirmaID=firma_id).first()
+        return durum.DurumID if durum else None
+        
+    except Exception as e:
+        print(f"Varsayılan durumlar oluşturulurken hata: {e}")
+        db.session.rollback()
+        return None
 
 @app.route('/todos/ekle', methods=['POST'])
 @login_required
@@ -7732,15 +8386,45 @@ def todo_ekle():
         if data.get('hatirlatma_tarihi'):
             hatirlatma_tarihi = datetime.strptime(data['hatirlatma_tarihi'], '%Y-%m-%d')
         
+        # Randevu tarihini parse et
+        randevu_tarihi = None
+        if data.get('randevu_tarihi'):
+            randevu_tarihi = datetime.strptime(data['randevu_tarihi'], '%Y-%m-%d').date()
+        
+        # Durum ID'sini al (durum adından) - evrensel arama
+        durum_id = None
+        if data.get('durum'):
+            # Durum adından ID'yi bul (firma kontrolü yok)
+            durum = TodoDurum.query.filter_by(DurumAdi=data['durum']).first()
+            if durum:
+                durum_id = durum.DurumID
+            else:
+                # Eğer durum bulunamazsa varsayılan durumları oluştur
+                durum_id = create_default_todo_durumlar(session['firma_id'], data['durum'])
+        
+        # Tip belirleme
+        todo_tip = data.get('tip', 'Kisisel')
+        
         # Yeni todo oluştur
         yeni_todo = Todo(
             KullaniciID=session['user_id'],
             Baslik=data['baslik'],
             Aciklama=data.get('aciklama', ''),
             Oncelik=data.get('oncelik', 'Orta'),
-            Durum=data.get('durum', 'Beklemede'),
+            DurumID=durum_id,  # Yeni durum sistemi
+            Tip=todo_tip,  # Kisisel veya Randevu
             BitisTarihi=bitis_tarihi,
-            HatirlatmaTarihi=hatirlatma_tarihi
+            HatirlatmaTarihi=hatirlatma_tarihi,
+            # Müşteri bilgileri
+            MusteriAdi=data.get('musteri_adi', ''),
+            MusteriSoyadi=data.get('musteri_soyadi', ''),
+            MusteriTelefon=data.get('musteri_telefon', ''),
+            MusteriEmail=data.get('musteri_email', ''),
+            # Randevu bilgileri (eğer görev ise)
+            RandevuTarihi=randevu_tarihi,
+            RandevuDefteriID=data.get('randevu_defteri_id'),
+            RandevuSaati=data.get('selected_randevu_saat'),
+            AtananKullaniciID=data.get('kullanici_id')
         )
         
         print(f"Todo oluşturuluyor: {yeni_todo}")  # Debug log
@@ -7770,7 +8454,7 @@ def todo_ekle():
         traceback.print_exc()  # Detaylı hata log'u
         return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
 
-@app.route('/todos/<int:todo_id>/guncelle', methods=['POST'])
+@app.route('/todos/<int:todo_id>/guncelle', methods=['GET', 'POST'])
 @login_required
 def todo_guncelle(todo_id):
     """Todo güncelle"""
@@ -7779,21 +8463,72 @@ def todo_guncelle(todo_id):
         if not todo:
             return jsonify({'success': False, 'message': 'Todo bulunamadı!'}), 404
         
+        # GET isteği - todo verilerini döndür
+        if request.method == 'GET':
+            return jsonify({
+                'success': True,
+                'todo': {
+                    'TodoID': todo.TodoID,
+                    'Baslik': todo.Baslik,
+                    'Aciklama': todo.Aciklama,
+                    'Oncelik': todo.Oncelik,
+                    'DurumID': todo.DurumID,
+                    'Durum': todo.durum.DurumAdi if todo.durum else None,
+                    'BitisTarihi': todo.BitisTarihi.strftime('%Y-%m-%d') if todo.BitisTarihi else None,
+                    'HatirlatmaTarihi': todo.HatirlatmaTarihi.strftime('%Y-%m-%d') if todo.HatirlatmaTarihi else None,
+                    'MusteriAdi': todo.MusteriAdi,
+                    'MusteriSoyadi': todo.MusteriSoyadi,
+                    'Telefon': todo.MusteriTelefon,
+                    'Email': todo.MusteriEmail
+                }
+            })
+        
         data = request.get_json()
         old_data = {
             'baslik': todo.Baslik,
             'aciklama': todo.Aciklama,
             'oncelik': todo.Oncelik,
-            'durum': todo.Durum,
+            'durum': todo.durum.DurumAdi if todo.durum else None,
             'bitis_tarihi': todo.BitisTarihi.isoformat() if todo.BitisTarihi else None,
-            'hatirlatma_tarihi': todo.HatirlatmaTarihi.isoformat() if todo.HatirlatmaTarihi else None
+            'hatirlatma_tarihi': todo.HatirlatmaTarihi.isoformat() if todo.HatirlatmaTarihi else None,
+            'musteri_adi': todo.MusteriAdi,
+            'musteri_soyadi': todo.MusteriSoyadi,
+            'musteri_telefon': todo.MusteriTelefon,
+            'musteri_email': todo.MusteriEmail
         }
+        
+        # Durum ID'sini al - durum adından ID'ye çevir
+        durum_id = None
+        if data.get('durum'):
+            try:
+                # Önce sayı olarak deneyelim
+                durum_id = int(data['durum'])
+            except (ValueError, TypeError):
+                # Sayı değilse, durum adından ID bulalım
+                try:
+                    firma_id = session.get('firma_id')
+                    if firma_id:
+                        durum_obj = TodoDurum.query.filter_by(
+                            FirmaID=firma_id,
+                            DurumAdi=data['durum']
+                        ).first()
+                        if durum_obj:
+                            durum_id = durum_obj.DurumID
+                except Exception as e:
+                    print(f"Durum arama hatası: {e}")
+                    pass
         
         # Güncelle
         todo.Baslik = data['baslik']
         todo.Aciklama = data.get('aciklama', '')
         todo.Oncelik = data.get('oncelik', 'Orta')
-        todo.Durum = data.get('durum', 'Beklemede')
+        todo.DurumID = durum_id  # Yeni durum sistemi
+        
+        # Müşteri bilgilerini güncelle
+        todo.MusteriAdi = data.get('musteri_adi', '')
+        todo.MusteriSoyadi = data.get('musteri_soyadi', '')
+        todo.MusteriTelefon = data.get('musteri_telefon', '')
+        todo.MusteriEmail = data.get('musteri_email', '')
         
         # Tarih formatlarını parse et
         if data.get('bitis_tarihi'):
@@ -7807,9 +8542,9 @@ def todo_guncelle(todo_id):
             todo.HatirlatmaTarihi = None
         
         # Eğer durum "Tamamlandı" ise tamamlanma tarihini set et
-        if todo.Durum == 'Tamamlandı' and not todo.TamamlanmaTarihi:
-            todo.TamamlanmaTarihi = datetime.utcnow()
-        elif todo.Durum != 'Tamamlandı':
+        if todo.durum and todo.durum.DurumAdi == 'Tamamlandı' and not todo.TamamlanmaTarihi:
+            todo.TamamlanmaTarihi = datetime.now()
+        elif not todo.durum or todo.durum.DurumAdi != 'Tamamlandı':
             todo.TamamlanmaTarihi = None
         
         db.session.commit()
@@ -7833,6 +8568,38 @@ def todo_guncelle(todo_id):
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
 
+@app.route('/todos/<int:todo_id>/delete', methods=['DELETE'])
+@login_required
+def todo_delete(todo_id):
+    """Todo sil"""
+    try:
+        todo = Todo.query.filter_by(TodoID=todo_id, KullaniciID=session['user_id']).first()
+        if not todo:
+            return jsonify({'success': False, 'message': 'Todo bulunamadı!'}), 404
+        
+        # Todo'yu sil
+        db.session.delete(todo)
+        db.session.commit()
+        
+        # Log ekle
+        try:
+            log_user_action(
+                action_type='Todo Silindi',
+                table_name='Todos',
+                record_id=todo_id,
+                old_data={'baslik': todo.Baslik, 'tip': todo.Tip},
+                new_data=None,
+                detail=f"Başlık: {todo.Baslik}"
+            )
+        except Exception as log_error:
+            print(f"Log hatası (önemli değil): {log_error}")
+        
+        return jsonify({'success': True, 'message': 'Todo başarıyla silindi!'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
+
 @app.route('/todos/<int:todo_id>/durum', methods=['POST'])
 @login_required
 def todo_durum_degistir(todo_id):
@@ -7847,20 +8614,31 @@ def todo_durum_degistir(todo_id):
         
         data = request.get_json()
         print(f"Request data: {data}")
-        yeni_durum = data.get('durum')
+        yeni_durum_adi = data.get('durum')
         
-        if yeni_durum not in ['Beklemede', 'Devam Ediyor', 'Tamamlandı']:
-            print(f"Geçersiz durum: {yeni_durum}")
-            return jsonify({'success': False, 'message': 'Geçersiz durum!'}), 400
+        # Durum adından ID'yi bul
+        yeni_durum_id = None
+        if yeni_durum_adi:
+            # Yapılacaklar için evrensel durum arama (firma kontrolü yok)
+            print(f"Firma ID: {session.get('firma_id')}")
+            print(f"Aranan durum: {yeni_durum_adi}")
+            
+            durum = TodoDurum.query.filter_by(DurumAdi=yeni_durum_adi).first()
+            if not durum:
+                print(f"Geçersiz durum adı: {yeni_durum_adi}")
+                return jsonify({'success': False, 'message': 'Geçersiz durum!'}), 400
+            yeni_durum_id = durum.DurumID
+            print(f"Bulunan durum: ID {durum.DurumID}, Ad: '{durum.DurumAdi}', Firma: {durum.FirmaID}")
         
-        eski_durum = todo.Durum
-        todo.Durum = yeni_durum
-        print(f"Durum değiştiriliyor: {eski_durum} -> {yeni_durum}")
+        eski_durum = todo.durum.DurumAdi if todo.durum else 'Durum Yok'
+        todo.DurumID = yeni_durum_id
+        print(f"Durum değiştiriliyor: {eski_durum} -> {yeni_durum_id}")
         
         # Eğer durum "Tamamlandı" ise tamamlanma tarihini set et ve todo'yu sil
-        if yeni_durum == 'Tamamlandı':
+        yeni_durum_adi = durum.DurumAdi if durum else None
+        if yeni_durum_adi == 'Tamamlandı':
             if not todo.TamamlanmaTarihi:
-                todo.TamamlanmaTarihi = datetime.utcnow()
+                todo.TamamlanmaTarihi = datetime.now()
             
             # Bu todo ile ilgili bildirimleri sil
             deleted_notifications = Bildirim.query.filter(
@@ -7883,14 +8661,14 @@ def todo_durum_degistir(todo_id):
             print("Todo durumu başarıyla güncellendi")
         
         # Log ekle
-        if yeni_durum == 'Tamamlandı':
+        if yeni_durum_adi == 'Tamamlandı':
             log_user_action(
                 action_type='Todo Tamamlandı ve Silindi',
                 table_name='Todos',
                 record_id=todo_id,
                 old_data={'durum': eski_durum},
-                new_data={'durum': yeni_durum, 'action': 'deleted'},
-                detail=f"Başlık: {todo.Baslik} - {eski_durum} → {yeni_durum} (Silindi)"
+                new_data={'durum': yeni_durum_adi, 'action': 'deleted'},
+                detail=f"Başlık: {todo.Baslik} - {eski_durum} → {yeni_durum_adi} (Silindi)"
             )
             return jsonify({'success': True, 'message': 'Todo tamamlandı ve silindi!'})
         else:
@@ -7899,16 +8677,290 @@ def todo_durum_degistir(todo_id):
                 table_name='Todos',
                 record_id=todo_id,
                 old_data={'durum': eski_durum},
-                new_data={'durum': yeni_durum},
-                detail=f"Başlık: {todo.Baslik} - {eski_durum} → {yeni_durum}"
+                new_data={'durum': yeni_durum_adi},
+                detail=f"Başlık: {todo.Baslik} - {eski_durum} → {yeni_durum_adi}"
             )
-            return jsonify({'success': True, 'message': f'Durum {yeni_durum} olarak güncellendi!'})
+            return jsonify({'success': True, 'message': f'Durum {yeni_durum_adi} olarak güncellendi!'})
         
     except Exception as e:
         db.session.rollback()
         print(f"Todo durum değiştirme hatası: {str(e)}")
         import traceback
         traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
+
+@app.route('/api/gorev-bilgi/<int:gorev_id>', methods=['GET'])
+@login_required
+def gorev_bilgi(gorev_id):
+    """Görev bilgilerini getir"""
+    try:
+        print(f"Görev bilgisi isteği: gorev_id={gorev_id}, user_id={session.get('user_id')}")
+        
+        # Görevi bul
+        gorev = Todo.query.filter_by(TodoID=gorev_id, KullaniciID=session['user_id'], Tip='Randevu').first()
+        print(f"Bulunan görev: {gorev}")
+        
+        if not gorev:
+            return jsonify({'success': False, 'message': 'Görev bulunamadı!'}), 404
+        
+        # Durum bilgisini güvenli şekilde al
+        durum_adi = None
+        try:
+            if gorev.durum:
+                durum_adi = gorev.durum.DurumAdi
+        except Exception as durum_error:
+            print(f"Durum bilgisi alınırken hata: {durum_error}")
+            durum_adi = None
+        
+        # Müşteri bilgilerini çıkar (görev açıklamasından)
+        musteri_adi = None
+        musteri_soyadi = None
+        telefon = None
+        email = None
+        
+        if gorev.Aciklama:
+            # Açıklamadan müşteri adını çıkar
+            if 'Müşteri:' in gorev.Aciklama:
+                musteri_line = [line for line in gorev.Aciklama.split('\n') if 'Müşteri:' in line]
+                if musteri_line:
+                    musteri_full = musteri_line[0].split('Müşteri:')[1].strip()
+                    ad_soyad = musteri_full.split(' ')
+                    musteri_adi = ad_soyad[0] if len(ad_soyad) > 0 else None
+                    musteri_soyadi = ' '.join(ad_soyad[1:]) if len(ad_soyad) > 1 else None
+        
+        # Eğer açıklamada müşteri adı yoksa, başlıktan çıkar
+        if not musteri_adi and gorev.Baslik and 'Randevu:' in gorev.Baslik:
+            baslik_parts = gorev.Baslik.split('Randevu:')[1]
+            if baslik_parts:
+                tarih_parts = baslik_parts.split(' - ')
+                if len(tarih_parts) > 0:
+                    musteri_full = tarih_parts[0].strip()
+                    ad_soyad = musteri_full.split(' ')
+                    musteri_adi = ad_soyad[0] if len(ad_soyad) > 0 else None
+                    musteri_soyadi = ' '.join(ad_soyad[1:]) if len(ad_soyad) > 1 else None
+        
+        # Müşteri adı varsa, müşteriler tablosundan telefon ve email bilgilerini al
+        if musteri_adi and musteri_soyadi:
+            try:
+                print(f"Müşteri aranıyor: {musteri_adi} {musteri_soyadi}, FirmaID: {session.get('firma_id')}")
+                musteri = Musteri.query.filter_by(
+                    MusteriAdi=musteri_adi,
+                    MusteriSoyadi=musteri_soyadi,
+                    FirmaID=session['firma_id']
+                ).first()
+                
+                if musteri:
+                    telefon = musteri.Telefon
+                    email = musteri.Email
+                    print(f"Müşteri bulundu: {musteri_adi} {musteri_soyadi}, Telefon: {telefon}, Email: {email}")
+                else:
+                    print(f"Müşteri bulunamadı: {musteri_adi} {musteri_soyadi}")
+            except Exception as musteri_error:
+                print(f"Müşteri arama hatası: {musteri_error}")
+                import traceback
+                traceback.print_exc()
+        
+        gorev_data = {
+            'TodoID': gorev.TodoID,
+            'Baslik': gorev.Baslik,
+            'Aciklama': gorev.Aciklama,
+            'Oncelik': gorev.Oncelik,
+            'BitisTarihi': gorev.BitisTarihi.strftime('%Y-%m-%d') if gorev.BitisTarihi else None,
+            'HatirlatmaTarihi': gorev.HatirlatmaTarihi.strftime('%Y-%m-%d') if gorev.HatirlatmaTarihi else None,
+            'RandevuTarihi': None,  # Şimdilik None
+            'RandevuSaati': None,  # Şimdilik None
+            'Durum': durum_adi,
+            'MusteriAdi': musteri_adi,
+            'MusteriSoyadi': musteri_soyadi,
+            'Telefon': telefon,
+            'Email': email
+        }
+        
+        print(f"Görev verisi: {gorev_data}")
+        
+        return jsonify({
+            'success': True,
+            'gorev': gorev_data
+        })
+        
+    except Exception as e:
+        print(f"Görev bilgisi API hatası: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
+
+@app.route('/api/randevu-defterleri', methods=['GET'])
+@login_required
+def api_randevu_defterleri():
+    """Randevu defterlerini getir"""
+    try:
+        print(f"Randevu defterleri isteği: firma_id={session.get('firma_id')}")
+        
+        defterler = RandevuDefterAyar.query.filter_by(FirmaID=session['firma_id'], Aktif=True).all()
+        print(f"Bulunan defterler: {len(defterler)}")
+        
+        defter_listesi = []
+        for d in defterler:
+            defter_listesi.append({
+                'AyarID': d.AyarID, 
+                'DefterAdi': d.DefterAdi,
+                'SlotDakika': d.SlotDakika
+            })
+        
+        print(f"Defter listesi: {defter_listesi}")
+        
+        return jsonify({
+            'success': True,
+            'defterler': defter_listesi
+        })
+    except Exception as e:
+        print(f"Randevu defterleri API hatası: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
+
+@app.route('/api/randevu-slotlari', methods=['GET'])
+@login_required
+def api_randevu_slotlari():
+    """Randevu slotlarını getir"""
+    try:
+        tarih = request.args.get('tarih')
+        defter_id = request.args.get('defter_id')
+        
+        if not tarih or not defter_id:
+            return jsonify({'success': False, 'message': 'Tarih ve defter ID gerekli!'}), 400
+        
+        # Defter ayarlarını al
+        defter_ayar = RandevuDefterAyar.query.filter_by(AyarID=defter_id, FirmaID=session['firma_id']).first()
+        if not defter_ayar:
+            return jsonify({'success': False, 'message': 'Defter bulunamadı!'}), 404
+        
+        # Mevcut randevuları kontrol et
+        tarih_obj = datetime.strptime(tarih, '%Y-%m-%d').date()
+        tarih_baslangic = datetime.combine(tarih_obj, datetime.min.time())
+        tarih_bitis = datetime.combine(tarih_obj, datetime.max.time())
+        
+        existing_randevular = Randevu.query.filter(
+            Randevu.RandevuTarihi >= tarih_baslangic,
+            Randevu.RandevuTarihi <= tarih_bitis,
+            Randevu.DefterID == defter_id,
+            Randevu.FirmaID == session['firma_id']
+        ).all()
+        
+        # Mevcut saatleri al
+        occupied_slots = []
+        for r in existing_randevular:
+            if r.RandevuTarihi:
+                # Saat bilgisini al
+                saat_str = r.RandevuTarihi.strftime('%H:%M')
+                occupied_slots.append(saat_str)
+        
+        print(f"Mevcut randevular: {len(existing_randevular)}")
+        print(f"Dolu slotlar: {occupied_slots}")
+        
+        # Çalışma günlerini kontrol et
+        calisma_gunleri = defter_ayar.CalismaGunleri or '1,2,3,4,5'  # Varsayılan: Pazartesi-Cuma
+        calisma_gunleri_list = [int(g.strip()) for g in calisma_gunleri.split(',')]
+        
+        # Bugünün haftanın günü (1=Pazartesi, 7=Pazar)
+        bugun_gun = tarih_obj.weekday() + 1  # Python'da 0=Pazartesi, bizim sistemde 1=Pazartesi
+        
+        if bugun_gun not in calisma_gunleri_list:
+            print(f"Bugün çalışma günü değil: {bugun_gun}, Çalışma günleri: {calisma_gunleri_list}")
+            return jsonify({
+                'success': True,
+                'slotlar': [],
+                'mesaj': 'Bu gün çalışma günü değil!'
+            })
+        
+        # Defter ayarlarından çalışma saatlerini ve slot süresini al
+        baslangic_saati = defter_ayar.BaslangicSaati or '09:00'
+        bitis_saati = defter_ayar.BitisSaati or '18:00'
+        slot_dakika = defter_ayar.SlotDakika or 30
+        
+        # Başlangıç ve bitiş saatlerini parse et
+        baslangic_hour, baslangic_minute = map(int, baslangic_saati.split(':'))
+        bitis_hour, bitis_minute = map(int, bitis_saati.split(':'))
+        
+        # Tüm slotları oluştur (hem müsait hem dolu)
+        all_slots = []
+        available_slots = []
+        current_hour = baslangic_hour
+        current_minute = baslangic_minute
+        
+        while (current_hour < bitis_hour) or (current_hour == bitis_hour and current_minute < bitis_minute):
+            slot = f"{current_hour:02d}:{current_minute:02d}"
+            all_slots.append(slot)
+            
+            if slot not in occupied_slots:
+                available_slots.append(slot)
+            
+            # Sonraki slot için dakika ekle
+            current_minute += slot_dakika
+            if current_minute >= 60:
+                current_hour += 1
+                current_minute -= 60
+        
+        print(f"Defter: {defter_ayar.DefterAdi}, Slot süresi: {slot_dakika} dk, Başlangıç: {baslangic_saati}, Bitiş: {bitis_saati}")
+        print(f"Oluşturulan slotlar: {all_slots[:5]}...")  # İlk 5 slotu göster
+        
+        return jsonify({
+            'success': True,
+            'slotlar': available_slots,
+            'dolu_slotlar': occupied_slots,
+            'tum_slotlar': all_slots
+        })
+        
+    except Exception as e:
+        print(f"Slot oluşturma hatası: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
+
+@app.route('/api/gorev-to-randevu/<int:gorev_id>', methods=['POST'])
+@login_required
+def gorev_to_randevu(gorev_id):
+    """Görevi randevu defterine taşı"""
+    try:
+        # Görevi bul
+        gorev = Todo.query.filter_by(TodoID=gorev_id, KullaniciID=session['user_id'], Tip='Randevu').first()
+        if not gorev:
+            return jsonify({'success': False, 'message': 'Görev bulunamadı!'}), 404
+        
+        # Görev tipini 'Randevu' olarak değiştir (zaten Randevu ama emin olmak için)
+        gorev.Tip = 'Randevu'
+        
+        # Randevu defteri için gerekli alanları ekle/güncelle
+        if not gorev.RandevuTarihi:
+            gorev.RandevuTarihi = gorev.BitisTarihi or datetime.now().date()
+        
+        if not gorev.RandevuSaati:
+            gorev.RandevuSaati = '09:00'  # Varsayılan saat
+        
+        # Durumu 'Beklemede' yap
+        beklemede_durum = TodoDurum.query.filter_by(DurumAdi='Beklemede', FirmaID=session['firma_id']).first()
+        if beklemede_durum:
+            gorev.DurumID = beklemede_durum.DurumID
+        
+        db.session.commit()
+        
+        # Log ekle
+        try:
+            log_user_action(
+                action_type='Görev Randevu Defterine Taşındı',
+                table_name='Todos',
+                record_id=gorev_id,
+                old_data={'tip': 'Randevu'},
+                new_data={'tip': 'Randevu', 'randevu_tarihi': str(gorev.RandevuTarihi), 'randevu_saati': gorev.RandevuSaati},
+                detail=f"Başlık: {gorev.Baslik} - Randevu Tarihi: {gorev.RandevuTarihi}"
+            )
+        except Exception as log_error:
+            print(f"Log hatası (önemli değil): {log_error}")
+        
+        return jsonify({'success': True, 'message': 'Görev başarıyla randevu defterine taşındı!'})
+        
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
 
 @app.route('/todos/<int:todo_id>/sil', methods=['DELETE'])
@@ -7930,7 +8982,7 @@ def todo_sil(todo_id):
                 action_type='Todo Silindi',
                 table_name='Todos',
                 record_id=todo_id,
-                old_data={'baslik': baslik, 'durum': todo.Durum},
+                old_data={'baslik': baslik, 'durum': todo.durum.DurumAdi if todo.durum else 'Durum Yok'},
                 new_data=None,
                 detail=f"Başlık: {baslik}"
             )
@@ -7958,7 +9010,7 @@ def todos_api():
                 'baslik': todo.Baslik,
                 'aciklama': todo.Aciklama,
                 'oncelik': todo.Oncelik,
-                'durum': todo.Durum,
+                'durum': todo.durum.DurumAdi if todo.durum else 'Durum Yok',
                 'bitis_tarihi': todo.BitisTarihi.isoformat() if todo.BitisTarihi else None,
                 'hatirlatma_tarihi': todo.HatirlatmaTarihi.isoformat() if todo.HatirlatmaTarihi else None,
                 'olusturma_tarihi': todo.OlusturmaTarihi.isoformat(),
@@ -7978,11 +9030,13 @@ def check_todo_reminders():
         bugun = datetime.now().date()
         simdi = datetime.now()
         
-        # Bugün hatırlatma tarihi olan ve tamamlanmamış todoları bul
+        # Bugün hatırlatma tarihi olan todoları bul
         hatirlatma_todos = Todo.query.filter(
-            Todo.HatirlatmaTarihi == bugun,
-            Todo.Durum != 'Tamamlandı'
+            Todo.HatirlatmaTarihi == bugun
         ).all()
+        
+        # Tamamlanmamış todoları filtrele
+        hatirlatma_todos = [todo for todo in hatirlatma_todos if not todo.durum or todo.durum.DurumAdi != 'Tamamlandı']
         
         yeni_bildirim_sayisi = 0
         
@@ -8051,7 +9105,7 @@ def forgot_password():
             # Token'ı veritabanına kaydet (geçici olarak session'da saklayalım)
             session[f'reset_token_{user.KullaniciID}'] = {
                 'token': reset_token,
-                'expires': datetime.utcnow() + timedelta(hours=1)  # 1 saat geçerli
+                'expires': datetime.now() + timedelta(hours=1)  # 1 saat geçerli
             }
             
             # Reset link'i oluştur
@@ -8076,7 +9130,7 @@ def reset_password(token):
         
         for key, value in session.items():
             if key.startswith('reset_token_') and value.get('token') == token:
-                if value.get('expires', datetime.min) > datetime.utcnow():
+                if value.get('expires', datetime.min) > datetime.now():
                     valid_token = True
                     user_id = key.replace('reset_token_', '')
                     break
@@ -8105,7 +9159,7 @@ def reset_password(token):
         
         for key, value in session.items():
             if key.startswith('reset_token_') and value.get('token') == token:
-                if value.get('expires', datetime.min) > datetime.utcnow():
+                if value.get('expires', datetime.min) > datetime.now():
                     valid_token = True
                     user_id = key.replace('reset_token_', '')
                     break
@@ -8118,7 +9172,7 @@ def reset_password(token):
         user = Kullanici.query.get(user_id)
         if user:
             user.Sifre = new_password
-            user.GuncellemeTarihi = datetime.utcnow()
+            user.GuncellemeTarihi = datetime.now()
             db.session.commit()
             
             # Token'ı temizle

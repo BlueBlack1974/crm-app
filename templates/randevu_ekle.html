@@ -244,6 +244,18 @@
                         <textarea class="form-control" id="aciklama" name="aciklama" rows="3"></textarea>
                     </div>
 
+                    <div class="mb-3">
+                        <label for="atanan_kullanici" class="form-label">{{ _('Assign to User') }}</label>
+                        <select class="form-select" id="atanan_kullanici" name="atanan_kullanici">
+                            <option value="">{{ _('Select user (optional)') }}</option>
+                            <!-- Kullanıcılar JavaScript ile doldurulacak -->
+                        </select>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle"></i> 
+                            {{ _('Seçilen kullanıcıya bu randevu için otomatik görev oluşturulacak') }}
+                        </small>
+                    </div>
+
                     <hr class="my-4">
                     <h5 class="mb-3">{{ _('Customer Information') }}</h5>
 
@@ -2002,6 +2014,37 @@
         
         // İlk yükleme
         updateCalendar();
+        
+        // Kullanıcıları yükle
+        loadKullanicilar();
+    }
+    
+    // Kullanıcıları yükle
+    function loadKullanicilar() {
+        fetch('/api/kullanicilar')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const select = document.getElementById('atanan_kullanici');
+                    // Mevcut seçenekleri temizle (ilk seçenek hariç)
+                    while (select.children.length > 1) {
+                        select.removeChild(select.lastChild);
+                    }
+                    
+                    // Kullanıcıları ekle
+                    data.kullanicilar.forEach(kullanici => {
+                        const option = document.createElement('option');
+                        option.value = kullanici.id;
+                        option.textContent = kullanici.tam_adi;
+                        select.appendChild(option);
+                    });
+                } else {
+                    console.error('Kullanıcılar yüklenemedi:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Kullanıcı yükleme hatası:', error);
+            });
     }
 </script>
 {% endblock %}

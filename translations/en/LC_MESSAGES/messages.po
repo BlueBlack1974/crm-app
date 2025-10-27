@@ -115,9 +115,209 @@ msgid "Customer Report"
 msgstr "Customer Report"
 
 #: templates/base.html:198 templates/base.html:300
-#, fuzzy
 msgid "Todos"
-msgstr "Today"
+msgstr "Todos"
+
+#: templates/base.html:198
+msgid "Yapılacaklar"
+msgstr "Todos"
+
+msgid "Görevler"
+msgstr "Tasks"
+
+msgid "Görevler Listesi"
+msgstr "Task List"
+
+msgid "Randevu bazlı görevlerinizi buradan takip edebilirsiniz"
+msgstr "You can track your appointment-based tasks from here"
+
+msgid "Toplam Görev"
+msgstr "Total Tasks"
+
+msgid "Tamamlanan"
+msgstr "Completed"
+
+msgid "Beklemede"
+msgstr "Pending"
+
+msgid "Devam Ediyor"
+msgstr "In Progress"
+
+msgid "Yaklaşan Hatırlatmalar"
+msgstr "Upcoming Reminders"
+
+msgid "Tümü"
+msgstr "All"
+
+msgid "Görev bulunamadı"
+msgstr "No tasks found"
+
+msgid "Henüz size atanmış görev bulunmuyor."
+msgstr "No tasks have been assigned to you yet."
+
+msgid "Görev Düzenle"
+msgstr "Edit Task"
+
+msgid "Başlık"
+msgstr "Title"
+
+msgid "Açıklama"
+msgstr "Description"
+
+msgid "Öncelik"
+msgstr "Priority"
+
+msgid "Düşük"
+msgstr "Low"
+
+msgid "Orta"
+msgstr "Medium"
+
+msgid "Yüksek"
+msgstr "High"
+
+msgid "Durum"
+msgstr "Status"
+
+msgid "Bitiş Tarihi"
+msgstr "End Date"
+
+msgid "Hatırlatma Tarihi"
+msgstr "Reminder Date"
+
+msgid "İptal"
+msgstr "Cancel"
+
+msgid "Kaydet"
+msgstr "Save"
+
+msgid "Düzenle"
+msgstr "Edit"
+
+msgid "Sil"
+msgstr "Delete"
+
+msgid "Bitiş"
+msgstr "End"
+
+msgid "Hatırlatma"
+msgstr "Reminder"
+
+msgid "Oluşturulma"
+msgstr "Created"
+
+msgid "Bu görevi silmek istediğinizden emin misiniz?"
+msgstr "Are you sure you want to delete this task?"
+
+msgid "Başlık gerekli!"
+msgstr "Title is required!"
+
+msgid "Assign to User"
+msgstr "Assign to User"
+
+msgid "Select user (optional)"
+msgstr "Select user (optional)"
+
+msgid "Seçilen kullanıcıya bu randevu için otomatik görev oluşturulacak"
+msgstr "An automatic task will be created for the selected user for this appointment"
+
+msgid "Kart Görünümü"
+msgstr "Card View"
+
+msgid "Liste Görünümü"
+msgstr "List View"
+
+msgid "Takvim Görünümü"
+msgstr "Calendar View"
+
+msgid "Kartlar"
+msgstr "Cards"
+
+msgid "Liste"
+msgstr "List"
+
+msgid "Takvim"
+msgstr "Calendar"
+
+msgid "Görevler Dashboard"
+msgstr "Tasks Dashboard"
+
+msgid "Randevu bazlı görevlerinizi profesyonel bir şekilde takip edin"
+msgstr "Track your appointment-based tasks professionally"
+
+msgid "Son Güncelleme"
+msgstr "Last Update"
+
+msgid "Yenile"
+msgstr "Refresh"
+
+msgid "Görev ara..."
+msgstr "Search tasks..."
+
+msgid "Temizle"
+msgstr "Clear"
+
+msgid "Yeni Görev"
+msgstr "New Task"
+
+msgid "Toplu İşlemler"
+msgstr "Bulk Actions"
+
+msgid "Filtreleri Temizle"
+msgstr "Clear Filters"
+
+msgid "Tamamla"
+msgstr "Complete"
+
+msgid "Filtreler"
+msgstr "Filters"
+
+msgid "Arama"
+msgstr "Search"
+
+msgid "Tarih"
+msgstr "Date"
+
+msgid "Filtrele"
+msgstr "Filter"
+
+msgid "Görünüm Seçenekleri"
+msgstr "View Options"
+
+msgid "Takvim Görünümü"
+msgstr "Calendar View"
+
+#: templates/todos.html:96
+msgid "Yapılacak"
+msgstr "Todo"
+
+#: templates/todos.html:260
+msgid "Yeni Yapılacak"
+msgstr "New Todo"
+
+#: templates/todos.html:484
+msgid "Yapılacak Düzenle"
+msgstr "Edit Todo"
+
+#: templates/todos.html:250
+msgid "Yapılacak"
+msgstr "Todo"
+
+#: templates/todos.html:3
+msgid "Yapılacaklar Listesi"
+msgstr "Todo List"
+
+#: templates/todos.html:107
+msgid "Toplam Yapılacak"
+msgstr "Total Todos"
+
+#: templates/todos.html:247
+msgid "Yapılacak bulunamadı"
+msgstr "No todos found"
+
+#: templates/todos.html:248
+msgid "Başlamak için ilk yapılacakınızı oluşturun!"
+msgstr "Create your first todo to get started!"
 
 #: templates/base.html:204 templates/base.html:645
 #, fuzzy

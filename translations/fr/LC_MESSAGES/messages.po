@@ -115,9 +115,44 @@ msgid "Customer Report"
 msgstr "Rapport Client"
 
 #: templates/base.html:198 templates/base.html:300
-#, fuzzy
 msgid "Todos"
-msgstr "Aujourd'hui"
+msgstr "Tâches"
+
+#: templates/base.html:198
+msgid "Yapılacaklar"
+msgstr "Tâches"
+
+#: templates/todos.html:96
+msgid "Yapılacak"
+msgstr "Tâche"
+
+#: templates/todos.html:260
+msgid "Yeni Yapılacak"
+msgstr "Nouvelle Tâche"
+
+#: templates/todos.html:484
+msgid "Yapılacak Düzenle"
+msgstr "Modifier la Tâche"
+
+#: templates/todos.html:250
+msgid "Yapılacak"
+msgstr "Tâche"
+
+#: templates/todos.html:3
+msgid "Yapılacaklar Listesi"
+msgstr "Liste des Tâches"
+
+#: templates/todos.html:107
+msgid "Toplam Yapılacak"
+msgstr "Total des Tâches"
+
+#: templates/todos.html:247
+msgid "Yapılacak bulunamadı"
+msgstr "Aucune tâche trouvée"
+
+#: templates/todos.html:248
+msgid "Başlamak için ilk yapılacakınızı oluşturun!"
+msgstr "Créez votre première tâche pour commencer !"
 
 #: templates/base.html:204 templates/base.html:645
 #, fuzzy

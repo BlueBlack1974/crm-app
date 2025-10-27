@@ -195,7 +195,13 @@
             <li>
                 <a href="{{ url_for('todos') }}" class="nav-link {% if request.endpoint == 'todos' %}active{% endif %}">
                     <i class="fas fa-tasks me-2"></i>
-                    {{ _('Todos') }}
+                    {{ _('Yapılacaklar') }}
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('gorevler') }}" class="nav-link {% if request.endpoint == 'gorevler' %}active{% endif %}">
+                    <i class="fas fa-clipboard-check me-2"></i>
+                    {{ _('Görevler') }}
                 </a>
             </li>
             <li>
@@ -299,7 +305,8 @@
             <li class="list-group-item"><a class="text-decoration-none" href="{{ url_for('randevu_ekle') }}">{{ _('New Appointment') }}</a></li>
             <li class="list-group-item"><a class="text-decoration-none" href="{{ url_for('takvim') }}">{{ _('Calendar') }}</a></li>
             <li class="list-group-item"><a class="text-decoration-none" href="{{ url_for('whatsapp_chat') }}"><i class="fab fa-whatsapp me-2"></i>{{ _('WhatsApp') }}</a></li>
-            <li class="list-group-item"><a class="text-decoration-none" href="{{ url_for('todos') }}"><i class="fas fa-tasks me-2"></i>{{ _('Todos') }}</a></li>
+            <li class="list-group-item"><a class="text-decoration-none" href="{{ url_for('todos') }}"><i class="fas fa-tasks me-2"></i>{{ _('Yapılacaklar') }}</a></li>
+            <li class="list-group-item"><a class="text-decoration-none" href="{{ url_for('gorevler') }}"><i class="fas fa-clipboard-check me-2"></i>{{ _('Görevler') }}</a></li>
             {% if session.raporlar_modulu %}
             <li class="list-group-item">
                 <div class="d-flex justify-content-between align-items-center">

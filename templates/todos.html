@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('Todo List') }} - Crandyx CRM{% endblock %}
+{% block title %}{{ _('Yapılacaklar Listesi') }} - Crandyx CRM{% endblock %}
 
 {% block head %}
 <style>
@@ -30,6 +30,7 @@
     opacity: 0.7;
     background-color: #f8f9fa;
 }
+
 
 .durum-badge {
     font-size: 0.8em;
@@ -89,11 +90,11 @@
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
-        <i class="fas fa-tasks me-2"></i>{{ _('Todo List') }}
+        <i class="fas fa-tasks me-2"></i>{{ _('Yapılacaklar Listesi') }}
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#todoModal">
-            <i class="fas fa-plus me-1"></i>{{ _('New Todo') }}
+            <i class="fas fa-plus me-1"></i>{{ _('Yapılacak') }}
         </button>
     </div>
 </div>
@@ -104,7 +105,7 @@
         <div class="card stats-card">
             <div class="card-body text-center">
                 <div class="stats-number">{{ toplam_todo }}</div>
-                <div>{{ _('Total Todos') }}</div>
+                <div>{{ _('Toplam Yapılacak') }}</div>
             </div>
         </div>
     </div>
@@ -168,8 +169,8 @@
 <!-- Todo Listesi -->
 <div class="row" id="todoList">
     {% for todo in todos %}
-    <div class="col-md-6 col-lg-4 mb-3 todo-item" data-durum="{{ todo.Durum }}">
-        <div class="card todo-card oncelik-{{ todo.Oncelik.lower().replace('ü', 'u').replace('ş', 's').replace('ğ', 'g').replace('ı', 'i').replace('ö', 'o').replace('ç', 'c') }} {% if todo.Durum == 'Tamamlandı' %}tamamlandi{% endif %}">
+    <div class="col-md-6 col-lg-4 mb-3 todo-item" data-durum="{{ todo.durum.DurumAdi if todo.durum else 'Durum Yok' }}">
+        <div class="card todo-card oncelik-{{ todo.Oncelik.lower().replace('ü', 'u').replace('ş', 's').replace('ğ', 'g').replace('ı', 'i').replace('ö', 'o').replace('ç', 'c') }} {% if todo.durum and todo.durum.DurumAdi == 'Tamamlandı' %}tamamlandi{% endif %}">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <h6 class="card-title mb-0">{{ todo.Baslik }}</h6>
@@ -191,11 +192,11 @@
                 
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="badge durum-badge 
-                        {% if todo.Durum == 'Beklemede' %}bg-warning
-                        {% elif todo.Durum == 'Devam Ediyor' %}bg-info
-                        {% elif todo.Durum == 'Tamamlandı' %}bg-success
+                        {% if todo.durum and todo.durum.DurumAdi == 'Beklemede' %}bg-warning
+                        {% elif todo.durum and todo.durum.DurumAdi == 'Devam Ediyor' %}bg-info
+                        {% elif todo.durum and todo.durum.DurumAdi == 'Tamamlandı' %}bg-success
                         {% endif %}">
-                        <span class="durum-text">{{ todo.Durum }}</span>
+                        <span class="durum-text">{{ todo.durum.DurumAdi if todo.durum else 'Durum Yok' }}</span>
                     </span>
                     <span class="badge oncelik-badge 
                         {% if todo.Oncelik == 'Yüksek' %}bg-danger
@@ -220,17 +221,17 @@
                     <div class="btn-group w-100" role="group">
                         <button type="button" class="btn btn-sm btn-outline-warning" 
                                 onclick="changeStatus({{ todo.TodoID }}, 'Beklemede')"
-                                {% if todo.Durum == 'Beklemede' %}disabled{% endif %}>
+                                {% if todo.durum and todo.durum.DurumAdi == 'Beklemede' %}disabled{% endif %}>
                             {{ _('Pending') }}
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-info" 
                                 onclick="changeStatus({{ todo.TodoID }}, 'Devam Ediyor')"
-                                {% if todo.Durum == 'Devam Ediyor' %}disabled{% endif %}>
+                                {% if todo.durum and todo.durum.DurumAdi == 'Devam Ediyor' %}disabled{% endif %}>
                             {{ _('In Progress') }}
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-success" 
                                 onclick="changeStatus({{ todo.TodoID }}, 'Tamamlandı')"
-                                {% if todo.Durum == 'Tamamlandı' %}disabled{% endif %}>
+                                {% if todo.durum and todo.durum.DurumAdi == 'Tamamlandı' %}disabled{% endif %}>
                             {{ _('Completed') }}
                         </button>
                     </div>
@@ -244,10 +245,10 @@
 {% if not todos %}
 <div class="text-center py-5">
     <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
-    <h4 class="text-muted">{{ _('No todos found') }}</h4>
-    <p class="text-muted">{{ _('Create your first todo to get started!') }}</p>
+    <h4 class="text-muted">{{ _('Yapılacak bulunamadı') }}</h4>
+    <p class="text-muted">{{ _('Başlamak için ilk yapılacakınızı oluşturun!') }}</p>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#todoModal">
-        <i class="fas fa-plus me-1"></i>{{ _('Create Todo') }}
+        <i class="fas fa-plus me-1"></i>{{ _('Yapılacak') }}
     </button>
 </div>
 {% endif %}
@@ -257,7 +258,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="todoModalLabel">{{ _('New Todo') }}</h5>
+                <h5 class="modal-title" id="todoModalLabel">{{ _('Yeni Yapılacak') }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div id="todoForm">
@@ -285,6 +286,9 @@
                                 </select>
                             </div>
                         </div>
+                    </div>
+                    
+                    <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="durum" class="form-label">{{ _('Status') }}</label>
@@ -353,9 +357,13 @@ window.deleteTodo = function(todoId) {
 };
 
 
-// Durum değiştirme fonksiyonu - global olarak tanımla
+
+// Durum değiştirme fonksiyonu
 window.changeStatus = function(todoId, newStatus) {
     console.log('changeStatus çağrıldı:', todoId, newStatus);
+    console.log('API URL:', `/todos/${todoId}/durum`);
+    console.log('Request body:', JSON.stringify({ durum: newStatus }));
+    
     fetch(`/todos/${todoId}/durum`, {
         method: 'POST',
         headers: {
@@ -364,8 +372,21 @@ window.changeStatus = function(todoId, newStatus) {
         },
         body: JSON.stringify({ durum: newStatus })
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        return response.text().then(text => {
+            console.log('Response text:', text);
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('JSON parse error:', e);
+                return { success: false, message: 'Geçersiz response formatı' };
+            }
+        });
+    })
     .then(result => {
+        console.log('Parsed result:', result);
         if (result.success) {
             showAlert('success', result.message);
             location.reload();
@@ -459,7 +480,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Formu temizle
             document.getElementById('todoForm').reset();
             document.getElementById('todoId').value = '';
-            document.getElementById('todoModalLabel').textContent = '{{ _("New Todo") }}';
+            document.getElementById('todoModalLabel').textContent = '{{ _("Yeni Yapılacak") }}';
         });
     });
 }); // DOMContentLoaded kapanışı
@@ -481,7 +502,7 @@ window.editTodo = function(todoId) {
             document.getElementById('bitis_tarihi').value = todo.bitis_tarihi ? todo.bitis_tarihi.split('T')[0] : '';
             document.getElementById('hatirlatma_tarihi').value = todo.hatirlatma_tarihi ? todo.hatirlatma_tarihi.split('T')[0] : '';
             
-            document.getElementById('todoModalLabel').textContent = '{{ _("Edit Todo") }}';
+            document.getElementById('todoModalLabel').textContent = '{{ _("Yapılacak Düzenle") }}';
             new bootstrap.Modal(document.getElementById('todoModal')).show();
         }
     });
@@ -514,7 +535,7 @@ function filterTodos(filter) {
 document.getElementById('todoModal').addEventListener('hidden.bs.modal', function() {
     document.getElementById('todoForm').reset();
     document.getElementById('todoId').value = '';
-    document.getElementById('todoModalLabel').textContent = '{{ _("New Todo") }}';
+    document.getElementById('todoModalLabel').textContent = '{{ _("Yeni Yapılacak") }}';
 });
 
 // Alert gösterme
