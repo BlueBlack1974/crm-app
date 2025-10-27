@@ -709,6 +709,13 @@
     z-index: 1000;
 }
 
+/* Filtreleme */
+.filtered-hidden {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
 .drop-zone {
     border: 2px dashed #667eea;
     border-radius: 10px;
@@ -2995,7 +3002,10 @@ function initializeCalendar() {
 
 // Sayfa yüklendiğinde
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== DOMContentLoaded BAŞLADI ===');
     console.log('Sayfa yüklendi, görevler sayfası başlatılıyor...');
+    
+    try {
     
     // Global fonksiyonları tanımla
     window.changeView = changeView;
@@ -3014,19 +3024,78 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Kullanıcının tercih ettiği görünümü yükle
     const savedView = localStorage.getItem('gorevlerView') || 'cards';
+    console.log('=== SAYFA YÜKLENDİ ===');
     console.log('Kaydedilen görünüm:', savedView);
+    console.log('localStorage gorevlerView:', localStorage.getItem('gorevlerView'));
+    
+    // Filtre durumunu geri yükle
+    const savedFilters = localStorage.getItem('gorevlerFilters');
+    if (savedFilters) {
+        try {
+            const filters = JSON.parse(savedFilters);
+            console.log('Kaydedilen filtreler:', filters);
+            
+            if (filters.searchTerm) document.getElementById('searchInput').value = filters.searchTerm;
+            if (filters.statusFilter) document.getElementById('statusFilter').value = filters.statusFilter;
+            if (filters.priorityFilter) document.getElementById('priorityFilter').value = filters.priorityFilter;
+            if (filters.dateFilter) document.getElementById('dateFilter').value = filters.dateFilter;
+            
+            console.log('Filtreler geri yüklendi');
+        } catch (error) {
+            console.error('Filtre geri yükleme hatası:', error);
+        }
+    }
     
     // Önce buton durumlarını güncelle
+    console.log('=== SAYFA YÜKLENDİ - BUTON İŞARETLEME BAŞLADI ===');
+    const buttons = document.querySelectorAll('[data-view]');
+    console.log('Bulunan buton sayısı:', buttons.length);
+    
+    buttons.forEach((btn, index) => {
+        const viewType = btn.getAttribute('data-view');
+        console.log(`Buton ${index + 1}:`, viewType, 'text:', btn.textContent.trim());
+        btn.classList.remove('active');
+        
+        if (viewType === savedView) {
+            btn.classList.add('active');
+            console.log('✅ SAYFA YÜKLENDİ - Buton işaretlendi:', viewType);
+            // Görsel olarak da gösterelim
+            btn.style.backgroundColor = '#007bff';
+            btn.style.color = 'white';
+            btn.style.borderColor = '#007bff';
+        } else {
+            console.log('❌ SAYFA YÜKLENDİ - Buton işaretlenmedi:', viewType);
+            // Diğer butonları normal yapalım
+            btn.style.backgroundColor = '';
+            btn.style.color = '';
+            btn.style.borderColor = '';
+        }
+    });
+    console.log('=== SAYFA YÜKLENDİ - BUTON İŞARETLEME BİTTİ ===');
+    
+    // Sonra görünümü değiştir
+    changeView(savedView);
+    
+    // changeView'den sonra buton durumlarını tekrar güncelle
+    console.log('=== CHANGEVIEW SONRASI - BUTON İŞARETLEME BAŞLADI ===');
     document.querySelectorAll('[data-view]').forEach(btn => {
         btn.classList.remove('active');
         if (btn.getAttribute('data-view') === savedView) {
             btn.classList.add('active');
-            console.log('Buton işaretlendi:', btn.getAttribute('data-view'));
+            console.log('✅ CHANGEVIEW SONRASI - Buton işaretlendi:', btn.getAttribute('data-view'));
+            // Görsel olarak da gösterelim
+            btn.style.backgroundColor = '#007bff';
+            btn.style.color = 'white';
+            btn.style.borderColor = '#007bff';
+        } else {
+            console.log('❌ CHANGEVIEW SONRASI - Buton işaretlenmedi:', btn.getAttribute('data-view'));
+            // Diğer butonları normal yapalım
+            btn.style.backgroundColor = '';
+            btn.style.color = '';
+            btn.style.borderColor = '';
         }
     });
-    
-    // Sonra görünümü değiştir
-    changeView(savedView);
+    console.log('=== CHANGEVIEW SONRASI - BUTON İŞARETLEME BİTTİ ===');
     
     // Eğer takvim görünümü seçiliyse CSS override'ları uygula
     if (savedView === 'calendar') {
@@ -3037,11 +3106,22 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Event listener'ları bağla
     setupAllEventListeners();
+    
+    console.log('=== DOMContentLoaded BİTTİ ===');
+    
+    } catch (error) {
+        console.error('DOMContentLoaded hatası:', error);
+        console.error('Hata detayı:', error.message);
+        console.error('Stack trace:', error.stack);
+    }
 });
 
 // Sayfa yenilendiğinde de çalışması için
 window.addEventListener('load', function() {
+    console.log('=== WINDOW LOAD BAŞLADI ===');
     console.log('Window load event - event listener\'lar yeniden bağlanıyor...');
+    
+    try {
     
     // Global fonksiyonları tekrar tanımla
     window.changeView = changeView;
@@ -3059,11 +3139,22 @@ window.addEventListener('load', function() {
     };
     
     setupAllEventListeners();
+    
+    console.log('=== WINDOW LOAD BİTTİ ===');
+    
+    } catch (error) {
+        console.error('Window load hatası:', error);
+        console.error('Hata detayı:', error.message);
+        console.error('Stack trace:', error.stack);
+    }
 });
 
 // Tüm event listener'ları bağlayan fonksiyon
 function setupAllEventListeners() {
+    console.log('=== setupAllEventListeners BAŞLADI ===');
     console.log('Event listener\'lar bağlanıyor...');
+    
+    try {
     
     // Görünüm değiştirme butonları
     setupViewChangeListeners();
@@ -3071,8 +3162,43 @@ function setupAllEventListeners() {
     // Durum değiştirme butonları
     setupStatusChangeListeners();
     
-    // Filtreleme butonları
-    setupFilterListeners();
+    // Filtreleme butonları - onclick attribute'ları kullanılıyor
+    
+    // Durumları yükle
+    loadDurumlar();
+    
+    // Yeni görev form submit
+    const quickGorevForm = document.getElementById('quickGorevForm');
+    if (quickGorevForm) {
+        quickGorevForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveQuickGorev();
+        });
+    }
+    
+    // Modal temizleme
+    const quickGorevModal = document.getElementById('quickGorevModal');
+    if (quickGorevModal) {
+        quickGorevModal.addEventListener('hidden.bs.modal', function() {
+            const form = document.getElementById('quickGorevForm');
+            if (form) form.reset();
+            // Müşteri arama önerilerini gizle
+            const suggestions = document.getElementById('musteri_adi_suggestions');
+            if (suggestions) suggestions.style.display = 'none';
+        });
+    }
+    
+    // Müşteri arama autocomplete
+    setupMusteriArama();
+    
+    // Kullanıcıları yükle
+    loadKullanicilar();
+    
+    // Randevu defterlerini yükle
+    loadRandevuDefterleri();
+    
+    // Bugünün tarihini set et
+    setTodayDate();
     
     // Modal butonları
     setupModalListeners();
@@ -3081,6 +3207,13 @@ function setupAllEventListeners() {
     setupRandevuModalListeners();
     
     console.log('Event listener\'lar bağlandı!');
+    console.log('=== setupAllEventListeners BİTTİ ===');
+    
+    } catch (error) {
+        console.error('setupAllEventListeners hatası:', error);
+        console.error('Hata detayı:', error.message);
+        console.error('Stack trace:', error.stack);
+    }
 }
 
 // Görünüm değiştirme event listener'ları
@@ -3289,90 +3422,7 @@ function initializeAdvancedFilters() {
     }
 }
 
-// Görevleri filtrele
-function filterTasks() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const statusFilter = document.getElementById('statusFilter').value;
-    const priorityFilter = document.getElementById('priorityFilter').value;
-    const dateFilter = document.getElementById('dateFilter').value;
-    
-    const tasks = document.querySelectorAll('.gorev-item');
-    
-    tasks.forEach(task => {
-        let showTask = true;
-        
-        // Arama filtresi
-        if (searchTerm) {
-            const title = task.querySelector('.card-title, .gorev-list-title')?.textContent.toLowerCase() || '';
-            const description = task.querySelector('.card-text, .gorev-list-description')?.textContent.toLowerCase() || '';
-            if (!title.includes(searchTerm) && !description.includes(searchTerm)) {
-                showTask = false;
-            }
-        }
-        
-        // Durum filtresi
-        if (statusFilter !== 'all') {
-            const taskStatusId = task.getAttribute('data-durum-id');
-            if (taskStatusId !== statusFilter) {
-                showTask = false;
-            }
-        }
-        
-        // Öncelik filtresi
-        if (priorityFilter !== 'all') {
-            const taskPriority = task.classList.contains(`oncelik-${priorityFilter}`);
-            if (!taskPriority) {
-                showTask = false;
-            }
-        }
-        
-        // Tarih filtresi
-        if (dateFilter) {
-            const taskDate = task.querySelector('[data-bitis-tarihi], [data-hatirlatma-tarihi]');
-            if (taskDate) {
-                const taskDateValue = taskDate.getAttribute('data-bitis-tarihi') || taskDate.getAttribute('data-hatirlatma-tarihi');
-                if (taskDateValue !== dateFilter) {
-                    showTask = false;
-                }
-            } else {
-                showTask = false;
-            }
-        }
-        
-        // Görevi göster/gizle
-        task.style.display = showTask ? 'block' : 'none';
-    });
-    
-    // Filtre sonuçlarını güncelle
-    updateFilterResults();
-}
-
-// Filtre sonuçlarını güncelle
-function updateFilterResults() {
-    const visibleTasks = document.querySelectorAll('.gorev-item[style*="block"], .gorev-item:not([style*="none"])');
-    const totalTasks = document.querySelectorAll('.gorev-item').length;
-    
-    // Sonuç sayısını göster
-    const resultInfo = document.querySelector('.filter-results');
-    if (resultInfo) {
-        resultInfo.textContent = `${visibleTasks.length} / ${totalTasks} görev gösteriliyor`;
-    }
-}
-
-// Filtreleri temizle
-function clearFilters() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('statusFilter').value = 'all';
-    document.getElementById('priorityFilter').value = 'all';
-    document.getElementById('dateFilter').value = '';
-    
-    // Tüm görevleri göster
-    document.querySelectorAll('.gorev-item').forEach(task => {
-        task.style.display = 'block';
-    });
-    
-    updateFilterResults();
-}
+// Eski fonksiyonlar kaldırıldı - script bloğunun başına taşındı
 
 // Veri yenileme
 function refreshData() {
@@ -3641,66 +3691,7 @@ function clearDateFilter() {
     updateFilterChips();
 }
 
-// Gelişmiş filtreleme sistemi güncellemesi
-function filterTasks() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const statusFilter = document.getElementById('statusFilter').value;
-    const priorityFilter = document.getElementById('priorityFilter').value;
-    const dateFilter = document.getElementById('dateFilter').value;
-    
-    const tasks = document.querySelectorAll('.gorev-item');
-    
-    tasks.forEach(task => {
-        let showTask = true;
-        
-        // Arama filtresi
-        if (searchTerm) {
-            const title = task.querySelector('.card-title, .gorev-list-title')?.textContent.toLowerCase() || '';
-            const description = task.querySelector('.card-text, .gorev-list-description')?.textContent.toLowerCase() || '';
-            if (!title.includes(searchTerm) && !description.includes(searchTerm)) {
-                showTask = false;
-            }
-        }
-        
-        // Durum filtresi
-        if (statusFilter !== 'all') {
-            const taskStatusId = task.getAttribute('data-durum-id');
-            if (taskStatusId !== statusFilter) {
-                showTask = false;
-            }
-        }
-        
-        // Öncelik filtresi
-        if (priorityFilter !== 'all') {
-            const taskPriority = task.getAttribute('data-priority');
-            if (taskPriority !== priorityFilter) {
-                showTask = false;
-            }
-        }
-        
-        // Tarih filtresi
-        if (dateFilter) {
-            const taskDate = task.querySelector('[data-bitis-tarihi], [data-hatirlatma-tarihi]');
-            if (taskDate) {
-                const taskDateValue = taskDate.getAttribute('data-bitis-tarihi') || taskDate.getAttribute('data-hatirlatma-tarihi');
-                if (taskDateValue !== dateFilter) {
-                    showTask = false;
-                }
-            } else {
-                showTask = false;
-            }
-        }
-        
-        // Görevi göster/gizle
-        task.style.display = showTask ? 'block' : 'none';
-    });
-    
-    // Filtre çiplerini güncelle
-    updateFilterChips();
-    
-    // Filtre sonuçlarını güncelle
-    updateFilterResults();
-}
+// İkinci filterTasks fonksiyonu kaldırıldı - global scope'taki kullanılıyor
 </script>
 
 <!-- Yeni Görev Modal -->
@@ -3846,7 +3837,248 @@ function filterTasks() {
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/tr.global.min.js"></script>
 
 <script>
-// Global fonksiyonları en başta tanımla
+// Global fonksiyonları en başta tanımla - HTML onclick attribute'ları için
+window.filterTasks = function() {
+    console.log('=== filterTasks BAŞLADI ===');
+    console.log('filterTasks çağrıldı');
+    
+    try {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const statusFilter = document.getElementById('statusFilter').value;
+        const priorityFilter = document.getElementById('priorityFilter').value;
+        const dateFilter = document.getElementById('dateFilter').value;
+        
+        console.log('Filtre değerleri:', { searchTerm, statusFilter, priorityFilter, dateFilter });
+        
+        // Durum filtresi seçeneklerini kontrol et
+        const statusSelect = document.getElementById('statusFilter');
+        if (statusSelect) {
+            console.log('Durum filtresi seçenekleri:');
+            Array.from(statusSelect.options).forEach((option, index) => {
+                console.log(`  ${index}: value="${option.value}", text="${option.textContent}"`);
+            });
+            
+            // Seçilen durumun adını bul
+            const selectedOption = statusSelect.options[statusSelect.selectedIndex];
+            console.log('Seçilen durum:', selectedOption.textContent, '(ID:', selectedOption.value + ')');
+        }
+    
+        // Tüm görünümlerdeki görevleri bul
+        const cardTasks = document.querySelectorAll('.gorev-item');
+        const listTasks = document.querySelectorAll('.gorev-list-item');
+        const calendarTasks = document.querySelectorAll('.fc-event');
+        
+        console.log('Kart görevleri:', cardTasks.length);
+        console.log('Liste görevleri:', listTasks.length);
+        console.log('Takvim görevleri:', calendarTasks.length);
+        
+        const tasks = [...cardTasks, ...listTasks, ...calendarTasks];
+        console.log('Toplam görev sayısı:', tasks.length);
+        
+        tasks.forEach((task, index) => {
+            let showTask = true;
+            console.log(`Görev ${index + 1}:`, task.className, task);
+            
+            // Görevin durum adını bul
+            let statusText = 'Bilinmiyor';
+            if (task.classList.contains('fc-event')) {
+                // Takvim event'i için
+                const eventId = task.getAttribute('data-event-id');
+                if (eventId && window.gorevlerCalendar) {
+                    const event = window.gorevlerCalendar.getEventById(eventId);
+                    if (event && event.extendedProps) {
+                        statusText = event.extendedProps.durum || 
+                                   event.extendedProps.durum_adi || 
+                                   event.extendedProps.durumAdi || 
+                                   'Bilinmiyor';
+                    }
+                }
+            } else {
+                // Kart ve liste görünümü için
+                const statusBadge = task.querySelector('.badge');
+                statusText = statusBadge ? statusBadge.textContent.trim() : 'Bilinmiyor';
+            }
+            console.log(`Görev ${index + 1} durum adı:`, statusText);
+            
+            // Arama filtresi
+            if (searchTerm) {
+                const title = task.querySelector('.card-title, .gorev-list-title, .fc-title')?.textContent.toLowerCase() || '';
+                const description = task.querySelector('.card-text, .gorev-list-description, .fc-description')?.textContent.toLowerCase() || '';
+                const taskText = task.textContent.toLowerCase();
+                if (!title.includes(searchTerm) && !description.includes(searchTerm) && !taskText.includes(searchTerm)) {
+                    showTask = false;
+                }
+            }
+            
+            // Durum filtresi
+            if (statusFilter !== 'all') {
+                let taskStatusId = task.getAttribute('data-durum-id');
+                
+                // Takvim event'i için özel durum ID alma
+                if (task.classList.contains('fc-event') && !taskStatusId) {
+                    const eventId = task.getAttribute('data-event-id');
+                    console.log(`Takvim event ID:`, eventId);
+                    
+                    if (eventId && window.gorevlerCalendar) {
+                        const event = window.gorevlerCalendar.getEventById(eventId);
+                        console.log(`Takvim event objesi:`, event);
+                        
+                        if (event && event.extendedProps) {
+                            console.log(`Event extendedProps:`, event.extendedProps);
+                            taskStatusId = event.extendedProps.durum_id || 
+                                         event.extendedProps.durumID || 
+                                         event.extendedProps.durum_id ||
+                                         event.extendedProps.durum;
+                            console.log(`Bulunan durum ID:`, taskStatusId);
+                        }
+                    }
+                }
+                
+                console.log(`Görev ${index + 1} durum karşılaştırması:`, {
+                    taskStatusId: taskStatusId,
+                    statusFilter: statusFilter,
+                    eşleşiyor: taskStatusId === statusFilter
+                });
+                if (taskStatusId !== statusFilter) {
+                    showTask = false;
+                }
+            }
+            
+            // Öncelik filtresi
+            if (priorityFilter !== 'all') {
+                const taskPriority = task.classList.contains(`oncelik-${priorityFilter}`) || 
+                                   task.getAttribute('data-priority') === priorityFilter;
+                if (!taskPriority) {
+                    showTask = false;
+                }
+            }
+            
+            // Tarih filtresi
+            if (dateFilter) {
+                const taskDate = task.querySelector('[data-bitis-tarihi], [data-hatirlatma-tarihi]');
+                const taskDateValue = taskDate ? 
+                    (taskDate.getAttribute('data-bitis-tarihi') || taskDate.getAttribute('data-hatirlatma-tarihi')) :
+                    task.getAttribute('data-start');
+                if (taskDateValue !== dateFilter) {
+                    showTask = false;
+                }
+            }
+            
+            // Görevi göster/gizle
+            if (showTask) {
+                // Liste görünümü için flex, diğerleri için block
+                const displayValue = task.classList.contains('list-group-item') ? 'flex' : 'block';
+                task.style.setProperty('display', displayValue, 'important');
+                task.style.setProperty('visibility', 'visible', 'important');
+                task.style.setProperty('opacity', '1', 'important');
+                task.classList.remove('filtered-hidden');
+                
+                // Takvim event'i için özel işlem
+                if (task.classList.contains('fc-event')) {
+                    task.style.setProperty('display', 'block', 'important');
+                    task.style.setProperty('visibility', 'visible', 'important');
+                    task.style.setProperty('opacity', '1', 'important');
+                }
+            } else {
+                task.style.setProperty('display', 'none', 'important');
+                task.style.setProperty('visibility', 'hidden', 'important');
+                task.style.setProperty('opacity', '0', 'important');
+                task.classList.add('filtered-hidden');
+                
+                // Takvim event'i için özel işlem
+                if (task.classList.contains('fc-event')) {
+                    task.style.setProperty('display', 'none', 'important');
+                    task.style.setProperty('visibility', 'hidden', 'important');
+                    task.style.setProperty('opacity', '0', 'important');
+                }
+            }
+            console.log(`Görev ${index + 1} gösterilecek mi:`, showTask, 'display:', task.style.display, 'classList:', task.classList.toString());
+        });
+        
+        // Takvim event'leri için CSS ile gizleme
+        if (window.gorevlerCalendar) {
+            console.log('Takvim event\'leri CSS ile güncelleniyor...');
+            // Tüm event'leri göster
+            const allEvents = window.gorevlerCalendar.getEvents();
+            allEvents.forEach(event => {
+                const eventEl = event.el;
+                if (eventEl) {
+                    // Event elementini bul ve stilini güncelle
+                    const isVisible = !eventEl.classList.contains('filtered-hidden');
+                    if (isVisible) {
+                        eventEl.style.setProperty('display', 'block', 'important');
+                        eventEl.style.setProperty('visibility', 'visible', 'important');
+                        eventEl.style.setProperty('opacity', '1', 'important');
+                    } else {
+                        eventEl.style.setProperty('display', 'none', 'important');
+                        eventEl.style.setProperty('visibility', 'hidden', 'important');
+                        eventEl.style.setProperty('opacity', '0', 'important');
+                    }
+                }
+            });
+        }
+        
+        // Filtre sonuçlarını güncelle
+        updateFilterResults();
+        
+        console.log('=== filterTasks BİTTİ ===');
+        
+    } catch (error) {
+        console.error('filterTasks hatası:', error);
+        console.error('Hata detayı:', error.message);
+        console.error('Stack trace:', error.stack);
+    }
+};
+
+window.clearFilters = function() {
+    console.log('=== clearFilters BAŞLADI ===');
+    console.log('clearFilters çağrıldı');
+    
+    try {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('statusFilter').value = 'all';
+        document.getElementById('priorityFilter').value = 'all';
+        document.getElementById('dateFilter').value = '';
+        
+        // Tüm görevleri göster
+        const cardTasks = document.querySelectorAll('.gorev-item');
+        const listTasks = document.querySelectorAll('.gorev-list-item');
+        const calendarTasks = document.querySelectorAll('.fc-event');
+        
+        [...cardTasks, ...listTasks, ...calendarTasks].forEach(task => {
+            // Liste görünümü için flex, diğerleri için block
+            const displayValue = task.classList.contains('list-group-item') ? 'flex' : 'block';
+            task.style.setProperty('display', displayValue, 'important');
+            task.style.setProperty('visibility', 'visible', 'important');
+            task.style.setProperty('opacity', '1', 'important');
+            task.classList.remove('filtered-hidden');
+        });
+        
+        updateFilterResults();
+        
+        // Filtre durumunu localStorage'dan temizle
+        localStorage.removeItem('gorevlerFilters');
+        
+        console.log('=== clearFilters BİTTİ ===');
+        
+    } catch (error) {
+        console.error('clearFilters hatası:', error);
+        console.error('Hata detayı:', error.message);
+        console.error('Stack trace:', error.stack);
+    }
+};
+
+window.updateFilterResults = function() {
+    const visibleTasks = document.querySelectorAll('.gorev-item[style*="block"], .gorev-item:not([style*="none"]), .gorev-list-item[style*="block"], .gorev-list-item:not([style*="none"]), .fc-event[style*="block"], .fc-event:not([style*="none"])');
+    const totalTasks = document.querySelectorAll('.gorev-item, .gorev-list-item, .fc-event').length;
+    
+    // Sonuç sayısını göster
+    const resultInfo = document.querySelector('.filter-results');
+    if (resultInfo) {
+        resultInfo.textContent = `${visibleTasks.length} / ${totalTasks} görev gösteriliyor`;
+    }
+};
+
 function showContextMenu(event, gorevId) {
     console.log('showContextMenu çağrıldı, gorevId:', gorevId, 'event:', event);
     event.preventDefault();
@@ -4290,6 +4522,7 @@ function changeView(viewType) {
     console.log('=== changeView BAŞLADI ===');
     console.log('changeView çağrıldı:', viewType);
     console.log('localStorage gorevlerView:', localStorage.getItem('gorevlerView'));
+    console.log('Görünüm değiştiriliyor:', viewType);
     
     // Tüm görünümleri gizle
     const cardsView = document.getElementById('cardsView');
@@ -4318,14 +4551,17 @@ function changeView(viewType) {
     
     // Seçilen görünümü göster
     if (viewType === 'cards' && cardsView) {
-        console.log('Kartlar görünümü gösteriliyor');
+        console.log('✅ Kartlar görünümü gösteriliyor');
         cardsView.style.display = 'block';
+        console.log('cardsView display:', cardsView.style.display);
     } else if (viewType === 'list' && listView) {
-        console.log('Liste görünümü gösteriliyor');
+        console.log('✅ Liste görünümü gösteriliyor');
         listView.style.display = 'block';
+        console.log('listView display:', listView.style.display);
     } else if (viewType === 'calendar' && calendarView) {
-        console.log('Takvim görünümü seçiliyor...');
+        console.log('✅ Takvim görünümü seçiliyor...');
         calendarView.style.display = 'block';
+        console.log('calendarView display:', calendarView.style.display);
         // Takvim görünümü seçildiğinde takvimi başlat
         setTimeout(() => {
             console.log('Takvim başlatılıyor...');
@@ -4341,6 +4577,12 @@ function changeView(viewType) {
                 } else {
                     console.error('applyCalendarStyles fonksiyonu bulunamadı!');
                 }
+                
+                // Takvim yüklendikten sonra mevcut filtreleri uygula
+                setTimeout(() => {
+                    console.log('Takvim yüklendikten sonra filtreler uygulanıyor...');
+                    filterTasks();
+                }, 500);
             }, 200);
         }, 100);
     } else {
@@ -4351,15 +4593,39 @@ function changeView(viewType) {
     // Tercihi kaydet
     localStorage.setItem('gorevlerView', viewType);
     
+    // Filtre durumunu kaydet
+    const searchTerm = document.getElementById('searchInput').value;
+    const statusFilter = document.getElementById('statusFilter').value;
+    const priorityFilter = document.getElementById('priorityFilter').value;
+    const dateFilter = document.getElementById('dateFilter').value;
+    
+    localStorage.setItem('gorevlerFilters', JSON.stringify({
+        searchTerm: searchTerm,
+        statusFilter: statusFilter,
+        priorityFilter: priorityFilter,
+        dateFilter: dateFilter
+    }));
+    
     // Buton durumlarını güncelle
-    console.log('Buton durumları güncelleniyor...');
+    console.log('=== CHANGEVIEW - BUTON İŞARETLEME BAŞLADI ===');
     document.querySelectorAll('[data-view]').forEach(btn => {
         btn.classList.remove('active');
         if (btn.getAttribute('data-view') === viewType) {
             btn.classList.add('active');
-            console.log('Buton aktif yapıldı:', btn.getAttribute('data-view'));
+            console.log('✅ CHANGEVIEW - Buton işaretlendi:', btn.getAttribute('data-view'));
+            // Görsel olarak da gösterelim
+            btn.style.backgroundColor = '#007bff';
+            btn.style.color = 'white';
+            btn.style.borderColor = '#007bff';
+        } else {
+            console.log('❌ CHANGEVIEW - Buton işaretlenmedi:', btn.getAttribute('data-view'));
+            // Diğer butonları normal yapalım
+            btn.style.backgroundColor = '';
+            btn.style.color = '';
+            btn.style.borderColor = '';
         }
     });
+    console.log('=== CHANGEVIEW - BUTON İŞARETLEME BİTTİ ===');
     
     console.log('=== changeView BİTTİ ===');
 }
@@ -4870,9 +5136,8 @@ function saveRandevu() {
     });
 }
 
-// Yeni görev modal'ı için durumları yükle
-document.addEventListener('DOMContentLoaded', function() {
-    // Durumları yükle
+// Durumları yükle (DOMContentLoaded içinde çağrılacak)
+function loadDurumlar() {
     fetch('/api/gorev-durumlar')
         .then(response => response.json())
         .then(data => {
@@ -4892,32 +5157,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Durumlar yüklenirken hata:', error);
         });
-    
-    // Yeni görev form submit
-    document.getElementById('quickGorevForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        saveQuickGorev();
-    });
-    
-    // Modal temizleme
-    document.getElementById('quickGorevModal').addEventListener('hidden.bs.modal', function() {
-        document.getElementById('quickGorevForm').reset();
-        // Müşteri arama önerilerini gizle
-        document.getElementById('musteri_adi_suggestions').style.display = 'none';
-    });
-    
-    // Müşteri arama autocomplete
-    setupMusteriArama();
-    
-    // Kullanıcıları yükle
-    loadKullanicilar();
-    
-    // Randevu defterlerini yükle
-    loadRandevuDefterleri();
-    
-    // Bugünün tarihini set et
-    setTodayDate();
-});
+}
 
 function saveQuickGorev() {
     const formData = new FormData(document.getElementById('quickGorevForm'));
