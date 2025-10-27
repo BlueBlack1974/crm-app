@@ -595,6 +595,7 @@ class Randevu(db.Model):
     OlusturanKullaniciID = db.Column(db.Integer, db.ForeignKey('Kullanicilar.KullaniciID'), nullable=False)
     FirmaID = db.Column(db.Integer, db.ForeignKey('Firmalar.FirmaID'), nullable=False)
     DefterID = db.Column(db.Integer, db.ForeignKey('RandevuDefterAyarlar.AyarID'), nullable=True)
+    GorevID = db.Column(db.Integer, db.ForeignKey('Todos.TodoID'), nullable=True)
     OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
     GuncellemeTarihi = db.Column(db.DateTime, default=lambda: datetime.now(), onupdate=lambda: datetime.now())
     
@@ -929,6 +930,7 @@ class Todo(db.Model):
     RandevuTarihi = db.Column(db.Date)
     RandevuSaati = db.Column(db.NVARCHAR(10))  # HH:MM formatında
     RandevuDefteriID = db.Column(db.Integer, db.ForeignKey('RandevuDefterAyarlar.AyarID'), nullable=True)
+    RandevuID = db.Column(db.Integer, db.ForeignKey('Randevular.RandevuID'), nullable=True)
     AtananKullaniciID = db.Column(db.Integer, db.ForeignKey('Kullanicilar.KullaniciID'), nullable=True)
     
     # İlişkiler
@@ -5675,13 +5677,23 @@ def api_gorevler_calendar():
                 
                 # Durum adını title'a ekle
                 durum_adi = gorev.durum.DurumAdi if gorev.durum else 'Durum Yok'
-                title_with_status = f"{gorev.Baslik} - {durum_adi}"
+                
+                # Müşteri bilgilerini title'a ekle
+                musteri_bilgi = ''
+                if gorev.MusteriAdi:
+                    musteri_bilgi = f" - {gorev.MusteriAdi}"
+                    if gorev.MusteriSoyadi:
+                        musteri_bilgi += f" {gorev.MusteriSoyadi}"
+                
+                # Saat bilgisini ekle (randevular takvimi gibi)
+                saat_bilgi = event_date.strftime('%H:%M') if hasattr(event_date, 'strftime') else ''
+                title_with_status = f"{saat_bilgi} {gorev.Baslik}{musteri_bilgi} - {durum_adi}"
                 
                 events.append({
                     'id': f'gorev_{gorev.TodoID}',
                     'title': title_with_status,
-                    'start': event_date.strftime('%Y-%m-%d'),
-                    'allDay': True,
+                    'start': event_date.strftime('%Y-%m-%dT%H:%M:%S'),
+                    'allDay': False,
                     'backgroundColor': durum_color,
                     'borderColor': durum_color,
                     'textColor': '#ffffff',
@@ -5692,7 +5704,11 @@ def api_gorevler_calendar():
                         'oncelik': gorev.Oncelik,
                         'durum': durum_adi,
                         'durum_rengi': durum_color,
-                        'tip': 'gorev'
+                        'tip': 'gorev',
+                        'musteri_adi': gorev.MusteriAdi,
+                        'musteri_soyadi': gorev.MusteriSoyadi,
+                        'musteri_telefon': gorev.MusteriTelefon,
+                        'musteri_email': gorev.MusteriEmail
                     }
                 })
         
@@ -8391,16 +8407,24 @@ def todo_ekle():
         if data.get('randevu_tarihi'):
             randevu_tarihi = datetime.strptime(data['randevu_tarihi'], '%Y-%m-%d').date()
         
-        # Durum ID'sini al (durum adından) - evrensel arama
+        # Durum ID'sini al - önce durum_id, sonra durum adından
         durum_id = None
-        if data.get('durum'):
+        if data.get('durum_id'):
+            # Direkt durum ID'si gönderilmiş
+            durum_id = int(data['durum_id'])
+            print(f"Durum ID direkt alındı: {durum_id}")
+        elif data.get('durum'):
             # Durum adından ID'yi bul (firma kontrolü yok)
             durum = TodoDurum.query.filter_by(DurumAdi=data['durum']).first()
             if durum:
                 durum_id = durum.DurumID
+                print(f"Durum adından ID bulundu: {durum_id}")
             else:
                 # Eğer durum bulunamazsa varsayılan durumları oluştur
                 durum_id = create_default_todo_durumlar(session['firma_id'], data['durum'])
+                print(f"Varsayılan durum oluşturuldu: {durum_id}")
+        
+        print(f"Final durum_id: {durum_id}")
         
         # Tip belirleme
         todo_tip = data.get('tip', 'Kisisel')
@@ -8429,6 +8453,83 @@ def todo_ekle():
         
         print(f"Todo oluşturuluyor: {yeni_todo}")  # Debug log
         db.session.add(yeni_todo)
+        db.session.flush()  # ID'yi almak için
+        
+        # Eğer randevu bilgileri varsa randevu oluştur
+        if (data.get('randevu_tarihi') and data.get('randevu_defteri_id') and 
+            data.get('selected_randevu_saat')):
+            
+            try:
+                # Randevu tarihini parse et
+                randevu_dt = datetime.strptime(f"{data['randevu_tarihi']} {data['selected_randevu_saat']}", '%Y-%m-%d %H:%M')
+                
+                # Randevu defterini kontrol et
+                defter_ayar = RandevuDefterAyar.query.filter_by(
+                    AyarID=data['randevu_defteri_id'], 
+                    FirmaID=session['firma_id'], 
+                    Aktif=True
+                ).first()
+                
+                if defter_ayar:
+                    # Çakışma kontrolü
+                    randevu_suresi = 60  # Varsayılan süre
+                    randevu_bas = randevu_dt
+                    randevu_bit = randevu_dt + timedelta(minutes=randevu_suresi)
+                    
+                    # Mevcut randevularla çakışma kontrolü
+                    day_start_chk = datetime(randevu_dt.year, randevu_dt.month, randevu_dt.day, 0, 0)
+                    day_end_chk = day_start_chk + timedelta(days=1)
+                    
+                    existing_randevular = Randevu.query.filter(
+                        Randevu.FirmaID == session['firma_id'],
+                        Randevu.DefterID == data['randevu_defteri_id'],
+                        Randevu.RandevuTarihi >= day_start_chk,
+                        Randevu.RandevuTarihi < day_end_chk,
+                        Randevu.Durum != 'Iptal'
+                    ).all()
+                    
+                    cakisma_var = False
+                    for r in existing_randevular:
+                        r_start = r.RandevuTarihi
+                        r_dur = r.RandevuSuresi or 60
+                        r_end = r_start + timedelta(minutes=int(r_dur))
+                        if r_start < randevu_bit and randevu_bas < r_end:
+                            cakisma_var = True
+                            break
+                    
+                    if not cakisma_var:
+                        # Randevu oluştur
+                        randevu = Randevu(
+                            RandevuBaslik=data['baslik'],
+                            RandevuAciklamasi=data.get('aciklama', ''),
+                            RandevuTarihi=randevu_dt,
+                            RandevuSuresi=randevu_suresi,
+                            MusteriAdi=data.get('musteri_adi', ''),
+                            MusteriSoyadi=data.get('musteri_soyadi', 'Müşteri'),
+                            MusteriTelefon=data.get('musteri_telefon', ''),
+                            MusteriEmail=data.get('musteri_email', ''),
+                            OlusturanKullaniciID=session['user_id'],
+                            FirmaID=session['firma_id'],
+                            DefterID=data['randevu_defteri_id'],
+                            GorevID=yeni_todo.TodoID  # Görev ID'sini bağla
+                        )
+                        
+                        db.session.add(randevu)
+                        db.session.flush()  # Randevu ID'sini almak için
+                        
+                        # Todo'ya RandevuID'yi ekle
+                        yeni_todo.RandevuID = randevu.RandevuID
+                        
+                        print(f"Randevu oluşturuldu: {randevu_dt} - {data['selected_randevu_saat']}")
+                    else:
+                        print("Randevu oluşturulamadı: Çakışma var")
+                else:
+                    print("Randevu defteri bulunamadı")
+                    
+            except Exception as randevu_error:
+                print(f"Randevu oluşturma hatası: {randevu_error}")
+                # Randevu hatası olsa bile todo'yu kaydet
+        
         db.session.commit()
         print("Todo başarıyla kaydedildi")  # Debug log
         
@@ -8476,6 +8577,8 @@ def todo_guncelle(todo_id):
                     'Durum': todo.durum.DurumAdi if todo.durum else None,
                     'BitisTarihi': todo.BitisTarihi.strftime('%Y-%m-%d') if todo.BitisTarihi else None,
                     'HatirlatmaTarihi': todo.HatirlatmaTarihi.strftime('%Y-%m-%d') if todo.HatirlatmaTarihi else None,
+                    'AtananKullaniciID': todo.AtananKullaniciID,
+                    'RandevuDefteriID': todo.RandevuDefteriID,
                     'MusteriAdi': todo.MusteriAdi,
                     'MusteriSoyadi': todo.MusteriSoyadi,
                     'Telefon': todo.MusteriTelefon,
@@ -8523,6 +8626,14 @@ def todo_guncelle(todo_id):
         todo.Aciklama = data.get('aciklama', '')
         todo.Oncelik = data.get('oncelik', 'Orta')
         todo.DurumID = durum_id  # Yeni durum sistemi
+        
+        # Atanan kullanıcıyı güncelle
+        if data.get('AtananKullaniciID'):
+            todo.AtananKullaniciID = data['AtananKullaniciID']
+        
+        # Randevu defteri ID'sini güncelle
+        if data.get('randevu_defteri_id'):
+            todo.RandevuDefteriID = data['randevu_defteri_id']
         
         # Müşteri bilgilerini güncelle
         todo.MusteriAdi = data.get('musteri_adi', '')
@@ -8712,13 +8823,14 @@ def gorev_bilgi(gorev_id):
             print(f"Durum bilgisi alınırken hata: {durum_error}")
             durum_adi = None
         
-        # Müşteri bilgilerini çıkar (görev açıklamasından)
-        musteri_adi = None
-        musteri_soyadi = None
-        telefon = None
-        email = None
+        # Müşteri bilgilerini görevden al (yeni format)
+        musteri_adi = gorev.MusteriAdi
+        musteri_soyadi = gorev.MusteriSoyadi
+        telefon = gorev.MusteriTelefon
+        email = gorev.MusteriEmail
         
-        if gorev.Aciklama:
+        # Eğer görevde müşteri bilgileri yoksa, eski formattan çıkar
+        if not musteri_adi and gorev.Aciklama:
             # Açıklamadan müşteri adını çıkar
             if 'Müşteri:' in gorev.Aciklama:
                 musteri_line = [line for line in gorev.Aciklama.split('\n') if 'Müşteri:' in line]
@@ -8739,8 +8851,8 @@ def gorev_bilgi(gorev_id):
                     musteri_adi = ad_soyad[0] if len(ad_soyad) > 0 else None
                     musteri_soyadi = ' '.join(ad_soyad[1:]) if len(ad_soyad) > 1 else None
         
-        # Müşteri adı varsa, müşteriler tablosundan telefon ve email bilgilerini al
-        if musteri_adi and musteri_soyadi:
+        # Müşteri adı varsa ve telefon/email yoksa, müşteriler tablosundan al
+        if musteri_adi and musteri_soyadi and (not telefon or not email):
             try:
                 print(f"Müşteri aranıyor: {musteri_adi} {musteri_soyadi}, FirmaID: {session.get('firma_id')}")
                 musteri = Musteri.query.filter_by(
@@ -8750,8 +8862,8 @@ def gorev_bilgi(gorev_id):
                 ).first()
                 
                 if musteri:
-                    telefon = musteri.Telefon
-                    email = musteri.Email
+                    telefon = telefon or musteri.Telefon
+                    email = email or musteri.Email
                     print(f"Müşteri bulundu: {musteri_adi} {musteri_soyadi}, Telefon: {telefon}, Email: {email}")
                 else:
                     print(f"Müşteri bulunamadı: {musteri_adi} {musteri_soyadi}")

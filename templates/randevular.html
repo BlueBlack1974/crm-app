@@ -298,7 +298,7 @@
                             {% if randevu.musteri %}
                                 {{ randevu.musteri.tam_adi }}
                             {% else %}
-                                {{ randevu.MusteriAdi or _('No Customer') }}
+                                {{ (randevu.MusteriAdi + ' ' + randevu.MusteriSoyadi) if randevu.MusteriAdi else _('No Customer') }}
                             {% endif %}
                         </td>
                         <td class="d-none-mobile">

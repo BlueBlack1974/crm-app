@@ -1656,7 +1656,7 @@
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
-            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#quickGorevModal">
+            <button class="btn btn-sm btn-primary" onclick="openNewTaskModal()">
                 <i class="fas fa-plus me-1"></i>
                 {{ _('Yeni Görev') }}
             </button>
@@ -2751,7 +2751,12 @@ function initializeCalendar() {
         dayMaxEvents: false, // Tüm görevleri göster
         moreLinkClick: 'popover', // Fazla görevler için popover
         height: 'auto', // Otomatik yükseklik
-        contentHeight: 'auto', // İçerik yüksekliği otomatik
+        contentHeight: 'auto', // İçerik yükseklik otomatik
+        displayEventTime: true, // Saat bilgisini göster
+        slotMinTime: '06:00:00', // Minimum saat
+        slotMaxTime: '22:00:00', // Maksimum saat
+        slotDuration: '01:00:00', // Slot süresi
+        snapDuration: '00:15:00', // Snap süresi
         eventClick: function(info) {
             console.log('Event click:', info);
             console.log('Mouse button:', info.jsEvent.button);
@@ -3167,14 +3172,7 @@ function setupAllEventListeners() {
     // Durumları yükle
     loadDurumlar();
     
-    // Yeni görev form submit
-    const quickGorevForm = document.getElementById('quickGorevForm');
-    if (quickGorevForm) {
-        quickGorevForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            saveQuickGorev();
-        });
-    }
+    // Yeni görev form submit - artık onclick ile yapılıyor
     
     // Modal temizleme
     const quickGorevModal = document.getElementById('quickGorevModal');
@@ -3186,7 +3184,17 @@ function setupAllEventListeners() {
             const suggestions = document.getElementById('musteri_adi_suggestions');
             if (suggestions) suggestions.style.display = 'none';
         });
+        
+        // Modal açıldığında seçenekleri yükle
+        quickGorevModal.addEventListener('shown.bs.modal', function() {
+            console.log('=== YENİ GÖREV MODALI AÇILDI ===');
+            console.log('Yeni görev modalı açıldı, seçenekler yükleniyor...');
+            loadDurumlar();
+            loadKullanicilar();
+            loadRandevuDefterleri();
+        });
     }
+    
     
     // Müşteri arama autocomplete
     setupMusteriArama();
@@ -3695,12 +3703,12 @@ function clearDateFilter() {
 </script>
 
 <!-- Yeni Görev Modal -->
-<div class="modal fade" id="quickGorevModal" tabindex="-1">
+<div class="modal fade" id="quickGorevModal" tabindex="-1" aria-labelledby="quickGorevModalLabel">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">{{ _('Yeni Görev') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="quickGorevModalLabel">{{ _('Yeni Görev') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="quickGorevForm">
                 <div class="modal-body">
@@ -3825,7 +3833,7 @@ function clearDateFilter() {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('İptal') }}</button>
-                    <button type="submit" class="btn btn-primary">{{ _('Kaydet') }}</button>
+                    <button type="button" class="btn btn-primary" onclick="saveQuickGorev()">{{ _('Kaydet') }}</button>
                 </div>
             </form>
         </div>
@@ -3838,6 +3846,75 @@ function clearDateFilter() {
 
 <script>
 // Global fonksiyonları en başta tanımla - HTML onclick attribute'ları için
+
+// Yeni görev modalını açma fonksiyonu - Global scope
+function openNewTaskModal() {
+    console.log('Yeni Görev butonuna tıklandı!');
+    console.log('Modal açılıyor...');
+    
+    try {
+        // Bootstrap kontrolü
+        console.log('Bootstrap mevcut mu:', typeof bootstrap !== 'undefined');
+        console.log('Bootstrap Modal mevcut mu:', typeof bootstrap?.Modal !== 'undefined');
+        
+        // Modal elementini bul
+        const modalElement = document.getElementById('quickGorevModal');
+        console.log('Modal elementi bulundu:', modalElement);
+        
+        if (!modalElement) {
+            console.error('Modal elementi bulunamadı!');
+            return;
+        }
+        
+        if (typeof bootstrap === 'undefined') {
+            console.error('Bootstrap yüklenmemiş!');
+            // Fallback: jQuery modal kullan
+            if (typeof $ !== 'undefined') {
+                $('#quickGorevModal').modal('show');
+            } else {
+                console.error('jQuery de yüklenmemiş!');
+            }
+            return;
+        }
+        
+        // Bootstrap Modal instance oluştur
+        const modal = new bootstrap.Modal(modalElement);
+        console.log('Bootstrap Modal instance oluşturuldu:', modal);
+        
+        // Modal'ı göster
+        modal.show();
+        console.log('Modal.show() çağrıldı');
+        
+        // Seçenekleri yükle
+        setTimeout(() => {
+            console.log('Seçenekler yükleniyor...');
+            if (typeof loadDurumlar === 'function') loadDurumlar();
+            if (typeof loadKullanicilar === 'function') loadKullanicilar();
+            if (typeof loadRandevuDefterleri === 'function') loadRandevuDefterleri();
+            
+            // Müşteri arama özelliğini aktif et
+            if (typeof setupMusteriArama === 'function') {
+                console.log('Müşteri arama özelliği aktif ediliyor...');
+                setupMusteriArama();
+            }
+            
+            // Tarih senkronizasyon özelliğini aktif et
+            if (typeof setupTarihSenkronizasyonu === 'function') {
+                console.log('Tarih senkronizasyon özelliği aktif ediliyor...');
+                setupTarihSenkronizasyonu();
+            }
+            
+            // Bugünün tarihini set et
+            setTodayDate();
+        }, 100);
+        
+    } catch (error) {
+        console.error('Modal açılırken hata:', error);
+        console.error('Hata detayı:', error.message);
+        console.error('Stack trace:', error.stack);
+    }
+}
+
 window.filterTasks = function() {
     console.log('=== filterTasks BAŞLADI ===');
     console.log('filterTasks çağrıldı');
@@ -4292,18 +4369,70 @@ function addContextMenuListeners() {
 }
 
 function editGorev(gorevId) {
-    // Önce durumları yükle, sonra görev verilerini getir
+    console.log('=== editGorev BAŞLADI ===');
+    console.log('Görev ID:', gorevId);
+    
+    // Önce durumları, kullanıcıları, defterleri ve görev verilerini yükle
     Promise.all([
-        fetch('/api/gorev-durumlar').then(r => r.json()),
-        fetch(`/todos/${gorevId}/guncelle`).then(r => r.json())
+        fetch('/api/gorev-durumlar').then(r => {
+            console.log('Durumlar API response status:', r.status);
+            return r.json();
+        }),
+        fetch('/api/kullanicilar').then(r => {
+            console.log('Kullanıcılar API response status:', r.status);
+            return r.json();
+        }),
+        fetch('/api/randevu-defterleri').then(r => {
+            console.log('Defterler API response status:', r.status);
+            return r.json();
+        }),
+        fetch(`/todos/${gorevId}/guncelle`).then(r => {
+            console.log('Görev güncelleme API response status:', r.status);
+            return r.json();
+        })
     ])
-    .then(([durumlarResponse, gorevResponse]) => {
-        if (!durumlarResponse.success || !gorevResponse.success) {
+    .then(([durumlarResponse, kullanicilarResponse, defterlerResponse, gorevResponse]) => {
+        console.log('Durumlar response:', durumlarResponse);
+        console.log('Kullanıcılar response:', kullanicilarResponse);
+        console.log('Defterler response:', defterlerResponse);
+        console.log('Görev response:', gorevResponse);
+        
+        if (!durumlarResponse.success || !kullanicilarResponse.success || !gorevResponse.success) {
+            console.error('API response başarısız:', {
+                durumlar: durumlarResponse.success,
+                kullanicilar: kullanicilarResponse.success,
+                defterler: defterlerResponse ? defterlerResponse.success : 'undefined',
+                gorev: gorevResponse.success
+            });
             throw new Error('Veri yüklenirken hata oluştu');
         }
         
-        const durumlar = durumlarResponse.durumlar;
+        // Defterler response'unu kontrol et
+        if (!defterlerResponse || !defterlerResponse.success) {
+            console.warn('Defterler API başarısız, boş liste kullanılıyor:', defterlerResponse);
+        }
+        
+        const durumlar = durumlarResponse.durumlar || [];
+        const kullanicilar = kullanicilarResponse.kullanicilar || [];
+        const defterler = (defterlerResponse && defterlerResponse.defterler) ? defterlerResponse.defterler : [];
         const gorev = gorevResponse.todo;
+        
+        console.log('Durumlar:', durumlar);
+        console.log('Kullanıcılar:', kullanicilar);
+        console.log('Defterler:', defterler);
+        console.log('Görev:', gorev);
+        console.log('Görev KullaniciID:', gorev.KullaniciID, 'tip:', typeof gorev.KullaniciID);
+        console.log('Görev tüm alanları:', Object.keys(gorev));
+        console.log('Görev KullaniciID alternatifleri:', {
+            KullaniciID: gorev.KullaniciID,
+            AtananKullaniciID: gorev.AtananKullaniciID,
+            kullanici_id: gorev.kullanici_id,
+            Kullanici: gorev.Kullanici,
+            kullanici: gorev.kullanici,
+            UserID: gorev.UserID,
+            user_id: gorev.user_id
+        });
+        console.log('Kullanıcı ID\'leri:', kullanicilar.map(k => ({id: k.id, tip: typeof k.id})));
         
         // Müşteri bilgilerini çek (eğer ad ve soyad varsa)
         let musteriPromise = Promise.resolve({ telefon: '', email: '' });
@@ -4336,10 +4465,10 @@ function editGorev(gorevId) {
             gorev.MusteriTelefon = musteriBilgileri.telefon;
             gorev.MusteriEmail = musteriBilgileri.email;
             
-            return { durumlar, gorev };
+            return { durumlar, kullanicilar, defterler, gorev };
         });
     })
-    .then(({ durumlar, gorev }) => {
+    .then(({ durumlar, kullanicilar, defterler, gorev }) => {
         
         // Modal HTML'ini oluştur
         const modalHTML = `
@@ -4399,6 +4528,32 @@ function editGorev(gorevId) {
                                         <div class="mb-3">
                                             <label for="edit_hatirlatma_tarihi" class="form-label">{{ _('Hatırlatma Tarihi') }}</label>
                                             <input type="date" class="form-control" id="edit_hatirlatma_tarihi" name="hatirlatma_tarihi" value="${gorev.HatirlatmaTarihi || ''}">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Kullanıcı ve Defter Seçimi -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="edit_kullanici" class="form-label">{{ _('Atanan Kullanıcı') }}</label>
+                                            <select class="form-select" id="edit_kullanici" name="kullanici_id">
+                                                <option value="">{{ _('Kullanıcı Seçin') }}</option>
+                                                ${kullanicilar.map(kullanici => 
+                                                    `<option value="${kullanici.id}" ${gorev.AtananKullaniciID == kullanici.id || gorev.AtananKullaniciID == parseInt(kullanici.id) ? 'selected' : ''}>${kullanici.tam_adi}</option>`
+                                                ).join('')}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="edit_randevu_defteri" class="form-label">{{ _('Randevu Defteri') }}</label>
+                                            <select class="form-select" id="edit_randevu_defteri" name="randevu_defteri_id">
+                                                <option value="">{{ _('Defter Seçin') }}</option>
+                                                ${defterler.map(defter => 
+                                                    `<option value="${defter.AyarID}" ${gorev.RandevuDefteriID == defter.AyarID ? 'selected' : ''}>${defter.DefterAdi}</option>`
+                                                ).join('')}
+                                            </select>
                                         </div>
                                     </div>
                                 </div>
@@ -4486,6 +4641,8 @@ function updateGorev(gorevId) {
         durum: formData.get('durum'),
         bitis_tarihi: formData.get('bitis_tarihi'),
         hatirlatma_tarihi: formData.get('hatirlatma_tarihi'),
+        AtananKullaniciID: formData.get('kullanici_id'),
+        randevu_defteri_id: formData.get('randevu_defteri_id'),
         musteri_adi: formData.get('musteri_adi'),
         musteri_soyadi: formData.get('musteri_soyadi'),
         musteri_telefon: formData.get('musteri_telefon'),
@@ -4682,7 +4839,12 @@ function initializeCalendar() {
         dayMaxEvents: false, // Tüm görevleri göster
         moreLinkClick: 'popover', // Fazla görevler için popover
         height: 'auto', // Otomatik yükseklik
-        contentHeight: 'auto', // İçerik yüksekliği otomatik
+        contentHeight: 'auto', // İçerik yükseklik otomatik
+        displayEventTime: true, // Saat bilgisini göster
+        slotMinTime: '06:00:00', // Minimum saat
+        slotMaxTime: '22:00:00', // Maksimum saat
+        slotDuration: '01:00:00', // Slot süresi
+        snapDuration: '00:15:00', // Snap süresi
         eventClick: function(info) {
             console.log('Event click:', info);
             console.log('Mouse button:', info.jsEvent.button);
@@ -5138,76 +5300,133 @@ function saveRandevu() {
 
 // Durumları yükle (DOMContentLoaded içinde çağrılacak)
 function loadDurumlar() {
+    console.log('loadDurumlar çağrıldı...');
     fetch('/api/gorev-durumlar')
-        .then(response => response.json())
+        .then(response => {
+            console.log('Durumlar API response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Durumlar API yanıtı:', data);
             if (data.success) {
                 const durumSelect = document.getElementById('quick_durum');
-                durumSelect.innerHTML = '<option value="">{{ _("Durum Seçin") }}</option>';
-                
-                data.durumlar.forEach(durum => {
-                    const option = document.createElement('option');
-                    option.value = durum.DurumID;
-                    option.textContent = durum.DurumAdi;
-                    option.style.color = durum.Renk;
-                    durumSelect.appendChild(option);
-                });
+                if (durumSelect) {
+                    durumSelect.innerHTML = '<option value="">{{ _("Durum Seçin") }}</option>';
+                    
+                    data.durumlar.forEach(durum => {
+                        const option = document.createElement('option');
+                        option.value = durum.DurumID;
+                        option.textContent = durum.DurumAdi;
+                        option.style.color = durum.Renk;
+                        durumSelect.appendChild(option);
+                    });
+                    console.log('Durumlar yüklendi:', data.durumlar.length, 'adet');
+                } else {
+                    console.error('quick_durum select elementi bulunamadı!');
+                }
+            } else {
+                console.error('Durumlar API başarısız:', data.message);
             }
         })
         .catch(error => {
             console.error('Durumlar yüklenirken hata:', error);
+            console.error('Hata detayı:', error.message);
         });
 }
 
 function saveQuickGorev() {
-    const formData = new FormData(document.getElementById('quickGorevForm'));
-    const data = Object.fromEntries(formData);
+    console.log('=== saveQuickGorev BAŞLADI ===');
     
-    // Görevler için özel veri hazırla
-    const gorevData = {
-        baslik: data.baslik,
-        aciklama: data.aciklama,
-        oncelik: data.oncelik,
-        durum: data.durum,
-        bitis_tarihi: data.bitis_tarihi,
-        hatirlatma_tarihi: data.hatirlatma_tarihi,
-        randevu_tarihi: data.randevu_tarihi,
-        randevu_defteri_id: data.randevu_defteri_id,
-        selected_randevu_saat: data.selected_randevu_saat,
-        musteri_adi: data.musteri_adi,
-        musteri_soyadi: data.musteri_soyadi,
-        musteri_telefon: data.musteri_telefon,
-        musteri_email: data.musteri_email,
-        kullanici_id: data.kullanici_id,
-        tip: 'Randevu' // Görevler için Randevu tipi
-    };
-    
-    console.log('Görev verisi:', gorevData);
-    
-    fetch('/todos/ekle', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(gorevData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Modal'ı kapat
-            const modal = bootstrap.Modal.getInstance(document.getElementById('quickGorevModal'));
-            modal.hide();
-            
-            // Sayfayı yenile
-            location.reload();
-        } else {
-            alert('{{ _("Görev kaydedilirken hata oluştu") }}: ' + data.message);
+    try {
+        const formData = new FormData(document.getElementById('quickGorevForm'));
+        const data = Object.fromEntries(formData);
+        
+        console.log('Form verisi:', data);
+        
+        // Durum bilgisini al
+        const durumSelect = document.getElementById('quick_durum');
+        const selectedDurumOption = durumSelect.options[durumSelect.selectedIndex];
+        const durumId = selectedDurumOption.value;
+        const durumAdi = selectedDurumOption.textContent;
+        
+        console.log('Seçilen durum ID:', durumId);
+        console.log('Seçilen durum adı:', durumAdi);
+        
+        // Görevler için özel veri hazırla
+        const gorevData = {
+            baslik: data.baslik,
+            aciklama: data.aciklama,
+            oncelik: data.oncelik,
+            durum_id: durumId, // Durum ID'sini gönder
+            durum_adi: durumAdi, // Durum adını da gönder
+            bitis_tarihi: data.bitis_tarihi,
+            hatirlatma_tarihi: data.hatirlatma_tarihi,
+            randevu_tarihi: data.randevu_tarihi,
+            randevu_defteri_id: data.randevu_defteri_id,
+            selected_randevu_saat: data.selected_randevu_saat,
+            musteri_adi: data.musteri_adi,
+            musteri_soyadi: data.musteri_soyadi,
+            musteri_telefon: data.musteri_telefon,
+            musteri_email: data.musteri_email,
+            kullanici_id: data.kullanici_id,
+            tip: 'Randevu' // Görevler için Randevu tipi
+        };
+        
+        console.log('Görev verisi hazırlandı:', gorevData);
+        
+        // Zorunlu alanları kontrol et
+        if (!gorevData.baslik || gorevData.baslik.trim() === '') {
+            alert('Başlık alanı zorunludur!');
+            return;
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('{{ _("Bir hata oluştu") }}');
-    });
+        
+        fetch('/todos/ekle', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(gorevData)
+        })
+        .then(response => {
+            console.log('API response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('API response data:', data);
+            if (data.success) {
+                console.log('Görev başarıyla kaydedildi!');
+                // Modal'ı kapat
+                const modal = bootstrap.Modal.getInstance(document.getElementById('quickGorevModal'));
+                if (modal) {
+                    modal.hide();
+                }
+                
+                // Sayfayı yenile
+                location.reload();
+            } else {
+                console.error('Görev kaydedilemedi:', data.message);
+                alert('Görev kaydedilirken hata oluştu: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Görev kaydetme hatası:', error);
+            console.error('Hata detayı:', error.message);
+            alert('Bir hata oluştu: ' + error.message);
+        });
+        
+    } catch (error) {
+        console.error('saveQuickGorev genel hatası:', error);
+        console.error('Hata detayı:', error.message);
+        alert('Bir hata oluştu: ' + error.message);
+    }
+    
+    console.log('=== saveQuickGorev BİTTİ ===');
 }
 
 // Müşteri arama autocomplete
@@ -5266,13 +5485,22 @@ function setupMusteriArama() {
     });
     
     function searchMusteriler(query) {
+        console.log('Müşteri arama yapılıyor:', query);
         fetch(`/api/musteri-ara?q=${encodeURIComponent(query)}`)
-            .then(response => response.json())
+            .then(response => {
+                console.log('Müşteri arama API response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('Müşteri arama sonuçları:', data);
                 displaySuggestions(data);
             })
             .catch(error => {
                 console.error('Müşteri arama hatası:', error);
+                console.error('Hata detayı:', error.message);
                 suggestionsDiv.style.display = 'none';
             });
     }
@@ -5326,11 +5554,44 @@ function setupMusteriArama() {
     }
 }
 
+// Randevu tarihi değiştiğinde diğer tarihleri güncelle
+function setupTarihSenkronizasyonu() {
+    const randevuTarihiInput = document.getElementById('quick_randevu_tarihi');
+    if (!randevuTarihiInput) return;
+    
+    randevuTarihiInput.addEventListener('change', function() {
+        const randevuTarihi = this.value;
+        if (randevuTarihi) {
+            // Bitiş tarihini güncelle
+            const bitisTarihiInput = document.getElementById('quick_bitis_tarihi');
+            if (bitisTarihiInput) {
+                bitisTarihiInput.value = randevuTarihi;
+            }
+            
+            // Hatırlatma tarihini güncelle
+            const hatirlatmaTarihiInput = document.getElementById('quick_hatirlatma_tarihi');
+            if (hatirlatmaTarihiInput) {
+                hatirlatmaTarihiInput.value = randevuTarihi;
+            }
+            
+            console.log('Randevu tarihi değişti, diğer tarihler güncellendi:', randevuTarihi);
+        }
+    });
+}
+
 // Kullanıcıları yükle
 function loadKullanicilar() {
+    console.log('loadKullanicilar çağrıldı...');
     fetch('/api/kullanicilar')
-        .then(response => response.json())
+        .then(response => {
+            console.log('Kullanıcılar API response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Kullanıcılar API yanıtı:', data);
             const select = document.getElementById('quick_kullanici');
             if (select && data.success) {
                 select.innerHTML = '<option value="">{{ _('Kullanıcı Seçin') }}</option>';
@@ -5340,18 +5601,30 @@ function loadKullanicilar() {
                     option.textContent = kullanici.tam_adi;
                     select.appendChild(option);
                 });
+                console.log('Kullanıcılar yüklendi:', data.kullanicilar.length, 'adet');
+            } else {
+                console.error('quick_kullanici select elementi bulunamadı veya API başarısız!');
             }
         })
         .catch(error => {
             console.error('Kullanıcı yükleme hatası:', error);
+            console.error('Hata detayı:', error.message);
         });
 }
 
 // Randevu defterlerini yükle
 function loadRandevuDefterleri() {
+    console.log('loadRandevuDefterleri çağrıldı...');
     fetch('/api/randevu-defterleri')
-        .then(response => response.json())
+        .then(response => {
+            console.log('Randevu defterleri API response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Randevu defterleri API yanıtı:', data);
             const select = document.getElementById('quick_randevu_defteri');
             if (select && data.defterler) {
                 select.innerHTML = '<option value="">{{ _('Defter Seçin') }}</option>';
@@ -5362,13 +5635,17 @@ function loadRandevuDefterleri() {
                     option.dataset.slotDakika = defter.SlotDakika;
                     select.appendChild(option);
                 });
+                console.log('Randevu defterleri yüklendi:', data.defterler.length, 'adet');
                 
                 // Event listener'ları ekle
                 setupRandevuSlotListeners();
+            } else {
+                console.error('quick_randevu_defteri select elementi bulunamadı veya defterler yok!');
             }
         })
         .catch(error => {
             console.error('Randevu defterleri yükleme hatası:', error);
+            console.error('Hata detayı:', error.message);
         });
 }
 
