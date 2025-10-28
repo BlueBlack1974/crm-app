@@ -1399,12 +1399,12 @@
     line-height: 1.2 !important;
 }
 
-/* Daha güçlü override */
+/* Daha güçlü override - Randevu takvimi stili */
 #calendar .fc-event {
     border-radius: 4px !important;
     border: none !important;
     font-size: 0.8rem !important;
-    padding: 6px 10px !important;
+    padding: 2px 4px !important;
     margin: 2px 0 !important;
     transition: all 0.3s ease !important;
     color: white !important;
@@ -1418,6 +1418,22 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
     min-height: 40px !important;
     line-height: 1.2 !important;
+    background: #17a2b8 !important;
+}
+
+/* En güçlü override - Tüm event'ler için */
+.fc-event, .fc-event.fc-event-start, .fc-event.fc-event-end, .fc-event.fc-event-today {
+    border-radius: 4px !important;
+    border: none !important;
+    font-size: 0.8rem !important;
+    padding: 2px 4px !important;
+    margin: 2px 0 !important;
+    color: white !important;
+    font-weight: 500 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
+    min-height: 40px !important;
+    line-height: 1.2 !important;
+    background: #17a2b8 !important;
 }
 
 .fc-event:hover {
@@ -2288,7 +2304,7 @@ function saveGorev() {
 // Görev silme
 function deleteGorev(gorevId) {
     if (confirm('{{ _("Bu görevi silmek istediğinizden emin misiniz?") }}')) {
-        fetch(`/todos/${gorevId}/delete`, {
+        fetch(`/todos/${gorevId}/sil`, {
             method: 'DELETE',
             headers: {'Content-Type': 'application/json'}
         })
@@ -2723,7 +2739,7 @@ function initializeCalendar() {
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
-            right: 'dayGridMonth,listWeek'
+            right: 'dayGridMonth,timeGridWeek,listWeek'
         },
         buttonText: {
             today: 'Bugün',
@@ -2752,11 +2768,27 @@ function initializeCalendar() {
         moreLinkClick: 'popover', // Fazla görevler için popover
         height: 'auto', // Otomatik yükseklik
         contentHeight: 'auto', // İçerik yükseklik otomatik
-        displayEventTime: true, // Saat bilgisini göster
+        displayEventTime: false, // Saat bilgisini gizle (başlıkta göstermiyoruz)
+        eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+        eventDisplay: 'block',
         slotMinTime: '06:00:00', // Minimum saat
         slotMaxTime: '22:00:00', // Maksimum saat
-        slotDuration: '01:00:00', // Slot süresi
+        slotDuration: '00:15:00', // Slot süresi
         snapDuration: '00:15:00', // Snap süresi
+        eventContent: function(arg) {
+            const defterAdi = arg.event.extendedProps.defter_adi;
+            console.log('Event content debug:', {
+                title: arg.event.title,
+                defterAdi: defterAdi,
+                extendedProps: arg.event.extendedProps
+            });
+            const title = document.createElement('div');
+            title.style.whiteSpace = 'normal';
+            title.style.lineHeight = '1.2';
+            title.innerHTML = `<div>${arg.event.title}</div>` +
+                (defterAdi ? `<div style="font-size: 0.75rem; color: rgba(255,255,255,0.6); opacity: 0.8; text-align: left;">${defterAdi}</div>` : '');
+            return { domNodes: [title] };
+        },
         eventClick: function(info) {
             console.log('Event click:', info);
             console.log('Mouse button:', info.jsEvent.button);
@@ -3768,15 +3800,35 @@ function clearDateFilter() {
                         </div>
                     </div>
                     
-                    <!-- Randevu Saatleri -->
+                    <!-- Randevu Süresi -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="quick_randevu_suresi" class="form-label">{{ _('Randevu Süresi (Dakika)') }}</label>
+                                <input type="number" class="form-control" id="quick_randevu_suresi" name="randevu_suresi" value="60" min="15" max="240" step="15">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">{{ _('Randevu Saati') }}</label>
+                                <div>
+                                    <span id="quick_end_info" class="text-muted"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Randevu Saatleri (slotlar) -->
                     <div class="mb-3" id="randevu_saatleri_container" style="display: none;">
-                        <label class="form-label">{{ _('Randevu Saati') }}</label>
-                        <div id="randevu_saatleri" class="row">
+                        <label class="form-label">{{ _('Müsait Saatler') }}</label>
+                        <div id="randevu_saatleri" class="row g-1 gy-1">
                             <div class="col-12">
                                 <p class="text-muted">{{ _('Önce randevu defteri ve tarih seçin') }}</p>
                             </div>
                         </div>
                     </div>
+                    
+
+                    
                     
                     <div class="row">
                         <div class="col-md-6">
@@ -4272,31 +4324,7 @@ function hideContextMenu(event) {
     document.removeEventListener('click', hideContextMenu, true);
 }
 
-// Görev silme fonksiyonu
-function deleteGorev(gorevId) {
-    if (confirm('Bu görevi silmek istediğinizden emin misiniz?')) {
-        fetch(`/todos/${gorevId}/sil`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Görev başarıyla silindi!');
-                // Sayfayı yenile
-                location.reload();
-            } else {
-                alert('Görev silinirken hata oluştu: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Görev silme hatası:', error);
-            alert('Görev silinirken hata oluştu!');
-        });
-    }
-}
+// Görev silme fonksiyonu (yukarıda tanımlı)
 
 // Element'ten görev ID'sini al
 function getGorevIdFromElement(element) {
@@ -4787,7 +4815,7 @@ function changeView(viewType) {
     console.log('=== changeView BİTTİ ===');
 }
 
-// Takvim başlatma fonksiyonu
+// Takvim başlatma fonksiyonu (duplicate)
 function initializeCalendar() {
     console.log('Takvim başlatılıyor...');
     const calendarEl = document.getElementById('calendar');
@@ -4811,7 +4839,7 @@ function initializeCalendar() {
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
-            right: 'dayGridMonth,listWeek'
+            right: 'dayGridMonth,timeGridWeek,listWeek'
         },
         buttonText: {
             today: 'Bugün',
@@ -4836,15 +4864,38 @@ function initializeCalendar() {
                     failureCallback(error);
                 });
         },
-        dayMaxEvents: false, // Tüm görevleri göster
-        moreLinkClick: 'popover', // Fazla görevler için popover
-        height: 'auto', // Otomatik yükseklik
-        contentHeight: 'auto', // İçerik yükseklik otomatik
-        displayEventTime: true, // Saat bilgisini göster
-        slotMinTime: '06:00:00', // Minimum saat
-        slotMaxTime: '22:00:00', // Maksimum saat
-        slotDuration: '01:00:00', // Slot süresi
-        snapDuration: '00:15:00', // Snap süresi
+        dayMaxEvents: false,
+        moreLinkClick: 'popover',
+        height: 'auto',
+        contentHeight: 'auto',
+        displayEventTime: false,
+        eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+        eventDisplay: 'block',
+        slotMinTime: '06:00:00',
+        slotMaxTime: '22:00:00',
+        slotDuration: '00:15:00',
+        snapDuration: '00:15:00',
+        eventContent: function(arg) {
+            const defterAdi = arg.event.extendedProps && arg.event.extendedProps.defter_adi;
+            const container = document.createElement('div');
+            container.style.whiteSpace = 'normal';
+            container.style.lineHeight = '1.2';
+            container.innerHTML = `<div>${arg.event.title}</div>` +
+                (defterAdi ? `<div style="font-size: 0.75rem; color: rgba(255,255,255,0.6); opacity: 0.8; text-align: left;">${defterAdi}</div>` : '');
+            return { domNodes: [container] };
+        },
+        eventDidMount: function(info) {
+            const el = info.el;
+            el.style.setProperty('border-radius', '4px', 'important');
+            el.style.setProperty('font-size', '0.8rem', 'important');
+            el.style.setProperty('padding', '2px 4px', 'important');
+            el.style.setProperty('border', 'none', 'important');
+            el.style.setProperty('color', 'white', 'important');
+            el.style.setProperty('font-weight', '500', 'important');
+            el.style.setProperty('box-shadow', '0 1px 3px rgba(0,0,0,0.2)', 'important');
+            el.style.setProperty('min-height', '40px', 'important');
+            el.style.setProperty('line-height', '1.2', 'important');
+        },
         eventClick: function(info) {
             console.log('Event click:', info);
             console.log('Mouse button:', info.jsEvent.button);
@@ -5658,12 +5709,23 @@ function setupRandevuSlotListeners() {
         defterSelect.addEventListener('change', function() {
             const selectedOption = this.options[this.selectedIndex];
             if (selectedOption.dataset.slotDakika) {
-                // Süre otomatik doldurulacak
+                // Süre otomatik doldur
+                const sureInput = document.getElementById('quick_randevu_suresi');
+                if (sureInput) {
+                    sureInput.value = selectedOption.dataset.slotDakika;
+                    console.log('Süre otomatik dolduruldu:', selectedOption.dataset.slotDakika);
+                }
             }
             
             const tarih = tarihInput.value;
             if (tarih) {
                 loadQuickRandevuSlots();
+            } else {
+                // Tarih seçilmemişse slot container'ı gizle
+                const container = document.getElementById('randevu_saatleri_container');
+                if (container) {
+                    container.style.display = 'none';
+                }
             }
         });
     }
@@ -5673,6 +5735,12 @@ function setupRandevuSlotListeners() {
             const defterId = defterSelect.value;
             if (defterId) {
                 loadQuickRandevuSlots();
+            } else {
+                // Defter seçilmemişse slot container'ı gizle
+                const container = document.getElementById('randevu_saatleri_container');
+                if (container) {
+                    container.style.display = 'none';
+                }
             }
         });
     }
@@ -5722,21 +5790,20 @@ function displayQuickRandevuSlots(slots, doluSlots = []) {
     
     slots.forEach(slot => {
         const col = document.createElement('div');
-        col.className = 'col-md-2 col-sm-3 col-4 mb-1';
-        
+        col.className = 'col-auto';
+
         const isDolu = doluSlots.includes(slot);
-        
+
         const button = document.createElement('button');
         button.type = 'button';
-        button.className = `btn btn-outline-primary w-100 ${isDolu ? 'disabled' : ''}`;
+        button.className = `btn btn-outline-primary px-2 py-1 ${isDolu ? 'disabled' : ''}`;
         button.style.opacity = isDolu ? '0.5' : '1';
-        button.style.fontSize = '0.75rem';
-        button.style.padding = '0.25rem 0.5rem';
-        button.style.minWidth = '70px';
+        button.style.fontSize = '0.72rem';
+        button.style.minWidth = '58px';
         button.disabled = isDolu;
         button.textContent = slot;
         button.onclick = (event) => selectQuickRandevuSlot(slot, event.target);
-        
+
         col.appendChild(button);
         slotContainer.appendChild(col);
     });
@@ -5755,6 +5822,15 @@ function selectQuickRandevuSlot(saat, targetButton) {
         form.appendChild(saatInput);
     }
     saatInput.value = saat;
+
+    // Saat input'una da yaz (manuel alan var ise)
+    const manualSaat = document.getElementById('quick_randevu_saati');
+    if (manualSaat) {
+        manualSaat.value = saat;
+    }
+
+    // Bitiş saatini hesapla ve göster
+    updateQuickEndTime();
     
     // Seçilen slot'u vurgula
     document.querySelectorAll('#randevu_saatleri .btn').forEach(btn => {
@@ -5764,6 +5840,37 @@ function selectQuickRandevuSlot(saat, targetButton) {
     
     targetButton.classList.remove('btn-outline-primary');
     targetButton.classList.add('btn-primary');
+}
+
+// Süre değişince bitiş saatini güncelle
+const quickSureInput = document.getElementById('quick_randevu_suresi');
+if (quickSureInput) {
+    quickSureInput.addEventListener('input', updateQuickEndTime);
+    quickSureInput.addEventListener('change', updateQuickEndTime);
+}
+
+function updateQuickEndTime() {
+    // Başlangıç saati seçilen slot'tan (hidden input) alınır
+    const startTimeEl = document.getElementById('selected_quick_randevu_saat');
+    const durationEl = document.getElementById('quick_randevu_suresi');
+    const infoEl = document.getElementById('quick_end_info');
+
+    if (!startTimeEl || !durationEl || !infoEl) return;
+
+    const start = startTimeEl.value; // HH:MM
+    const durationMin = parseInt(durationEl.value || '0', 10);
+    if (!start || !durationMin) {
+        infoEl.textContent = '';
+        return;
+    }
+
+    const [h, m] = start.split(':').map(Number);
+    const startDate = new Date();
+    startDate.setHours(h, m, 0, 0);
+    const endDate = new Date(startDate.getTime() + durationMin * 60000);
+    const eh = String(endDate.getHours()).padStart(2, '0');
+    const em = String(endDate.getMinutes()).padStart(2, '0');
+    infoEl.textContent = `${start} → ${eh}:${em}`;
 }
 
 // Bugünün tarihini set et

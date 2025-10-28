@@ -66,6 +66,13 @@
                                 </small>
                             </div>
                         </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="hatirlatma_gunu" class="form-label">{{ _('Reminder Day') }}</label>
+                                <input type="date" class="form-control" id="hatirlatma_gunu" name="hatirlatma_gunu" value="{% if randevu.gorev and randevu.gorev.HatirlatmaTarihi %}{{ randevu.gorev.HatirlatmaTarihi.strftime('%Y-%m-%d') }}{% elif randevu.hatirlatmalar and randevu.hatirlatmalar|length > 0 %}{{ randevu.hatirlatmalar[0].HatirlamaTarihi.strftime('%Y-%m-%d') }}{% endif %}">
+                                <small class="form-text text-muted"><i class="fas fa-bell me-1"></i>{{ _('If set, related task reminder date will be updated') }}</small>
+                            </div>
+                        </div>
                     </div>
 
 

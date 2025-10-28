@@ -237,6 +237,16 @@
                                 </small>
                             </div>
                         </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="hatirlatma_gunu" class="form-label">{{ _('Reminder Date') }}</label>
+                                <input type="date" class="form-control" id="hatirlatma_gunu" name="hatirlatma_gunu">
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-info-circle"></i>
+                                    {{ _('If set, a reminder will be created for this appointment.') }}
+                                </small>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -1102,7 +1112,7 @@
     }
 
     function musteriAra(query) {
-        fetch(`/api/musteri/ara?q=${encodeURIComponent(query)}`)
+        fetch(`/api/musteri-ara?q=${encodeURIComponent(query)}`)
             .then(response => response.json())
             .then(data => {
                 musteriSonuclariniGoster(data);
@@ -1127,7 +1137,7 @@
                          onmouseout="this.style.backgroundColor='white'">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <strong>${musteri.tam_adi}</strong>
+                                <strong>${musteri.display || (musteri.ad + ' ' + musteri.soyad).trim()}</strong>
                                 <br>
                                 <small class="text-muted">
                                     ${musteri.telefon ? '📞 ' + musteri.telefon : ''} 
@@ -1163,14 +1173,15 @@
         document.getElementById('secilen_musteri_id').value = musteri.id;
         
         // Seçilen müşteri bilgisini göster
-        document.getElementById('secilen_musteri_adi').textContent = musteri.tam_adi;
+        const tamAdi = musteri.display || (musteri.ad + ' ' + musteri.soyad).trim();
+        document.getElementById('secilen_musteri_adi').textContent = tamAdi;
         document.getElementById('secilen_musteri_detay').textContent = 
             `${musteri.telefon ? '📞 ' + musteri.telefon + ' ' : ''}${musteri.email ? '📧 ' + musteri.email : ''}`;
         document.getElementById('secilen_musteri').style.display = 'block';
         
         // Form alanlarını doldur ve devre dışı bırak
-        document.getElementById('musteri_adi').value = musteri.adi;
-        document.getElementById('musteri_soyadi').value = musteri.soyadi;
+        document.getElementById('musteri_adi').value = musteri.ad || '';
+        document.getElementById('musteri_soyadi').value = musteri.soyad || '';
         
         // Telefon numarasını formatla ve doldur
         if (musteri.telefon) {
@@ -1365,6 +1376,85 @@
             document.getElementById('musteri_notlar').value = musteri.notlar;
         }
         
+        // Meslek doldur
+        if (musteri.meslek) {
+            document.getElementById('musteri_meslek').value = musteri.meslek;
+        }
+        
+        // Medeni durum doldur
+        if (musteri.medeni_durum) {
+            document.getElementById('musteri_medeni_durum').value = musteri.medeni_durum;
+        }
+        
+        // Eğitim durumu doldur
+        if (musteri.egitim_durumu) {
+            document.getElementById('musteri_egitim_durumu').value = musteri.egitim_durumu;
+        }
+        
+        // Kan grubu doldur
+        if (musteri.kan_grubu) {
+            document.getElementById('musteri_kan_grubu').value = musteri.kan_grubu;
+        }
+        
+        // TC Kimlik No doldur
+        if (musteri.tc_kimlik_no) {
+            document.getElementById('musteri_tc_kimlik_no').value = musteri.tc_kimlik_no;
+        }
+        
+        // Pasaport No doldur
+        if (musteri.pasaport_no) {
+            document.getElementById('musteri_pasaport_no').value = musteri.pasaport_no;
+        }
+        
+        // Vergi No doldur
+        if (musteri.vergi_no) {
+            document.getElementById('musteri_vergi_no').value = musteri.vergi_no;
+        }
+        
+        // İş yeri doldur
+        if (musteri.is_yeri) {
+            document.getElementById('musteri_is_yeri').value = musteri.is_yeri;
+        }
+        
+        // İş telefonu doldur
+        if (musteri.is_telefonu) {
+            document.getElementById('musteri_is_telefonu').value = musteri.is_telefonu;
+        }
+        
+        // Acil durum kişisi doldur
+        if (musteri.acil_durum_kisi) {
+            document.getElementById('musteri_acil_durum_kisi').value = musteri.acil_durum_kisi;
+        }
+        
+        // Acil durum telefonu doldur
+        if (musteri.acil_durum_telefonu) {
+            document.getElementById('musteri_acil_durum_telefonu').value = musteri.acil_durum_telefonu;
+        }
+        
+        // Sosyal medya hesapları doldur
+        if (musteri.facebook) {
+            document.getElementById('musteri_facebook').value = musteri.facebook;
+        }
+        if (musteri.instagram) {
+            document.getElementById('musteri_instagram').value = musteri.instagram;
+        }
+        if (musteri.twitter) {
+            document.getElementById('musteri_twitter').value = musteri.twitter;
+        }
+        if (musteri.linkedin) {
+            document.getElementById('musteri_linkedin').value = musteri.linkedin;
+        }
+        
+        // Referans doldur
+        if (musteri.referans) {
+            document.getElementById('musteri_referans').value = musteri.referans;
+        }
+        
+        // Özel notlar doldur
+        if (musteri.ozel_notlar) {
+            document.getElementById('musteri_ozel_notlar').value = musteri.ozel_notlar;
+        }
+        
         // Form validation'ını kontrol et ve submit butonunu aktif et
         setTimeout(() => {
             const formValid = validateForm();
@@ -1405,9 +1495,9 @@
         document.getElementById('musteri_cinsiyet').value = '';
         document.getElementById('musteri_kategori').value = '';
         document.getElementById('musteri_ulke').value = 'TR';
-        // Şehir ve ilçe alanlarını temizleme - GEÇİCİ OLARAK KAPALI
-        // document.getElementById('musteri_sehir').value = '';
-        // document.getElementById('musteri_ilce').value = '';
+        // Şehir ve ilçe alanlarını temizleme
+        document.getElementById('musteri_sehir').value = '';
+        document.getElementById('musteri_ilce').value = '';
         document.getElementById('musteri_adres').value = '';
         document.getElementById('musteri_notlar').value = '';
         
@@ -1584,44 +1674,44 @@
         const stateSelect = document.getElementById('musteri_sehir');
         const citySelect = document.getElementById('musteri_ilce');
         
-        // Varsayılan olarak Türkiye seçili gelsin - GEÇİCİ OLARAK KAPALI
+        // Varsayılan olarak Türkiye seçili gelsin
         if (countrySelect && !countrySelect.value) {
             countrySelect.value = 'TR';
-            // loadStates('TR'); // GEÇİCİ OLARAK KAPALI
+            loadStates('TR');
         }
         
-        // Ülke değiştiğinde eyaletleri/şehirleri yükle - GEÇİCİ OLARAK KAPALI
-        // countrySelect.addEventListener('change', function() {
-        //     const countryIso2 = this.value;
-        //     
-        //     // Eyalet/şehir dropdown'larını temizle
-        //     stateSelect.innerHTML = '<option value="">{{ _("Select State/City") }}</option>';
-        //     citySelect.innerHTML = '<option value="">{{ _("Select District") }}</option>';
-        //     
-        //     if (countryIso2) {
-        //         loadStates(countryIso2);
-        //     }
-        // });
+        // Ülke değiştiğinde eyaletleri/şehirleri yükle
+        countrySelect.addEventListener('change', function() {
+            const countryIso2 = this.value;
+            
+            // Eyalet/şehir dropdown'larını temizle
+            stateSelect.innerHTML = '<option value="">{{ _("Select State/City") }}</option>';
+            citySelect.innerHTML = '<option value="">{{ _("Select District") }}</option>';
+            
+            if (countryIso2) {
+                loadStates(countryIso2);
+            }
+        });
         
-        // Eyalet/şehir değiştiğinde ilçeleri yükle - GEÇİCİ OLARAK KAPALI
-        // stateSelect.addEventListener('change', function() {
-        //     const countryIso2 = countrySelect.value;
-        //     const stateIso2 = this.value;
-        //     
-        //     console.log('Şehir değişti event tetiklendi:', stateIso2);
-        //     
-        //     // İlçe dropdown'ını temizle
-        //     citySelect.innerHTML = '<option value="">{{ _("Select District") }}</option>';
-        //     
-        //     if (countryIso2 && stateIso2) {
-        //         loadCities(countryIso2, stateIso2);
-        //     }
-        // });
+        // Eyalet/şehir değiştiğinde ilçeleri yükle
+        stateSelect.addEventListener('change', function() {
+            const countryIso2 = countrySelect.value;
+            const stateIso2 = this.value;
+            
+            console.log('Şehir değişti event tetiklendi:', stateIso2);
+            
+            // İlçe dropdown'ını temizle
+            citySelect.innerHTML = '<option value="">{{ _("Select District") }}</option>';
+            
+            if (countryIso2 && stateIso2) {
+                loadCities(countryIso2, stateIso2);
+            }
+        });
         
-        // Sayfa yüklendiğinde Türkiye seçiliyse eyaletleri yükle - GEÇİCİ OLARAK KAPALI
-        // if (countrySelect.value === 'TR') {
-        //     loadStates('TR');
-        // }
+        // Sayfa yüklendiğinde Türkiye seçiliyse eyaletleri yükle
+        if (countrySelect.value === 'TR') {
+            loadStates('TR');
+        }
     });
     
     // Eyaletleri/şehirleri yükle
@@ -1667,12 +1757,12 @@
                                        || options.find(o => o.textContent === 'Istanbul');
                     if (istanbulOption) {
                         stateSelect.value = istanbulOption.value;
-                        // İlçeleri otomatik yükle - GEÇİCİ OLARAK KAPALI
-                        // const countrySelect = document.getElementById('musteri_ulke');
-                        // const stateIso2 = stateSelect.value;
-                        // if (countrySelect && stateIso2) {
-                        //     loadCities(countrySelect.value, stateIso2);
-                        // }
+                        // İlçeleri otomatik yükle
+                        const countrySelect = document.getElementById('musteri_ulke');
+                        const stateIso2 = stateSelect.value;
+                        if (countrySelect && stateIso2) {
+                            loadCities(countrySelect.value, stateIso2);
+                        }
                     }
                 }
                 
@@ -1692,9 +1782,9 @@
         return fetch(`/api/cities/${countryIso2}/${stateIso2}`)
             .then(response => response.json())
             .then(data => {
-                // Mevcut seçili değeri sakla - GEÇİCİ OLARAK KAPALI
-                // const currentValue = citySelect.value;
-                // console.log('loadCities: Mevcut ilçe değeri saklanıyor:', currentValue);
+                // Mevcut seçili değeri sakla
+                const currentValue = citySelect.value;
+                console.log('loadCities: Mevcut ilçe değeri saklanıyor:', currentValue);
                 console.log('loadCities: API\'den gelen veri:', data);
                 console.log('loadCities: Veri tipi:', typeof data, 'Array mi?', Array.isArray(data));
                 
@@ -1733,13 +1823,13 @@
                     }
                 }
                 
-                // Saklanan değeri geri yükle - GEÇİCİ OLARAK KAPALI
-                // if (currentValue) {
-                //     setTimeout(() => {
-                //         citySelect.value = currentValue;
-                //         console.log('loadCities: İlçe değeri geri yüklendi:', currentValue);
-                //     }, 100);
-                // }
+                // Saklanan değeri geri yükle
+                if (currentValue) {
+                    setTimeout(() => {
+                        citySelect.value = currentValue;
+                        console.log('loadCities: İlçe değeri geri yüklendi:', currentValue);
+                    }, 100);
+                }
                 
                 return data; // Promise'i resolve et
             })
