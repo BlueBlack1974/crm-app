@@ -106,7 +106,7 @@
                     {% endif %}
                     <small class="form-text text-muted">
                         <i class="fas fa-info-circle"></i> 
-                        Randevu süresi seçilen defterin slot dakikasının katları olmalı
+                        <span id="duration-info-text">Randevu süresi seçilen defterin slot dakikasının katları olmalı</span>
                     </small>
                 </div>
             </div>
@@ -234,16 +234,6 @@
                                 <small class="form-text text-muted" id="sure-bilgi">
                                     <i class="fas fa-info-circle"></i> 
                                     Süre seçilen defterin slot dakikasının katları olmalı
-                                </small>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="hatirlatma_gunu" class="form-label">{{ _('Reminder Date') }}</label>
-                                <input type="date" class="form-control" id="hatirlatma_gunu" name="hatirlatma_gunu">
-                                <small class="form-text text-muted">
-                                    <i class="fas fa-info-circle"></i>
-                                    {{ _('If set, a reminder will be created for this appointment.') }}
                                 </small>
                             </div>
                         </div>
@@ -692,6 +682,28 @@
     console.log('Final çeviriler:', translations);
     // 2 aşamalı akış: önce tarih/saat seç, sonra formu doldur
     document.addEventListener('DOMContentLoaded', function() {
+        // Çeviri fonksiyonu
+        function translateDurationInfo() {
+            const currentLang = document.documentElement.lang || 'tr';
+            const durationInfoText = document.getElementById('duration-info-text');
+            if (durationInfoText) {
+                let message;
+                if (currentLang === 'en') {
+                    message = 'Appointment duration must be multiples of the selected book\'s slot minutes';
+                } else if (currentLang === 'fr') {
+                    message = 'La durée du rendez-vous doit être un multiple des minutes de créneau du livre sélectionné';
+                } else if (currentLang === 'de') {
+                    message = 'Die Termindauer muss ein Vielfaches der Minuten des ausgewählten Buchs sein';
+                } else {
+                    message = 'Randevu süresi seçilen defterin slot dakikasının katları olmalı';
+                }
+                durationInfoText.textContent = message;
+            }
+        }
+        
+        // Sayfa yüklendiğinde çevir
+        translateDurationInfo();
+        
         const today = new Date();
         const y = today.getFullYear();
         const m = String(today.getMonth() + 1).padStart(2, '0');
@@ -753,11 +765,33 @@
         const container = document.getElementById('slotContainer');
         
         if (!date || !defterId) { 
-            container.innerHTML = '<div class="text-muted small">Önce defter ve tarih seçin</div>'; 
+            const currentLang = document.documentElement.lang || 'tr';
+            let message;
+            if (currentLang === 'en') {
+                message = 'Please select book and date first';
+            } else if (currentLang === 'fr') {
+                message = 'Veuillez d\'abord sélectionner le livre et la date';
+            } else if (currentLang === 'de') {
+                message = 'Bitte wählen Sie zuerst Buch und Datum';
+            } else {
+                message = 'Önce defter ve tarih seçin';
+            }
+            container.innerHTML = '<div class="text-muted small">' + message + '</div>'; 
             return; 
         }
         
-        container.innerHTML = '<div class="text-muted small">Uygun saatler yükleniyor...</div>';
+        const currentLang = document.documentElement.lang || 'tr';
+        let loadingMessage;
+        if (currentLang === 'en') {
+            loadingMessage = 'Loading available times...';
+        } else if (currentLang === 'fr') {
+            loadingMessage = 'Chargement des heures disponibles...';
+        } else if (currentLang === 'de') {
+            loadingMessage = 'Verfügbare Zeiten werden geladen...';
+        } else {
+            loadingMessage = 'Uygun saatler yükleniyor...';
+        }
+        container.innerHTML = '<div class="text-muted small">' + loadingMessage + '</div>';
         fetch(`/api/slots?date=${date}&defter_id=${defterId}&all=1`, {
             credentials: 'same-origin',
             headers: { 'X-Requested-With': 'XMLHttpRequest' }

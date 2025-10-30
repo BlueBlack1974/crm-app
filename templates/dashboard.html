@@ -137,16 +137,44 @@
                                     <span class="badge bg-{% if todo.Oncelik == 'Yüksek' %}danger{% elif todo.Oncelik == 'Orta' %}warning{% else %}success{% endif %} me-2">
                                         <span class="oncelik-text">{{ todo.Oncelik }}</span>
                                     </span>
+                                    {% if todo.durum %}
+                                    <!-- Debug: {{ todo.durum.DurumAdi }} -->
+                                    {% if todo.durum.DurumAdi == 'Beklemede' %}
+                                    <span class="badge bg-warning me-2">
+                                        <span class="durum-text">{{ todo.durum.DurumAdi }}</span>
+                                    </span>
+                                    {% elif todo.durum.DurumAdi == 'Devam Ediyor' %}
+                                    <span class="badge bg-info me-2">
+                                        <span class="durum-text">{{ todo.durum.DurumAdi }}</span>
+                                    </span>
+                                    {% elif todo.durum.DurumAdi == 'Tamamlandı' %}
+                                    <span class="badge bg-success me-2">
+                                        <span class="durum-text">{{ todo.durum.DurumAdi }}</span>
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary me-2">
+                                        <span class="durum-text">{{ todo.durum.DurumAdi }}</span>
+                                    </span>
+                                    {% endif %}
+                                    {% endif %}
                                     {% if todo.BitisTarihi %}
                                     <i class="fas fa-calendar-alt me-1"></i>{{ todo.BitisTarihi.strftime('%d.%m.%Y') }}
                                     {% endif %}
                                 </small>
                             </div>
                         </div>
-                        <div>
-                            <span class="badge bg-{% if todo.Durum == 'Beklemede' %}warning{% elif todo.Durum == 'Devam Ediyor' %}info{% else %}success{% endif %}">
-                                <span class="durum-text">{{ todo.Durum }}</span>
-                            </span>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="editTodo({{ todo.TodoID }})">
+                                    <i class="fas fa-edit me-2"></i>{{ _('Edit') }}
+                                </a></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteTodo({{ todo.TodoID }})">
+                                    <i class="fas fa-trash me-2"></i>{{ _('Delete') }}
+                                </a></li>
+                            </ul>
                         </div>
                     </div>
                     {% endfor %}
@@ -168,25 +196,25 @@
     <div class="col-lg-6">
         <div class="card shadow mb-3">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">{{ _('Yapılacaklar İstatistikleri') }}</h6>
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Todo Statistics') }}</h6>
             </div>
             <div class="card-body">
                 <div class="row text-center">
                     <div class="col-6 mb-3">
                         <div class="h4 text-primary">{{ toplam_todo }}</div>
-                        <small class="text-muted">{{ _('Toplam') }}</small>
+                        <small class="text-muted">{{ _('Total') }}</small>
                     </div>
                     <div class="col-6 mb-3">
                         <div class="h4 text-success">{{ tamamlanan_todo }}</div>
-                        <small class="text-muted">{{ _('Tamamlanan') }}</small>
+                        <small class="text-muted">{{ _('Completed') }}</small>
                     </div>
                     <div class="col-6">
                         <div class="h4 text-warning">{{ beklemede_todo }}</div>
-                        <small class="text-muted">{{ _('Beklemede') }}</small>
+                        <small class="text-muted">{{ _('Pending') }}</small>
                     </div>
                     <div class="col-6">
                         <div class="h4 text-info">{{ devam_eden_todo }}</div>
-                        <small class="text-muted">{{ _('Devam Ediyor') }}</small>
+                        <small class="text-muted">{{ _('In Progress') }}</small>
                     </div>
                 </div>
             </div>
@@ -201,11 +229,11 @@
         <div class="card shadow mb-3">
             <div class="card-header py-3 d-flex justify-content-between align-items-center">
                 <h6 class="m-0 font-weight-bold text-success">
-                    <i class="fas fa-clipboard-check me-2"></i>{{ _('Görevlerim') }}
+                    <i class="fas fa-clipboard-check me-2"></i>{{ _('My Tasks') }}
                 </h6>
                 <div>
                     <a href="/gorevler" class="btn btn-sm btn-outline-success me-2">
-                        <i class="fas fa-list"></i> {{ _('Tümünü Gör') }}
+                        <i class="fas fa-list"></i> {{ _('View All') }}
                     </a>
                 </div>
             </div>
@@ -278,27 +306,38 @@
     <div class="col-lg-6">
         <div class="card shadow mb-3">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-success">{{ _('Görev İstatistikleri') }}</h6>
+                <h6 class="m-0 font-weight-bold text-success">{{ _('Task Statistics') }}</h6>
             </div>
             <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-6 mb-3">
+                <!-- Toplam görev sayısı -->
+                <div class="row text-center mb-3">
+                    <div class="col-12">
                         <div class="h4 text-success">{{ toplam_gorev }}</div>
-                        <small class="text-muted">{{ _('Toplam') }}</small>
-                    </div>
-                    <div class="col-6 mb-3">
-                        <div class="h4 text-success">{{ tamamlanan_gorev }}</div>
-                        <small class="text-muted">{{ _('Tamamlanan') }}</small>
-                    </div>
-                    <div class="col-6">
-                        <div class="h4 text-warning">{{ beklemede_gorev }}</div>
-                        <small class="text-muted">{{ _('Beklemede') }}</small>
-                    </div>
-                    <div class="col-6">
-                        <div class="h4 text-info">{{ devam_eden_gorev }}</div>
-                        <small class="text-muted">{{ _('Devam Ediyor') }}</small>
+                        <small class="text-muted">{{ _('Total Tasks') }}</small>
                     </div>
                 </div>
+                
+                <!-- Durumlara göre istatistikler -->
+                {% if gorev_durum_istatistikleri %}
+                <div class="row">
+                    {% for istatistik in gorev_durum_istatistikleri %}
+                    <div class="col-6 mb-2">
+                        <div class="d-flex align-items-center">
+                            <div class="me-2" style="width: 12px; height: 12px; background-color: {{ istatistik.durum.Renk if istatistik.durum.Renk else '#007bff' }}; border-radius: 50%;"></div>
+                            <div class="flex-grow-1">
+                                <div class="h6 mb-0" style="color: {{ istatistik.durum.Renk if istatistik.durum.Renk else '#007bff' }};">{{ istatistik.sayi }}</div>
+                                <small class="text-muted">{{ istatistik.durum.DurumAdi }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-chart-pie fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">{{ _('No task status defined yet') }}</p>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -454,6 +493,64 @@
 // Durum ve öncelik çevirileri
 function translateStatusAndPriority() {
     const currentLang = document.documentElement.lang || 'tr';
+    
+    // Başlık çevirileri
+    const titleTranslations = {
+        'en': {
+            'My Tasks': 'My Tasks',
+            'Task Statistics': 'Task Statistics',
+            'Total Tasks': 'Total Tasks',
+            'Todo Statistics': 'Todo Statistics',
+            'Total': 'Total',
+            'Completed': 'Completed',
+            'Pending': 'Pending',
+            'In Progress': 'In Progress'
+        },
+        'fr': {
+            'My Tasks': 'Mes Tâches',
+            'Task Statistics': 'Statistiques des Tâches',
+            'Total Tasks': 'Total des Tâches',
+            'Todo Statistics': 'Statistiques des Tâches',
+            'Total': 'Total',
+            'Completed': 'Terminé',
+            'Pending': 'En Attente',
+            'In Progress': 'En Cours'
+        },
+        'tr': {
+            'My Tasks': 'Görevlerim',
+            'Task Statistics': 'Görev İstatistikleri',
+            'Total Tasks': 'Toplam Görev',
+            'Todo Statistics': 'Yapılacaklar İstatistikleri',
+            'Total': 'Toplam',
+            'Completed': 'Tamamlanan',
+            'Pending': 'Beklemede',
+            'In Progress': 'Devam Ediyor'
+        },
+        'de': {
+            'My Tasks': 'Meine Aufgaben',
+            'Task Statistics': 'Aufgabenstatistiken',
+            'Total Tasks': 'Gesamtaufgaben',
+            'Todo Statistics': 'Todo-Statistiken',
+            'Total': 'Gesamt',
+            'Completed': 'Abgeschlossen',
+            'Pending': 'Ausstehend',
+            'In Progress': 'In Bearbeitung'
+        }
+    };
+    
+    // Başlıkları çevir
+    if (titleTranslations[currentLang]) {
+        Object.keys(titleTranslations[currentLang]).forEach(original => {
+            const translated = titleTranslations[currentLang][original];
+            document.querySelectorAll('*').forEach(element => {
+                if (element.textContent && element.textContent.trim() === original) {
+                    // Class'ları koruyarak sadece metni değiştir
+                    const originalHTML = element.innerHTML;
+                    element.innerHTML = originalHTML.replace(original, translated);
+                }
+            });
+        });
+    }
     
     // Durum çevirileri
     document.querySelectorAll('.durum-text').forEach(element => {
@@ -675,6 +772,70 @@ function showAlert(type, message) {
             alertDiv.remove();
         }
     }, 5000);
+}
+
+// Todo düzenleme
+function editTodo(todoId) {
+    // Todo düzenleme sayfasına yönlendir
+    window.location.href = `/todos/${todoId}/duzenle`;
+}
+
+// Todo silme
+function deleteTodo(todoId) {
+    if (confirm('Bu yapılacak görevi silmek istediğinizden emin misiniz?')) {
+        fetch(`/todos/${todoId}/sil`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showAlert('success', result.message);
+                location.reload();
+            } else {
+                showAlert('danger', result.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('danger', 'Bir hata oluştu!');
+        });
+    }
+}
+
+// Görev düzenleme
+function editGorev(todoId) {
+    // Görev düzenleme sayfasına yönlendir
+    window.location.href = `/gorevler/${todoId}/duzenle`;
+}
+
+// Görev silme
+function deleteGorev(todoId) {
+    if (confirm('Bu görevi silmek istediğinizden emin misiniz?')) {
+        fetch(`/gorevler/${todoId}/sil`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showAlert('success', result.message);
+                location.reload();
+            } else {
+                showAlert('danger', result.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('danger', 'Bir hata oluştu!');
+        });
+    }
 }
 
     // Modal temizleme

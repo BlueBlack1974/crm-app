@@ -928,10 +928,24 @@ function addToTasks(randevuId, musteriAdi, randevuBaslik, randevuTarihi, defterA
     }
     
     // Form alanlarını doldur
-    document.getElementById('todoBaslik').value = musteriAdi + ' randevu hatırlatma';
+    const currentLang = document.documentElement.lang || 'tr';
     
-    // Açıklama alanını doldur
-    let aciklama = musteriAdi + ' ' + defterAdi + ' randevusu var.';
+    // Başlık
+    let baslik;
+    if (currentLang === 'en') {
+        baslik = musteriAdi + ' appointment reminder';
+    } else {
+        baslik = musteriAdi + ' randevu hatırlatma';
+    }
+    document.getElementById('todoBaslik').value = baslik;
+    
+    // Açıklama
+    let aciklama;
+    if (currentLang === 'en') {
+        aciklama = musteriAdi + ' has ' + defterAdi + ' appointment.';
+    } else {
+        aciklama = musteriAdi + ' ' + defterAdi + ' randevusu var.';
+    }
     document.getElementById('todoAciklama').value = aciklama;
     
     // Randevu tarihini bitiş tarihi olarak ayarla

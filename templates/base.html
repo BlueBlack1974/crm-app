@@ -906,6 +906,50 @@ function translateSidebar() {
             el.textContent = 'Hatırlatma:';
         });
     }
+    
+    // Duration info çevirisi
+    const durationInfoText = document.getElementById('duration-info-text');
+    if (durationInfoText) {
+        let message;
+        if (currentLang === 'en') {
+            message = 'Appointment duration must be multiples of the selected book\'s slot minutes';
+        } else if (currentLang === 'fr') {
+            message = 'La durée du rendez-vous doit être un multiple des minutes de créneau du livre sélectionné';
+        } else if (currentLang === 'de') {
+            message = 'Die Termindauer muss ein Vielfaches der Minuten des ausgewählten Buchs sein';
+        } else {
+            message = 'Randevu süresi seçilen defterin slot dakikasının katları olmalı';
+        }
+        durationInfoText.textContent = message;
+    }
+    
+    // Durum çevirisi
+    const statusElements = document.querySelectorAll('.durum-text');
+    statusElements.forEach(element => {
+        const originalStatus = element.getAttribute('data-durum');
+        if (originalStatus) {
+            let translatedStatus;
+            if (currentLang === 'en') {
+                if (originalStatus === 'Beklemede') translatedStatus = 'Pending';
+                else if (originalStatus === 'Devam Ediyor') translatedStatus = 'In Progress';
+                else if (originalStatus === 'Tamamlandı') translatedStatus = 'Complete';
+                else translatedStatus = originalStatus;
+            } else if (currentLang === 'fr') {
+                if (originalStatus === 'Beklemede') translatedStatus = 'En Attente';
+                else if (originalStatus === 'Devam Ediyor') translatedStatus = 'En Cours';
+                else if (originalStatus === 'Tamamlandı') translatedStatus = 'Terminé';
+                else translatedStatus = originalStatus;
+            } else if (currentLang === 'de') {
+                if (originalStatus === 'Beklemede') translatedStatus = 'Ausstehend';
+                else if (originalStatus === 'Devam Ediyor') translatedStatus = 'In Bearbeitung';
+                else if (originalStatus === 'Tamamlandı') translatedStatus = 'Abgeschlossen';
+                else translatedStatus = originalStatus;
+            } else {
+                translatedStatus = originalStatus;
+            }
+            element.textContent = translatedStatus;
+        }
+    });
 }
 
 // Sayfa yüklendiğinde çevirileri uygula

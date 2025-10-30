@@ -1839,7 +1839,7 @@
         <div class="col-md-6 col-lg-4 mb-3 gorev-item" data-durum-id="{{ gorev.durum.DurumID if gorev.durum else '' }}" data-priority="{{ gorev.Oncelik|lower|replace(' ', '') }}">
             <div class="card shadow h-100 {{ 'tamamlandi' if gorev.durum and gorev.durum.DurumAdi == 'Tamamlandı' else '' }}">
                 <div class="card-header py-2 d-flex justify-content-between align-items-center">
-                    <span class="badge" style="background-color: {{ gorev.durum.Renk if gorev.durum and gorev.durum.Renk else '#007bff' }}; color: white;">
+                    <span class="badge durum-text" style="background-color: {{ gorev.durum.Renk if gorev.durum and gorev.durum.Renk else '#007bff' }}; color: white;" data-durum="{{ gorev.durum.DurumAdi if gorev.durum else 'Durum Yok' }}">
                         {{ gorev.durum.DurumAdi if gorev.durum else 'Durum Yok' }}
                     </span>
                     <span class="badge bg-{% if gorev.Oncelik == 'Yüksek' %}danger{% elif gorev.Oncelik == 'Orta' %}warning{% else %}success{% endif %}">
@@ -1958,7 +1958,7 @@
                             </div>
                         </div>
                         <div class="d-flex align-items-center">
-                            <span class="badge bg-{% if gorev.Durum == 'Beklemede' %}warning{% elif gorev.Durum == 'Devam Ediyor' %}info{% else %}success{% endif %} me-2">
+                            <span class="badge bg-{% if gorev.Durum == 'Beklemede' %}warning{% elif gorev.Durum == 'Devam Ediyor' %}info{% else %}success{% endif %} me-2 durum-text" data-durum="{{ gorev.Durum }}">
                                 {{ gorev.Durum }}
                             </span>
                             <div class="btn-group btn-group-sm">
@@ -3041,6 +3041,41 @@ function initializeCalendar() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('=== DOMContentLoaded BAŞLADI ===');
     console.log('Sayfa yüklendi, görevler sayfası başlatılıyor...');
+    
+    // Durum çeviri fonksiyonu
+    function translateStatuses() {
+        const currentLang = document.documentElement.lang || 'tr';
+        const statusElements = document.querySelectorAll('.durum-text');
+        
+        statusElements.forEach(element => {
+            const originalStatus = element.getAttribute('data-durum');
+            if (originalStatus) {
+                let translatedStatus;
+                if (currentLang === 'en') {
+                    if (originalStatus === 'Beklemede') translatedStatus = 'Pending';
+                    else if (originalStatus === 'Devam Ediyor') translatedStatus = 'In Progress';
+                    else if (originalStatus === 'Tamamlandı') translatedStatus = 'Complete';
+                    else translatedStatus = originalStatus;
+                } else if (currentLang === 'fr') {
+                    if (originalStatus === 'Beklemede') translatedStatus = 'En Attente';
+                    else if (originalStatus === 'Devam Ediyor') translatedStatus = 'En Cours';
+                    else if (originalStatus === 'Tamamlandı') translatedStatus = 'Terminé';
+                    else translatedStatus = originalStatus;
+                } else if (currentLang === 'de') {
+                    if (originalStatus === 'Beklemede') translatedStatus = 'Ausstehend';
+                    else if (originalStatus === 'Devam Ediyor') translatedStatus = 'In Bearbeitung';
+                    else if (originalStatus === 'Tamamlandı') translatedStatus = 'Abgeschlossen';
+                    else translatedStatus = originalStatus;
+                } else {
+                    translatedStatus = originalStatus;
+                }
+                element.textContent = translatedStatus;
+            }
+        });
+    }
+    
+    // Sayfa yüklendiğinde çevir
+    translateStatuses();
     
     try {
     

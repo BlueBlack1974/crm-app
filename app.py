@@ -265,8 +265,9 @@ def get_locale():
     # Sonra request header'ından
     return app.config['BABEL_DEFAULT_LOCALE']
 
-# Babel'i yeniden başlat
-babel = Babel(app, locale_selector=get_locale)
+# Babel'i başlat
+babel = Babel(app)
+babel.init_app(app, locale_selector=get_locale)
 
 # Parola karmaşıklık kontrolü
 import re
@@ -2125,10 +2126,11 @@ def dashboard():
             Randevu.FirmaID == session['firma_id']
         ).order_by(Randevu.RandevuTarihi.desc()).limit(10).all()
     
-    # Yapılacaklar (Kişisel) verilerini getir
-    user_todos = Todo.query.filter_by(KullaniciID=session['user_id'], Tip='Kisisel').order_by(
-        Todo.Oncelik.desc(), Todo.OlusturmaTarihi.desc()
-    ).limit(5).all()
+    # Yapılacaklar (Kişisel) verilerini getir - Durum bilgisi ile birlikte
+    user_todos = db.session.query(Todo).outerjoin(TodoDurum, Todo.DurumID == TodoDurum.DurumID).filter(
+        Todo.KullaniciID == session['user_id'], 
+        Todo.Tip == 'Kisisel'
+    ).order_by(Todo.Oncelik.desc(), Todo.OlusturmaTarihi.desc()).limit(5).all()
     
     # Görevler (Randevu) verilerini getir
     user_gorevler = Todo.query.filter_by(KullaniciID=session['user_id'], Tip='Randevu').order_by(
@@ -2157,9 +2159,26 @@ def dashboard():
         TodoDurum.DurumAdi == 'Devam Ediyor'
     ).count()
     
-    # Görevler (Randevu) istatistikleri
+    # Görevler (Randevu) istatistikleri - Durumlara göre
     toplam_gorev = Todo.query.filter_by(KullaniciID=session['user_id'], Tip='Randevu').count()
     
+    # Firma bazlı tüm durumları getir
+    gorev_durumlar = TodoDurum.query.filter_by(FirmaID=session['firma_id'], Aktif=True).order_by(TodoDurum.Sira).all()
+    
+    # Her durum için kullanıcının görev sayısını hesapla
+    gorev_durum_istatistikleri = []
+    for durum in gorev_durumlar:
+        sayi = db.session.query(Todo).join(TodoDurum).filter(
+            Todo.KullaniciID == session['user_id'],
+            Todo.Tip == 'Randevu',
+            TodoDurum.DurumID == durum.DurumID
+        ).count()
+        gorev_durum_istatistikleri.append({
+            'durum': durum,
+            'sayi': sayi
+        })
+    
+    # Eski istatistikler (geriye dönük uyumluluk için)
     tamamlanan_gorev = db.session.query(Todo).join(TodoDurum).filter(
         Todo.KullaniciID == session['user_id'],
         Todo.Tip == 'Randevu',
@@ -2193,7 +2212,8 @@ def dashboard():
                          toplam_gorev=toplam_gorev,
                          tamamlanan_gorev=tamamlanan_gorev,
                          beklemede_gorev=beklemede_gorev,
-                         devam_eden_gorev=devam_eden_gorev)
+                         devam_eden_gorev=devam_eden_gorev,
+                         gorev_durum_istatistikleri=gorev_durum_istatistikleri)
 
 
 @app.route('/profil')
@@ -4878,7 +4898,6 @@ def randevu_duzenle(randevu_id):
             referans_id = request.form.get('referans_id', type=int)
             randevu_suresi = request.form.get('randevu_suresi', type=int)
             randevu_notlar = request.form.get('randevu_notlar', '').strip()
-            hatirlatma_gunu = request.form.get('hatirlatma_gunu')
             atanan_kullanici_id = request.form.get('atanan_kullanici', type=int)
             
             if not tarih_gun or not saat or not randevu_suresi:
@@ -4907,27 +4926,6 @@ def randevu_duzenle(randevu_id):
             randevu.RandevuNotlar = randevu_notlar
             randevu.GuncellemeTarihi = datetime.now()
 
-            # Hatırlatma güncelle: Bağlı görev varsa veya randevu hatırlatma tablosu varsa
-            try:
-                if hatirlatma_gunu:
-                    hat_dt = datetime.strptime(hatirlatma_gunu, '%Y-%m-%d').date()
-                    # 1) Eğer randevuya bağlı bir görev varsa onun HatirlatmaTarihi'ni güncelle
-                    if randevu.GorevID:
-                        todo = Todo.query.filter_by(TodoID=randevu.GorevID).first()
-                        if todo:
-                            todo.HatirlatmaTarihi = datetime.combine(hat_dt, time(9, 0))
-                    # 2) RandevuHatirlatma kaydı varsa ilkini güncelle, yoksa oluştur
-                    if hasattr(randevu, 'hatirlatmalar'):
-                        if randevu.hatirlatmalar and len(randevu.hatirlatmalar) > 0:
-                            randevu.hatirlatmalar[0].HatirlamaTarihi = hat_dt
-                        else:
-                            try:
-                                rh = RandevuHatirlatma(RandevuID=randevu.RandevuID, HatirlamaTarihi=hat_dt)
-                                db.session.add(rh)
-                            except Exception:
-                                pass
-            except Exception:
-                pass
             
             # Referans güncelle - başlık otomatik olarak referans adı olur
             if ref:
@@ -5129,7 +5127,6 @@ def randevu_ekle():
             email = request.form.get('email', '')
             aciklama = request.form.get('aciklama', '')
             randevu_suresi = int(request.form.get('sure', 60))
-            hatirlatma_gunu_str = request.form.get('hatirlatma_gunu', '').strip()
         if not tarih_gun or not saat or not defter_id:
             flash('Lütfen tarih, saat ve randevu defteri seçin', 'error')
             return redirect(url_for('randevu_ekle'))
@@ -5411,95 +5408,6 @@ def randevu_ekle():
             except Exception as gorev_error:
                 print(f"Görev oluşturma hatası: {gorev_error}")
                 # Görev oluşturma hatası randevu oluşturmayı etkilemesin
-
-        # Eğer kullanıcı hatırlatma tarihi seçtiyse, randevuya hatırlatma kaydı oluştur
-        try:
-            if not request.is_json:
-                hatirlatma_gunu_str = hatirlatma_gunu_str if 'hatirlatma_gunu_str' in locals() else request.form.get('hatirlatma_gunu', '').strip()
-                if hatirlatma_gunu_str:
-                    from datetime import time as dtime
-                    
-                    # Tarih formatını kontrol et ve parse et
-                    try:
-                        # Önce YYYY-MM-DD formatını dene
-                        hatirlatma_date = datetime.strptime(hatirlatma_gunu_str, '%Y-%m-%d').date()
-                    except ValueError:
-                        try:
-                            # DD.MM.YYYY formatını dene
-                            hatirlatma_date = datetime.strptime(hatirlatma_gunu_str, '%d.%m.%Y').date()
-                        except ValueError:
-                            try:
-                                # DD/MM/YYYY formatını dene
-                                hatirlatma_date = datetime.strptime(hatirlatma_gunu_str, '%d/%m/%Y').date()
-                            except ValueError:
-                                print(f"Geçersiz tarih formatı: {hatirlatma_gunu_str}")
-                                hatirlatma_date = None
-                    
-                    if hatirlatma_date:
-                        # RandevuHatirlatma kaydı oluştur
-                        rh = RandevuHatirlatma(
-                            RandevuID=randevu.RandevuID,
-                            FirmaID=session['firma_id'],
-                            HatirlatmaTarihi=hatirlatma_date,
-                            HatirlatmaTipi='Günlük',
-                            Aktif=True
-                        )
-                        db.session.add(rh)
-                        db.session.commit()
-
-                        # Yapılacaklar listesine de düşür (Todo oluştur)
-                        try:
-                            # Kime atanacak? Öncelik: atanan_kullanici, yoksa oluşturan kullanıcı
-                            atanacak_kullanici = request.form.get('atanan_kullanici', type=int) or session['user_id']
-                            musteri_tam_adi = (musteri_adi or '').strip()
-                            if not musteri_tam_adi:
-                                try:
-                                    if randevu.musteri and (randevu.musteri.MusteriAdi or randevu.musteri.MusteriSoyadi):
-                                        musteri_tam_adi = f"{randevu.musteri.MusteriAdi or ''} {randevu.musteri.MusteriSoyadi or ''}".strip()
-                                except Exception:
-                                    musteri_tam_adi = (randevu.MusteriAdi or '').strip()
-
-                            # Durum ID'sini bul (Beklemede durumu)
-                            from app import TodoDurum
-                            beklemede_durum = TodoDurum.query.filter_by(
-                                FirmaID=session['firma_id'],
-                                DurumAdi='Beklemede'
-                            ).first()
-                            durum_id = beklemede_durum.DurumID if beklemede_durum else None
-
-                            todo_baslik = f"Hatırlatma: {musteri_tam_adi} randevusu"
-                            todo_aciklama = f"{randevu_dt.strftime('%d.%m.%Y %H:%M')} tarihli randevu için hatırlatma."
-                            yeni_todo = Todo(
-                                KullaniciID=atanacak_kullanici,
-                                Baslik=todo_baslik,
-                                Aciklama=todo_aciklama,
-                                Oncelik='Orta',
-                                Tip='Randevu',
-                                DurumID=durum_id,
-                                BitisTarihi=None,
-                                HatirlatmaTarihi=datetime.combine(hatirlatma_date, datetime.min.time()),
-                                RandevuID=randevu.RandevuID
-                            )
-                            db.session.add(yeni_todo)
-                            db.session.commit()
-
-                            # İsteğe bağlı: Randevu tarafında da ilişkiyi kaydet
-                            try:
-                                randevu.GorevID = yeni_todo.TodoID
-                                db.session.commit()
-                                print(f"Randevu hatırlatma görevi oluşturuldu: {todo_baslik} - {hatirlatma_date}")
-                            except Exception:
-                                db.session.rollback()
-                        except Exception as todo_err:
-                            db.session.rollback()
-                            print(f"Randevu hatirlatma Todo olusurken hata: {todo_err}")
-                            import traceback
-                            traceback.print_exc()
-        except Exception as e:
-            db.session.rollback()
-            print(f"Randevu hatirlatma tarih kaydi olusurken hata: {e}")
-            import traceback
-            traceback.print_exc()
 
         # SMS: randevu olusturuldugunda gonder
         try:
