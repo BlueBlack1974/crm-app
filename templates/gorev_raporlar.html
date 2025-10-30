@@ -280,6 +280,30 @@
 let reportData = null;
 let charts = {};
 
+// Basit çeviri nesnesi (Jinja ile doldurulur)
+const t = {
+    statusDistribution: "{{ _('Durum Dağılımı') }}",
+    priorityDistribution: "{{ _('Öncelik Dağılımı') }}",
+    userDistribution: "{{ _('Kullanıcı Bazlı Dağılım') }}",
+    userCompleted: "{{ _('Kullanıcı Tamamlanan Görevler') }}",
+    monthlyTrend: "{{ _('Aylık Trend') }}",
+    taskCount: "{{ _('Görev Sayısı') }}",
+    completedTasks: "{{ _('Tamamlanan Görevler') }}",
+    createdTasks: "{{ _('Oluşturulan Görevler') }}",
+    noData: "{{ _('Veri bulunamadı') }}",
+    loadingReport: "{{ _('Rapor yükleniyor...') }}",
+    reportTitle: "{{ _('Görev Raporu') }}",
+    reportDate: "{{ _('Rapor Tarihi') }}",
+    exportFirst: "{{ _('Önce rapor oluşturun') }}",
+    columnTask: "{{ _('Görev') }}",
+    columnStatus: "{{ _('Durum') }}",
+    columnPriority: "{{ _('Öncelik') }}",
+    columnUser: "{{ _('Kullanıcı') }}",
+    columnCreated: "{{ _('Oluşturma') }}",
+    columnEnd: "{{ _('Bitiş') }}",
+    columnCustomer: "{{ _('Müşteri') }}",
+};
+
 // Sayfa yüklendiğinde
 document.addEventListener('DOMContentLoaded', function() {
     initializeFilters();
@@ -430,7 +454,7 @@ function updatePriorityChart(data) {
         data: {
             labels: data.labels,
             datasets: [{
-                label: 'Görev Sayısı',
+                label: t.taskCount,
                 data: data.values,
                 backgroundColor: data.colors,
                 borderColor: data.colors,
@@ -462,7 +486,7 @@ function updateUserChart(data) {
         data: {
             labels: data.labels,
             datasets: [{
-                label: 'Görev Sayısı',
+                label: t.taskCount,
                 data: data.values,
                 backgroundColor: data.colors,
                 borderColor: data.colors,
@@ -493,7 +517,7 @@ function updateUserCompletedChart(data) {
         data: {
             labels: data.labels,
             datasets: [{
-                label: 'Tamamlanan Görevler',
+                label: t.completedTasks,
                 data: data.values,
                 backgroundColor: data.colors,
                 borderColor: data.colors,
@@ -524,13 +548,13 @@ function updateTrendChart(data) {
         data: {
             labels: data.labels,
             datasets: [{
-                label: 'Oluşturulan Görevler',
+                label: t.createdTasks,
                 data: data.created,
                 borderColor: '#007bff',
                 backgroundColor: 'rgba(0, 123, 255, 0.1)',
                 tension: 0.4
             }, {
-                label: 'Tamamlanan Görevler',
+                label: t.completedTasks,
                 data: data.completed,
                 borderColor: '#28a745',
                 backgroundColor: 'rgba(40, 167, 69, 0.1)',
@@ -555,7 +579,7 @@ function updateTasksTable(tasks) {
     tbody.innerHTML = '';
     
     if (!Array.isArray(tasks) || tasks.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center no-data">Veri bulunamadı</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center no-data">${t.noData}</td></tr>`;
         return;
     }
     
@@ -601,22 +625,22 @@ function formatDate(dateString) {
 // Excel'e aktar
 function exportToExcel() {
     if (!reportData || !reportData.tasks) {
-        alert('Önce rapor oluşturun');
+        alert(t.exportFirst);
         return;
     }
     
     const ws = XLSX.utils.json_to_sheet(reportData.tasks.map(task => ({
-        'Görev': task.baslik,
-        'Durum': task.durum,
-        'Öncelik': task.oncelik,
-        'Kullanıcı': task.kullanici_adi || '-',
-        'Oluşturma Tarihi': formatDate(task.olusturma_tarihi),
-        'Bitiş Tarihi': formatDate(task.bitis_tarihi),
-        'Müşteri': task.musteri_adi || '-'
+        [t.columnTask]: task.baslik,
+        [t.columnStatus]: task.durum,
+        [t.columnPriority]: task.oncelik,
+        [t.columnUser]: task.kullanici_adi || '-',
+        [t.columnCreated]: formatDate(task.olusturma_tarihi),
+        [t.columnEnd]: formatDate(task.bitis_tarihi),
+        [t.columnCustomer]: task.musteri_adi || '-'
     })));
     
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Görev Raporu');
+    XLSX.utils.book_append_sheet(wb, ws, t.reportTitle);
     
     const now = new Date();
     const fileName = `gorev_raporu_${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}.xlsx`;
@@ -626,7 +650,7 @@ function exportToExcel() {
 // PDF'e aktar
 function exportToPDF() {
     if (!reportData || !reportData.tasks) {
-        alert('Önce rapor oluşturun');
+        alert(t.exportFirst);
         return;
     }
     
@@ -635,11 +659,11 @@ function exportToPDF() {
     
     // Başlık
     doc.setFontSize(20);
-    doc.text('Görev Raporu', 14, 22);
+    doc.text(t.reportTitle, 14, 22);
     
     // Tarih
     doc.setFontSize(10);
-    doc.text(`Rapor Tarihi: ${formatDate(new Date().toISOString())}`, 14, 30);
+    doc.text(`${t.reportDate}: ${formatDate(new Date().toISOString())}`, 14, 30);
     
     // Tablo
     const tableData = reportData.tasks.map(task => [
@@ -653,20 +677,21 @@ function exportToPDF() {
     ]);
     
     doc.autoTable({
-        head: [['Görev', 'Durum', 'Öncelik', 'Kullanıcı', 'Oluşturma', 'Bitiş', 'Müşteri']],
+        head: [[t.columnTask, t.columnStatus, t.columnPriority, t.columnUser, t.columnCreated, t.columnEnd, t.columnCustomer]],
         body: tableData,
         startY: 40,
         styles: { fontSize: 8 }
     });
     
-    const fileName = `gorev_raporu_${moment().format('YYYY-MM-DD')}.pdf`;
-    doc.save(fileName);
+    const d2 = new Date();
+    const pdfName = `gorev_raporu_${d2.getFullYear()}-${pad2(d2.getMonth()+1)}-${pad2(d2.getDate())}.pdf`;
+    doc.save(pdfName);
 }
 
 // Yükleme göster
 function showLoading() {
     const tbody = document.getElementById('tasksTableBody');
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center loading"><i class="fas fa-spinner fa-spin"></i> Rapor yükleniyor...</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center loading"><i class="fas fa-spinner fa-spin"></i> ${t.loadingReport}</td></tr>`;
 }
 
 // Hata göster

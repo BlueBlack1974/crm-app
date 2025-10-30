@@ -986,7 +986,6 @@ msgstr "Passwort"
 
 # User edit reset password
 #: templates/login.html:45
-#, fuzzy
 msgid "Forgot Password?"
 msgstr "Passwort vergessen?"
 
