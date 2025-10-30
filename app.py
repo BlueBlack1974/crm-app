@@ -5788,7 +5788,6 @@ def api_gorevler_calendar():
                     'allDay': False,
                     'backgroundColor': durum_color,
                     'borderColor': durum_color,
-                    'textColor': '#ffffff',
                     'className': f'{oncelik_class} {durum_class}',
                     'extendedProps': {
                         'gorev_id': gorev.TodoID,

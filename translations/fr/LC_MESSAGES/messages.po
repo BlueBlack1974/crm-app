@@ -45,12 +45,10 @@ msgstr ""
 "e-mail."
 
 #: app.py:9578
-#, fuzzy
 msgid "Invalid username or email address."
 msgstr "Nom d'utilisateur ou adresse e-mail invalide."
 
 #: app.py:9597 app.py:9626
-#, fuzzy
 msgid "Invalid or expired reset token."
 msgstr "Jeton de réinitialisation invalide ou expiré."
 
@@ -71,7 +69,6 @@ msgstr ""
 "vous connecter avec votre nouveau mot de passe."
 
 #: app.py:9642
-#, fuzzy
 msgid "User not found."
 msgstr "Utilisateur non trouvé."
 
@@ -126,7 +123,7 @@ msgstr "Tâches"
 
 #: templates/base.html:204 templates/base.html:315 templates/gorevler.html:1671
 msgid "Görevler"
-msgstr ""
+msgstr "Tâches"
 
 #: templates/base.html:210 templates/gorev_raporlar.html:3
 #: templates/gorev_raporlar.html:87
@@ -134,7 +131,6 @@ msgid "Görev Raporları"
 msgstr ""
 
 #: templates/base.html:216 templates/base.html:768
-#, fuzzy
 msgid "Today's Reminders"
 msgstr "Rappel"
 
@@ -181,7 +177,6 @@ msgid "Mark all as read"
 msgstr "Tout marquer comme lu"
 
 #: templates/base.html:274
-#, fuzzy
 msgid "Clear all"
 msgstr "Tout effacer"
 
@@ -296,27 +291,22 @@ msgstr "En Cours"
 
 # Dashboard translations
 #: templates/dashboard.html:232
-#, fuzzy
 msgid "My Tasks"
 msgstr "Mes Tâches"
 
 #: templates/dashboard.html:295
-#, fuzzy
 msgid "No tasks yet"
 msgstr "Aucune tâche pour le moment"
 
 #: templates/dashboard.html:297
-#, fuzzy
 msgid "Create First Task"
 msgstr "Créer la Première Tâche"
 
 #: templates/dashboard.html:309
-#, fuzzy
 msgid "Task Statistics"
 msgstr "Statistiques des Tâches"
 
 #: templates/dashboard.html:316
-#, fuzzy
 msgid "Total Tasks"
 msgstr "Total Customers"
 
@@ -486,7 +476,6 @@ msgstr ""
 #: templates/gorevler.html:1753 templates/gorevler.html:2039
 #: templates/gorevler.html:2157 templates/gorevler.html:3795
 #: templates/gorevler.html:4562
-#, fuzzy
 msgid "Öncelik"
 msgstr "Priorité"
 
@@ -499,7 +488,6 @@ msgstr "Faible"
 #: templates/gorev_raporlar.html:126 templates/gorevler.html:1757
 #: templates/gorevler.html:2042 templates/gorevler.html:2160
 #: templates/gorevler.html:3798 templates/gorevler.html:4565
-#, fuzzy
 msgid "Orta"
 msgstr "Moyen"
 
@@ -510,7 +498,6 @@ msgid "Yüksek"
 msgstr "Élevé"
 
 #: templates/gorev_raporlar.html:131
-#, fuzzy
 msgid "Tip"
 msgstr "VIP"
 
@@ -521,7 +508,7 @@ msgstr ""
 #: templates/gorev_raporlar.html:135 templates/gorevler.html:2618
 #: templates/gorevler.html:4278
 msgid "Randevu"
-msgstr ""
+msgstr "Rendez-vous"
 
 #: templates/gorev_raporlar.html:152 templates/gorevler.html:1696
 msgid "Toplam Görev"
@@ -585,14 +572,13 @@ msgstr "Liste des Tâches"
 
 #: templates/gorevler.html:1677 templates/gorevler.html:3777
 msgid "Yeni Görev"
-msgstr ""
+msgstr "Nouvelle tâche"
 
 #: templates/gorevler.html:1681
 msgid "Yenile"
-msgstr ""
+msgstr "Actualiser"
 
 #: templates/gorevler.html:1729
-#, fuzzy
 msgid "Filtreler"
 msgstr "Filtres"
 
@@ -605,17 +591,14 @@ msgid "Görev ara..."
 msgstr "Rechercher une tâche..."
 
 #: templates/gorevler.html:1763 templates/gorevler.html:5140
-#, fuzzy
 msgid "Tarih"
 msgstr "Date"
 
 #: templates/gorevler.html:1769
-#, fuzzy
 msgid "Temizle"
 msgstr "Effacer"
 
 #: templates/gorevler.html:1772
-#, fuzzy
 msgid "Filtrele"
 msgstr "Filtres"
 
@@ -633,60 +616,55 @@ msgstr ""
 
 #: templates/gorevler.html:1820
 msgid "Kartlar"
-msgstr ""
+msgstr "Cartes"
 
 #: templates/gorevler.html:1822
 msgid "Liste Görünümü"
 msgstr ""
 
 #: templates/gorevler.html:1823
-#, fuzzy
 msgid "Liste"
 msgstr "Fermer"
 
 #: templates/gorevler.html:1825 templates/gorevler.html:1997
 msgid "Takvim Görünümü"
-msgstr ""
+msgstr "Vue Calendrier"
 
 #: templates/gorevler.html:1826
-#, fuzzy
 msgid "Takvim"
 msgstr "Heure"
 
 #: templates/gorevler.html:1862
 msgid "Bitiş"
-msgstr ""
+msgstr "Fin"
 
 #: templates/gorevler.html:1871
 msgid "Hatırlatma"
-msgstr ""
+msgstr "Rappel"
 
 #: templates/gorevler.html:1879
 msgid "Oluşturulma"
-msgstr ""
+msgstr "Créé le"
 
 #: templates/gorevler.html:1886 templates/gorevler.html:1887
 #: templates/gorevler.html:1932
 msgid "Tamamla"
-msgstr ""
+msgstr "Terminer"
 
 #: templates/gorevler.html:1891 templates/gorevler.html:1965
 msgid "Randevu Defterine Taşı"
-msgstr ""
+msgstr "Déplacer vers l'agenda"
 
 #: templates/gorevler.html:1894 templates/gorevler.html:1968
-#, fuzzy
 msgid "Düzenle"
-msgstr "Supprimer"
+msgstr "Modifier"
 
 #: templates/gorevler.html:1897 templates/gorevler.html:1971
 #: templates/gorevler.html:2621 templates/gorevler.html:4281
-#, fuzzy
 msgid "Sil"
-msgstr "Mar"
+msgstr "Supprimer"
 
 #: templates/gorevler.html:1911 templates/gorevler.html:1985
-#, fuzzy
 msgid "Görev bulunamadı"
 msgstr "Aucune tâche trouvée"
 
@@ -698,11 +676,10 @@ msgstr ""
 #: templates/gorevler.html:2615 templates/gorevler.html:4275
 #: templates/gorevler.html:4542
 msgid "Görev Düzenle"
-msgstr ""
+msgstr "Modifier la tâche"
 
 #: templates/gorevler.html:2027 templates/gorevler.html:2145
 #: templates/gorevler.html:3783 templates/gorevler.html:4550
-#, fuzzy
 msgid "Başlık"
 msgstr "Retour"
 
@@ -768,7 +745,6 @@ msgstr ""
 
 #: templates/gorevler.html:2204 templates/gorevler.html:3913
 #: templates/gorevler.html:4653 templates/gorevler.html:5123
-#, fuzzy
 msgid "E-posta"
 msgstr "Exporter"
 
@@ -787,7 +763,6 @@ msgid "Select date and book first"
 msgstr "Sélectionnez d'abord la date et le carnet"
 
 #: templates/gorevler.html:2392
-#, fuzzy
 msgid "Create Appointment from Task"
 msgstr "Create Appointment"
 
@@ -873,12 +848,10 @@ msgid "Create Appointment"
 msgstr "Create Appointment"
 
 #: templates/gorevler.html:2560
-#, fuzzy
 msgid "No available times for this date"
 msgstr "No available time slots for this date. Please choose another date."
 
 #: templates/gorevler.html:2566
-#, fuzzy
 msgid "Error loading times"
 msgstr "Erreur lors du chargement des données client"
 
@@ -927,7 +900,6 @@ msgid "Müşteri adı yazın..."
 msgstr ""
 
 #: templates/gorevler.html:4663
-#, fuzzy
 msgid "Güncelle"
 msgstr "Annulé"
 

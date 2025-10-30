@@ -202,6 +202,23 @@
     transition: all 0.3s ease;
 }
 
+/* FullCalendar Liste görünümü okunabilirliği artır */
+.fc .fc-list-empty {
+    color: #495057 !important;
+}
+.fc .fc-list-event-title a,
+.fc .fc-list-event-time,
+.fc .fc-list-day-text,
+.fc .fc-list-day-side-text {
+    color: #212529 !important;
+    font-weight: 500 !important;
+}
+.fc .fc-list-event:hover {
+    background-color: #f8f9fa !important;
+}
+.fc .fc-list-table tr > td {
+    padding: 10px 12px !important;
+}
 .gorev-list-item:hover {
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     transform: translateY(-1px);
@@ -1842,8 +1859,8 @@
                     <span class="badge durum-text" style="background-color: {{ gorev.durum.Renk if gorev.durum and gorev.durum.Renk else '#007bff' }}; color: white;" data-durum="{{ gorev.durum.DurumAdi if gorev.durum else 'Durum Yok' }}">
                         {{ gorev.durum.DurumAdi if gorev.durum else 'Durum Yok' }}
                     </span>
-                    <span class="badge bg-{% if gorev.Oncelik == 'Yüksek' %}danger{% elif gorev.Oncelik == 'Orta' %}warning{% else %}success{% endif %}">
-                        {{ gorev.Oncelik }}
+                    <span class="badge bg-{% if gorev.Oncelik == 'Yüksek' %}danger{% elif gorev.Oncelik == 'Orta' %}warning{% else %}success{% endif %} oncelik-text" data-oncelik="{{ gorev.Oncelik }}">
+                        {% if gorev.Oncelik == 'Yüksek' %}{{ _('Yüksek') }}{% elif gorev.Oncelik == 'Orta' %}{{ _('Orta') }}{% else %}{{ _('Düşük') }}{% endif %}
                     </span>
                 </div>
                 <div class="card-body">
@@ -1883,7 +1900,7 @@
                 <div class="card-footer bg-transparent">
                     <div class="d-flex justify-content-between">
                         {% if gorev.Durum != 'Tamamlandı' %}
-                        <button class="btn btn-sm btn-success" onclick="quickComplete({{ gorev.TodoID }})" title="{{ _('Tamamla') }}">
+                        <button type="button" class="btn btn-sm btn-success" onclick="quickComplete({{ gorev.TodoID }})" title="{{ _('Tamamla') }}">
                             <i class="fas fa-check me-1"></i>{{ _('Tamamla') }}
                         </button>
                         {% endif %}
@@ -1927,10 +1944,11 @@
                         <div class="d-flex align-items-center">
                             <div class="me-3">
                                 {% if not gorev.durum or gorev.durum.DurumAdi != 'Tamamlandı' %}
-                                <button class="btn btn-sm btn-outline-success" 
+                                <button type="button" class="btn btn-sm btn-outline-success" 
                                         onclick="quickComplete({{ gorev.TodoID }})"
                                         title="{{ _('Tamamla') }}">
                                     <i class="fas fa-check"></i>
+                                    <span class="ms-1 d-none d-md-inline">{{ _('Tamamla') }}</span>
                                 </button>
                                 {% endif %}
                             </div>
@@ -1945,8 +1963,8 @@
                                     <span class="badge me-2" style="background-color: {{ gorev.durum.Renk if gorev.durum and gorev.durum.Renk else '#007bff' }}; color: white;">
                                         {{ gorev.durum.DurumAdi if gorev.durum else 'Durum Yok' }}
                                     </span>
-                                    <span class="badge bg-{% if gorev.Oncelik == 'Yüksek' %}danger{% elif gorev.Oncelik == 'Orta' %}warning{% else %}success{% endif %} me-2">
-                                        {{ gorev.Oncelik }}
+                                    <span class="badge bg-{% if gorev.Oncelik == 'Yüksek' %}danger{% elif gorev.Oncelik == 'Orta' %}warning{% else %}success{% endif %} me-2 oncelik-text" data-oncelik="{{ gorev.Oncelik }}">
+                                        {% if gorev.Oncelik == 'Yüksek' %}{{ _('Yüksek') }}{% elif gorev.Oncelik == 'Orta' %}{{ _('Orta') }}{% else %}{{ _('Düşük') }}{% endif %}
                                     </span>
                                     {% if gorev.BitisTarihi %}
                                     <i class="fas fa-calendar-alt me-1"></i>{{ gorev.BitisTarihi.strftime('%d.%m.%Y') }}
@@ -2617,6 +2635,9 @@ function showContextMenu(event, gorevId) {
         <div class="context-menu-item" onclick="moveToRandevu(${gorevId}); hideContextMenu();" style="padding: 8px 15px; cursor: pointer; border-bottom: 1px solid #eee;">
             <i class="fas fa-calendar-plus me-2"></i>{{ _('Randevu') }}
         </div>
+        <div class="context-menu-item" onclick="quickComplete(${gorevId}); hideContextMenu();" style="padding: 8px 15px; cursor: pointer; border-bottom: 1px solid #eee; color: #198754;">
+            <i class="fas fa-check me-2"></i>{{ _('Tamamlandı') }}
+        </div>
         <div class="context-menu-item" onclick="deleteGorev(${gorevId}); hideContextMenu();" style="padding: 8px 15px; cursor: pointer; color: #dc3545;">
             <i class="fas fa-trash me-2"></i>{{ _('Sil') }}
         </div>
@@ -2733,21 +2754,22 @@ function initializeCalendar() {
     }
     
     // FullCalendar başlat
+    const htmlLang = (document.documentElement.lang || 'tr').toLowerCase();
+    const fcLocale = ({ 'tr': 'tr', 'en': 'en', 'en-us': 'en', 'en-gb': 'en-gb', 'fr': 'fr', 'de': 'de' })[htmlLang] || 'tr';
     window.gorevlerCalendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
-        locale: 'tr',
+        locale: fcLocale,
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
             right: 'dayGridMonth,timeGridWeek,listWeek'
         },
-        buttonText: {
-            today: 'Bugün',
-            month: 'Ay',
-            week: 'Hafta',
-            day: 'Gün',
-            list: 'Liste'
-        },
+        buttonText: (function(){
+            if (fcLocale.startsWith('en')) return { today: 'Today', month: 'Month', week: 'Week', day: 'Day', list: 'List' };
+            if (fcLocale.startsWith('fr')) return { today: 'Aujourd\'hui', month: 'Mois', week: 'Semaine', day: 'Jour', list: 'Liste' };
+            if (fcLocale.startsWith('de')) return { today: 'Heute', month: 'Monat', week: 'Woche', day: 'Tag', list: 'Liste' };
+            return { today: 'Bugün', month: 'Ay', week: 'Hafta', day: 'Gün', list: 'Liste' };
+        })(),
         events: function(info, successCallback, failureCallback) {
             // Cache-busting için timestamp ekle
             const url = `/api/gorevler/calendar?start=${info.startStr}&end=${info.endStr}&_t=${Date.now()}`;
@@ -2809,7 +2831,30 @@ function initializeCalendar() {
             // Tooltip ekle
             const gorev = info.event.extendedProps;
             if (gorev.aciklama) {
-                info.el.title = `${gorev.aciklama}\nÖncelik: ${gorev.oncelik}\nDurum: ${gorev.durum}`;
+                const currentLang = document.documentElement.lang || 'tr';
+                let labelPriority = 'Öncelik';
+                let labelStatus = 'Durum';
+                let valuePriority = gorev.oncelik || '';
+                if (currentLang === 'en') {
+                    labelPriority = 'Priority';
+                    labelStatus = 'Status';
+                    if (valuePriority === 'Düşük') valuePriority = 'Low';
+                    else if (valuePriority === 'Orta') valuePriority = 'Medium';
+                    else if (valuePriority === 'Yüksek') valuePriority = 'High';
+                } else if (currentLang === 'fr') {
+                    labelPriority = 'Priorité';
+                    labelStatus = 'Statut';
+                    if (valuePriority === 'Düşük') valuePriority = 'Faible';
+                    else if (valuePriority === 'Orta') valuePriority = 'Moyen';
+                    else if (valuePriority === 'Yüksek') valuePriority = 'Élevé';
+                } else if (currentLang === 'de') {
+                    labelPriority = 'Priorität';
+                    labelStatus = 'Status';
+                    if (valuePriority === 'Düşük') valuePriority = 'Niedrig';
+                    else if (valuePriority === 'Orta') valuePriority = 'Mittel';
+                    else if (valuePriority === 'Yüksek') valuePriority = 'Hoch';
+                }
+                info.el.title = `${gorev.aciklama}\n${labelPriority}: ${valuePriority}\n${labelStatus}: ${gorev.durum}`;
             }
             
             // Sağ tık menüsü için event listener ekle
@@ -3074,8 +3119,41 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Öncelik çeviri fonksiyonu
+    function translatePriorities() {
+        const currentLang = document.documentElement.lang || 'tr';
+        const priorityElements = document.querySelectorAll('.oncelik-text');
+        
+        priorityElements.forEach(element => {
+            const originalPriority = element.getAttribute('data-oncelik');
+            if (originalPriority) {
+                let translated;
+                if (currentLang === 'en') {
+                    if (originalPriority === 'Düşük') translated = 'Low';
+                    else if (originalPriority === 'Orta') translated = 'Medium';
+                    else if (originalPriority === 'Yüksek') translated = 'High';
+                    else translated = originalPriority;
+                } else if (currentLang === 'fr') {
+                    if (originalPriority === 'Düşük') translated = 'Faible';
+                    else if (originalPriority === 'Orta') translated = 'Moyen';
+                    else if (originalPriority === 'Yüksek') translated = 'Élevé';
+                    else translated = originalPriority;
+                } else if (currentLang === 'de') {
+                    if (originalPriority === 'Düşük') translated = 'Niedrig';
+                    else if (originalPriority === 'Orta') translated = 'Mittel';
+                    else if (originalPriority === 'Yüksek') translated = 'Hoch';
+                    else translated = originalPriority;
+                } else {
+                    translated = originalPriority;
+                }
+                element.textContent = translated;
+            }
+        });
+    }
+    
     // Sayfa yüklendiğinde çevir
     translateStatuses();
+    translatePriorities();
     
     try {
     
@@ -3708,6 +3786,7 @@ function updateFilterChips() {
 
 // Hızlı tamamlama
 function quickComplete(taskId) {
+    try { event && event.stopPropagation && event.stopPropagation(); } catch (e) {}
     if (confirm('Bu görevi tamamlandı olarak işaretlemek istediğinizden emin misiniz?')) {
         fetch(`/todos/${taskId}/durum`, {
             method: 'POST',
@@ -3720,7 +3799,8 @@ function quickComplete(taskId) {
         .then(data => {
             if (data.success) {
                 showToast('Görev başarıyla tamamlandı!', 'success');
-                setTimeout(() => window.location.reload(), 1000);
+                try { window.gorevlerCalendar && window.gorevlerCalendar.refetchEvents(); } catch (e) {}
+                setTimeout(() => window.location.reload(), 800);
             } else {
                 showToast('Hata: ' + data.message, 'error');
             }
@@ -3929,7 +4009,7 @@ function clearDateFilter() {
 
 <!-- FullCalendar JS -->
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/tr.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales-all.global.min.js"></script>
 
 <script>
 // Global fonksiyonları en başta tanımla - HTML onclick attribute'ları için
@@ -4276,6 +4356,9 @@ function showContextMenu(event, gorevId) {
         </div>
         <div class="context-menu-item" onclick="moveToRandevu(${gorevId}); hideContextMenu();" style="padding: 8px 15px; cursor: pointer; border-bottom: 1px solid #eee; display: flex; align-items: center;">
             <i class="fas fa-calendar-plus me-2"></i>{{ _('Randevu') }}
+        </div>
+        <div class="context-menu-item" onclick="quickComplete(${gorevId}); hideContextMenu();" style="padding: 8px 15px; cursor: pointer; border-bottom: 1px solid #eee; color: #198754; display: flex; align-items: center;">
+            <i class="fas fa-check me-2"></i>{{ _('Tamamlandı') }}
         </div>
         <div class="context-menu-item" onclick="deleteGorev(${gorevId}); hideContextMenu();" style="padding: 8px 15px; cursor: pointer; color: #dc3545; display: flex; align-items: center;">
             <i class="fas fa-trash me-2"></i>{{ _('Sil') }}
@@ -4867,22 +4950,23 @@ function initializeCalendar() {
         window.gorevlerCalendar.destroy();
     }
     
-    // FullCalendar başlat
+    // FullCalendar başlat (ikinci takvim örneği)
+    const htmlLang2 = (document.documentElement.lang || 'tr').toLowerCase();
+    const fcLocale2 = ({ 'tr': 'tr', 'en': 'en', 'en-us': 'en', 'en-gb': 'en-gb', 'fr': 'fr', 'de': 'de' })[htmlLang2] || 'tr';
     window.gorevlerCalendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
-        locale: 'tr',
+        locale: fcLocale2,
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
             right: 'dayGridMonth,timeGridWeek,listWeek'
         },
-        buttonText: {
-            today: 'Bugün',
-            month: 'Ay',
-            week: 'Hafta',
-            day: 'Gün',
-            list: 'Liste'
-        },
+        buttonText: (function(){
+            if (fcLocale2.startsWith('en')) return { today: 'Today', month: 'Month', week: 'Week', day: 'Day', list: 'List' };
+            if (fcLocale2.startsWith('fr')) return { today: 'Aujourd\'hui', month: 'Mois', week: 'Semaine', day: 'Jour', list: 'Liste' };
+            if (fcLocale2.startsWith('de')) return { today: 'Heute', month: 'Monat', week: 'Woche', day: 'Tag', list: 'Liste' };
+            return { today: 'Bugün', month: 'Ay', week: 'Hafta', day: 'Gün', list: 'Liste' };
+        })(),
         events: function(info, successCallback, failureCallback) {
             // Cache-busting için timestamp ekle
             const url = `/api/gorevler/calendar?start=${info.startStr}&end=${info.endStr}&_t=${Date.now()}`;
