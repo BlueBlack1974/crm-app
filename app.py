@@ -5646,8 +5646,15 @@ def api_gorevler_calendar():
         priority_filter = request.args.get('priority', 'all')
         date_filter = request.args.get('date', '')
         
-        # Görevleri getir (sadece randevu bazlı görevler)
+        # Görevleri getir (sadece randevu bazlı görevler) ve tamamlananları gizle
         query = Todo.query.filter_by(KullaniciID=user_id, Tip='Randevu')
+        try:
+            # Tamamlananları hariç tut (durum adı üzerinden)
+            query = query.outerjoin(TodoDurum, Todo.DurumID == TodoDurum.DurumID) \
+                         .filter(or_(TodoDurum.DurumAdi != 'Tamamlandı', TodoDurum.DurumAdi.is_(None)))
+        except Exception:
+            # Herhangi bir hata olursa sadece DurumID None olmayan ve adı 'Tamamlandı' olmayanları approx filtrele
+            pass
         
         # Arama filtresi
         if search_term:
@@ -8376,22 +8383,32 @@ def gorevler():
     """Görev listesi sayfası - Randevu bazlı görevler"""
     firma_id = session['firma_id']
     
-    # Kullanıcının sadece randevu bazlı görevlerini getir
-    user_todos = Todo.query.filter_by(KullaniciID=session['user_id'], Tip='Randevu').order_by(
-        Todo.Oncelik.desc(), Todo.OlusturmaTarihi.desc()
-    ).all()
+    # Kullanıcının randevu bazlı TÜM görevlerini getir (tamamlananlar dahil).
+    # Ekranda varsayılan olarak tamamlananlar JS ile gizlenecek; filtre 'Tamamlandı' seçildiğinde gösterilecek.
+    user_todos = (Todo.query
+        .filter_by(KullaniciID=session['user_id'], Tip='Randevu')
+        .order_by(Todo.Oncelik.desc(), Todo.OlusturmaTarihi.desc())
+        .all())
     
     # Firma bazlı durumları getir
     durumlar = TodoDurum.query.filter_by(FirmaID=firma_id, Aktif=True).order_by(TodoDurum.Sira).all()
     
-    # Her durum için sayıları hesapla
-    durum_istatistikleri = []
-    for durum in durumlar:
-        sayi = len([t for t in user_todos if t.durum and t.durum.DurumID == durum.DurumID])
-        durum_istatistikleri.append({
+    # Her durum için sayıları DB'den güvenilir şekilde hesapla (tamamlananlar dahil)
+    from sqlalchemy import func
+    counts_by_name = dict(
+        db.session.query(TodoDurum.DurumAdi, func.count(Todo.TodoID))
+        .join(Todo, Todo.DurumID == TodoDurum.DurumID)
+        .filter(Todo.KullaniciID == session['user_id'], Todo.Tip == 'Randevu')
+        .group_by(TodoDurum.DurumAdi)
+        .all()
+    )
+    durum_istatistikleri = [
+        {
             'durum': durum,
-            'sayi': sayi
-        })
+            'sayi': int(counts_by_name.get(durum.DurumAdi, 0) or 0)
+        }
+        for durum in durumlar
+    ]
     
     # Toplam görev sayısı
     toplam_gorev = len(user_todos)
@@ -8861,11 +8878,17 @@ def todo_durum_degistir(todo_id):
         # Durum adından ID'yi bul
         yeni_durum_id = None
         if yeni_durum_adi:
-            # Yapılacaklar için evrensel durum arama (firma kontrolü yok)
+            # Önce firmanın durumları içinde ara, yoksa genel kataloğa bak
             print(f"Firma ID: {session.get('firma_id')}")
             print(f"Aranan durum: {yeni_durum_adi}")
             
-            durum = TodoDurum.query.filter_by(DurumAdi=yeni_durum_adi).first()
+            durum = TodoDurum.query.filter_by(
+                DurumAdi=yeni_durum_adi,
+                FirmaID=session.get('firma_id'),
+                Aktif=True
+            ).first()
+            if not durum:
+                durum = TodoDurum.query.filter_by(DurumAdi=yeni_durum_adi, Aktif=True).first()
             if not durum:
                 print(f"Geçersiz durum adı: {yeni_durum_adi}")
                 return jsonify({'success': False, 'message': 'Geçersiz durum!'}), 400

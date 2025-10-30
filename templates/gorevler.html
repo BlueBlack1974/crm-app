@@ -1847,13 +1847,90 @@
 </div>
 
 <!-- Görev İçeriği -->
+<script>
+function normalizeStatusLabel(label) {
+    if (!label) return '';
+    const t = String(label).trim().toLowerCase();
+    if (['tamamlandı','tamamlandi','completed','terminé','termine','abgeschlossen'].includes(t)) return 'completed';
+    if (['beklemede','pending','en attente','ausstehend'].includes(t)) return 'pending';
+    if (['devam ediyor','in progress','en cours','in bearbeitung','fortschritt'].includes(t)) return 'in_progress';
+    return t;
+}
+// Güvenlik: quickComplete global değilse tanımla
+if (!window.quickComplete) {
+    window.quickComplete = function(taskId) {
+        try { event && event.stopPropagation && event.stopPropagation(); } catch (e) {}
+        try { event && event.preventDefault && event.preventDefault(); } catch (e) {}
+        try { console.log('quickComplete (early) clicked for taskId:', taskId); } catch (e) {}
+        fetch(`/todos/${taskId}/durum`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ durum: 'Tamamlandı' })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data && data.success) {
+                try { showToast && showToast('Görev başarıyla tamamlandı!', 'success'); } catch (e) {}
+                try { window.gorevlerCalendar && window.gorevlerCalendar.refetchEvents(); } catch (e) {}
+                try {
+                    document.querySelectorAll(`.gorev-item[data-gorev-id="${taskId}"]`).forEach(el => {
+                        if (window.completedStatusId) {
+                            el.setAttribute('data-durum-id', String(window.completedStatusId));
+                        }
+                        el.classList.add('tamamlandi');
+                        const badge = el.querySelector('.durum-text');
+                        if (badge) {
+                            badge.setAttribute('data-durum', 'Tamamlandı');
+                            const lang = document.documentElement.lang || 'tr';
+                            let text = 'Tamamlandı';
+                            if (lang.startsWith('en')) text = 'Completed';
+                            else if (lang.startsWith('fr')) text = 'Terminé';
+                            else if (lang.startsWith('de')) text = 'Abgeschlossen';
+                            badge.textContent = text;
+                            badge.style.backgroundColor = '#28a745';
+                            badge.style.color = 'white';
+                        }
+                        // Tamamla butonunu pasifleştir/gizle
+                        try {
+                            el.querySelectorAll('[data-complete-btn]').forEach(btn => {
+                                btn.disabled = true;
+                                btn.classList.add('disabled');
+                                btn.style.pointerEvents = 'none';
+                                btn.style.opacity = '0.5';
+                                btn.title = '';
+                            });
+                        } catch (e) {}
+                        // Tamamla butonunu pasifleştir
+                        el.querySelectorAll('[data-complete-btn]')?.forEach(btn => {
+                            try {
+                                btn.disabled = true;
+                                btn.classList.add('disabled');
+                                btn.style.pointerEvents = 'none';
+                                btn.style.opacity = '0.5';
+                                btn.title = '';
+                            } catch (e) {}
+                        });
+                        const titleEl = el.querySelector('.card-title, h6.mb-1');
+                        if (titleEl && !titleEl.classList.contains('text-decoration-line-through')) {
+                            titleEl.classList.add('text-decoration-line-through', 'text-muted');
+                        }
+                    });
+                } catch (e) {}
+            } else {
+                try { showToast && showToast('Hata: ' + (data && data.message ? data.message : 'Bilinmeyen hata'), 'error'); } catch (e) {}
+            }
+        })
+        .catch(() => { try { showToast && showToast('Bir hata oluştu', 'error'); } catch (e) {} });
+    };
+}
+</script>
 <div class="view-content">
     <!-- Kart Görünümü -->
     <div class="view-cards" id="cardsView">
         <div class="row" id="gorevlerListesi">
     {% if gorevler %}
         {% for gorev in gorevler %}
-        <div class="col-md-6 col-lg-4 mb-3 gorev-item" data-durum-id="{{ gorev.durum.DurumID if gorev.durum else '' }}" data-priority="{{ gorev.Oncelik|lower|replace(' ', '') }}">
+        <div class="col-md-6 col-lg-4 mb-3 gorev-item" data-gorev-id="{{ gorev.TodoID }}" data-durum-id="{{ gorev.durum.DurumID if gorev.durum else '' }}" data-priority="{{ gorev.Oncelik|lower|replace(' ', '') }}">
             <div class="card shadow h-100 {{ 'tamamlandi' if gorev.durum and gorev.durum.DurumAdi == 'Tamamlandı' else '' }}">
                 <div class="card-header py-2 d-flex justify-content-between align-items-center">
                     <span class="badge durum-text" style="background-color: {{ gorev.durum.Renk if gorev.durum and gorev.durum.Renk else '#007bff' }}; color: white;" data-durum="{{ gorev.durum.DurumAdi if gorev.durum else 'Durum Yok' }}">
@@ -1900,7 +1977,7 @@
                 <div class="card-footer bg-transparent">
                     <div class="d-flex justify-content-between">
                         {% if gorev.Durum != 'Tamamlandı' %}
-                        <button type="button" class="btn btn-sm btn-success" onclick="quickComplete({{ gorev.TodoID }})" title="{{ _('Tamamla') }}">
+                        <button type="button" class="btn btn-sm btn-success" data-complete-btn="1" onclick="quickComplete({{ gorev.TodoID }})" title="{{ _('Tamamla') }}">
                             <i class="fas fa-check me-1"></i>{{ _('Tamamla') }}
                         </button>
                         {% endif %}
@@ -1940,12 +2017,12 @@
             <div class="card-body">
                 <div class="list-group list-group-flush">
                     {% for gorev in gorevler %}
-                    <div class="list-group-item d-flex justify-content-between align-items-center px-0 gorev-item" data-durum-id="{{ gorev.durum.DurumID if gorev.durum else '' }}" data-priority="{{ gorev.Oncelik|lower|replace(' ', '') }}">
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0 gorev-item" data-gorev-id="{{ gorev.TodoID }}" data-durum-id="{{ gorev.durum.DurumID if gorev.durum else '' }}" data-priority="{{ gorev.Oncelik|lower|replace(' ', '') }}">
                         <div class="d-flex align-items-center">
                             <div class="me-3">
                                 {% if not gorev.durum or gorev.durum.DurumAdi != 'Tamamlandı' %}
                                 <button type="button" class="btn btn-sm btn-outline-success" 
-                                        onclick="quickComplete({{ gorev.TodoID }})"
+                                        data-complete-btn="1" onclick="quickComplete({{ gorev.TodoID }})"
                                         title="{{ _('Tamamla') }}">
                                     <i class="fas fa-check"></i>
                                     <span class="ms-1 d-none d-md-inline">{{ _('Tamamla') }}</span>
@@ -3785,8 +3862,10 @@ function updateFilterChips() {
 }
 
 // Hızlı tamamlama
-function quickComplete(taskId) {
+window.quickComplete = function(taskId) {
     try { event && event.stopPropagation && event.stopPropagation(); } catch (e) {}
+    try { event && event.preventDefault && event.preventDefault(); } catch (e) {}
+    try { console.log('quickComplete clicked for taskId:', taskId); } catch (e) {}
     if (confirm('Bu görevi tamamlandı olarak işaretlemek istediğinizden emin misiniz?')) {
         fetch(`/todos/${taskId}/durum`, {
             method: 'POST',
@@ -3799,8 +3878,41 @@ function quickComplete(taskId) {
         .then(data => {
             if (data.success) {
                 showToast('Görev başarıyla tamamlandı!', 'success');
-                try { window.gorevlerCalendar && window.gorevlerCalendar.refetchEvents(); } catch (e) {}
-                setTimeout(() => window.location.reload(), 800);
+                // Takvim olaylarını yenile
+                try {
+                    if (window.gorevlerCalendar) {
+                        const evId = 'gorev_' + String(taskId);
+                        const ev = window.gorevlerCalendar.getEventById(evId);
+                        if (ev) { ev.remove(); }
+                    }
+                } catch (e) {}
+                // Kart ve liste görünümlerinde tamamlandı olarak işaretle (DOM'dan kaldırma)
+                try {
+                    document.querySelectorAll(`.gorev-item[data-gorev-id="${taskId}"]`).forEach(el => {
+                        if (window.completedStatusId) {
+                            el.setAttribute('data-durum-id', String(window.completedStatusId));
+                        }
+                        el.classList.add('tamamlandi');
+                        const badge = el.querySelector('.durum-text');
+                        if (badge) {
+                            badge.setAttribute('data-durum', 'Tamamlandı');
+                            const lang = document.documentElement.lang || 'tr';
+                            let text = 'Tamamlandı';
+                            if (lang.startsWith('en')) text = 'Completed';
+                            else if (lang.startsWith('fr')) text = 'Terminé';
+                            else if (lang.startsWith('de')) text = 'Abgeschlossen';
+                            badge.textContent = text;
+                            badge.style.backgroundColor = '#28a745';
+                            badge.style.color = 'white';
+                        }
+                        const titleEl = el.querySelector('.card-title, h6.mb-1');
+                        if (titleEl && !titleEl.classList.contains('text-decoration-line-through')) {
+                            titleEl.classList.add('text-decoration-line-through', 'text-muted');
+                        }
+                    });
+                } catch (e) {}
+                // Yedek olarak kısa bir gecikmeden sonra görünümü güncelle
+                // Eğer tamamen kaldırıldıysa boş durum görünebilir; tam sayfa yenilemeye gerek yok
             } else {
                 showToast('Hata: ' + data.message, 'error');
             }
@@ -4105,6 +4217,8 @@ window.filterTasks = function() {
             // Seçilen durumun adını bul
             const selectedOption = statusSelect.options[statusSelect.selectedIndex];
             console.log('Seçilen durum:', selectedOption.textContent, '(ID:', selectedOption.value + ')');
+            var selectedStatusName = selectedOption.textContent.replace(/\([^)]*\)$/, '').trim(); // 'Ad (N)' -> 'Ad'
+            var selectedStatusKey = normalizeStatusLabel(selectedStatusName);
         }
     
         // Tüm görünümlerdeki görevleri bul
@@ -4183,7 +4297,13 @@ window.filterTasks = function() {
                     statusFilter: statusFilter,
                     eşleşiyor: taskStatusId === statusFilter
                 });
-                if (taskStatusId !== statusFilter) {
+                // Karşılaştırma: ID eşleşmesi YA DA isim (lokalize) eşleşmesi
+                const statusBadge = task.querySelector('.badge, .durum-text');
+                const statusText = statusBadge ? statusBadge.textContent.trim() : '';
+                const taskStatusKey = normalizeStatusLabel(statusText);
+                const idMatches = String(taskStatusId) === String(statusFilter);
+                const nameMatches = taskStatusKey && typeof selectedStatusKey !== 'undefined' && (taskStatusKey === selectedStatusKey);
+                if (!idMatches && !nameMatches) {
                     showTask = false;
                 }
             }
@@ -4869,7 +4989,9 @@ function changeView(viewType) {
         setTimeout(() => {
             console.log('Takvim başlatılıyor...');
             if (typeof initializeCalendar === 'function') {
-                initializeCalendar();
+    initializeCalendar();
+    // Varsayılan olarak tamamlananları gizle
+    try { window.filterTasks && window.filterTasks(); } catch (e) {}
             } else {
                 console.error('initializeCalendar fonksiyonu bulunamadı!');
             }
@@ -5482,6 +5604,12 @@ function loadDurumlar() {
         .then(data => {
             console.log('Durumlar API yanıtı:', data);
             if (data.success) {
+                try {
+                    // Global tamamlandı durum ID'sini tut
+                    const tamamlandi = (data.durumlar || []).find(d => d.DurumAdi === 'Tamamlandı');
+                    window.completedStatusId = tamamlandi ? String(tamamlandi.DurumID) : null;
+                    console.log('completedStatusId set:', window.completedStatusId);
+                } catch (e) { console.warn('completedStatusId set edilemedi', e); }
                 const durumSelect = document.getElementById('quick_durum');
                 if (durumSelect) {
                     durumSelect.innerHTML = '<option value="">{{ _("Durum Seçin") }}</option>';

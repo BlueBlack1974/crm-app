@@ -196,7 +196,7 @@
     <div class="col-lg-6">
         <div class="card shadow mb-3">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">{{ _('Todo Statistics') }}</h6>
+                <h6 id="todo-stats-title" class="m-0 font-weight-bold text-primary">{{ _('Todo Statistics') }}</h6>
             </div>
             <div class="card-body">
                 <div class="row text-center">
@@ -551,6 +551,16 @@ function translateStatusAndPriority() {
             });
         });
     }
+    // Özelleştirilmiş: Yapılacaklar istatistikleri başlığını dil bazında zorla düzelt
+    try {
+        const todoTitle = document.getElementById('todo-stats-title');
+        if (todoTitle) {
+            if (currentLang.startsWith('tr')) todoTitle.textContent = 'Yapılacaklar İstatistikleri';
+            else if (currentLang.startsWith('fr')) todoTitle.textContent = 'Statistiques des Tâches';
+            else if (currentLang.startsWith('de')) todoTitle.textContent = 'Todo-Statistiken';
+            else todoTitle.textContent = 'Todo Statistics';
+        }
+    } catch (e) {}
     
     // Durum çevirileri
     document.querySelectorAll('.durum-text').forEach(element => {

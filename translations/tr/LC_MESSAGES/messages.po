@@ -260,7 +260,7 @@ msgstr "İlk Görevi Oluştur"
 
 #: templates/dashboard.html:199
 msgid "Todo Statistics"
-msgstr "Görev İstatistikleri"
+msgstr "Yapılacaklar İstatistikleri"
 
 #: templates/dashboard.html:205
 msgid "Total"
