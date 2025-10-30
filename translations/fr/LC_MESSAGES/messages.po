@@ -1,3 +1,77 @@
+msgid "Excel"
+msgstr "Excel"
+
+msgid "PDF"
+msgstr "PDF"
+# Reports page translations
+msgid "Görev Raporları"
+msgstr "Rapports des Tâches"
+
+msgid "Durum Dağılımı"
+msgstr "Répartition par Statut"
+
+msgid "Öncelik Dağılımı"
+msgstr "Répartition par Priorité"
+
+msgid "Kullanıcı Bazlı Dağılım"
+msgstr "Répartition par Utilisateur"
+
+msgid "Kullanıcı Tamamlanan Görevler"
+msgstr "Tâches Terminées par Utilisateur"
+
+msgid "Aylık Trend"
+msgstr "Tendance Mensuelle"
+
+msgid "Görev Sayısı"
+msgstr "Nombre de Tâches"
+
+msgid "Tamamlanan Görevler"
+msgstr "Tâches Terminées"
+
+msgid "Oluşturulan Görevler"
+msgstr "Tâches Créées"
+
+msgid "Veri bulunamadı"
+msgstr "Aucune donnée"
+
+msgid "Rapor yükleniyor..."
+msgstr "Chargement du rapport..."
+
+msgid "Görev Raporu"
+msgstr "Rapport des Tâches"
+
+msgid "Rapor Tarihi"
+msgstr "Date du Rapport"
+
+msgid "Önce rapor oluşturun"
+msgstr "Générez d'abord le rapport"
+
+msgid "Detaylı Görev Listesi"
+msgstr "Liste détaillée des tâches"
+
+msgid "Başlangıç Tarihi"
+msgstr "Date de Début"
+
+msgid "Bitiş Tarihi"
+msgstr "Date de Fin"
+
+msgid "Tip"
+msgstr "Type"
+
+msgid "Kişisel"
+msgstr "Personnel"
+
+msgid "Randevu"
+msgstr "Rendez-vous"
+
+msgid "Oluşturma"
+msgstr "Création"
+
+msgid "Bitiş"
+msgstr "Fin"
+
+msgid "Müşteri"
+msgstr "Client"
 # English translations for Crandyx CRM Project.
 # Copyright (C) 2025 Crandyx CRM Project
 # This file is distributed under the same license as the Crandyx CRM

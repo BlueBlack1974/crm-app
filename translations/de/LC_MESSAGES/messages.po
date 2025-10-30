@@ -1,3 +1,77 @@
+msgid "Excel"
+msgstr "Excel"
+
+msgid "PDF"
+msgstr "PDF"
+# Reports page translations
+msgid "Görev Raporları"
+msgstr "Aufgabenberichte"
+
+msgid "Durum Dağılımı"
+msgstr "Statusverteilung"
+
+msgid "Öncelik Dağılımı"
+msgstr "Prioritätsverteilung"
+
+msgid "Kullanıcı Bazlı Dağılım"
+msgstr "Verteilung nach Benutzer"
+
+msgid "Kullanıcı Tamamlanan Görevler"
+msgstr "Abgeschlossene Aufgaben nach Benutzer"
+
+msgid "Aylık Trend"
+msgstr "Monatlicher Trend"
+
+msgid "Görev Sayısı"
+msgstr "Aufgabenanzahl"
+
+msgid "Tamamlanan Görevler"
+msgstr "Abgeschlossene Aufgaben"
+
+msgid "Oluşturulan Görevler"
+msgstr "Erstellte Aufgaben"
+
+msgid "Veri bulunamadı"
+msgstr "Keine Daten"
+
+msgid "Rapor yükleniyor..."
+msgstr "Bericht wird geladen..."
+
+msgid "Görev Raporu"
+msgstr "Aufgabenbericht"
+
+msgid "Rapor Tarihi"
+msgstr "Berichtsdatum"
+
+msgid "Önce rapor oluşturun"
+msgstr "Zuerst den Bericht erstellen"
+
+msgid "Detaylı Görev Listesi"
+msgstr "Detaillierte Aufgabenliste"
+
+msgid "Başlangıç Tarihi"
+msgstr "Anfangsdatum"
+
+msgid "Bitiş Tarihi"
+msgstr "Enddatum"
+
+msgid "Tip"
+msgstr "Typ"
+
+msgid "Kişisel"
+msgstr "Persönlich"
+
+msgid "Randevu"
+msgstr "Termin"
+
+msgid "Oluşturma"
+msgstr "Erstellt"
+
+msgid "Bitiş"
+msgstr "Ende"
+
+msgid "Müşteri"
+msgstr "Kunde"
 # English translations for Crandyx CRM Project.
 # Copyright (C) 2025 Crandyx CRM Project
 # This file is distributed under the same license as the Crandyx CRM

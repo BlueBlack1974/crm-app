@@ -87,10 +87,10 @@
                 <h1 class="h3 mb-0">{{ _('Görev Raporları') }}</h1>
                 <div class="btn-group">
                     <button type="button" class="btn btn-outline-primary" onclick="exportToExcel()">
-                        <i class="fas fa-file-excel"></i> Excel
+                        <i class="fas fa-file-excel"></i> {{ _('Excel') }}
                     </button>
                     <button type="button" class="btn btn-outline-danger" onclick="exportToPDF()">
-                        <i class="fas fa-file-pdf"></i> PDF
+                        <i class="fas fa-file-pdf"></i> {{ _('PDF') }}
                     </button>
                 </div>
             </div>
@@ -177,11 +177,11 @@
                 <div class="col-md-6">
                     <div class="card">
                         <div class="card-header">
-                            <h5 class="card-title mb-0">{{ _('Durum Dağılımı') }}</h5>
+                            <h5 class="card-title mb-0">{{ _('Öncelik Dağılımı') }}</h5>
                         </div>
                         <div class="card-body">
                             <div class="chart-container">
-                                <canvas id="statusChart"></canvas>
+                                <canvas id="priorityChart"></canvas>
                             </div>
                         </div>
                     </div>
@@ -189,11 +189,11 @@
                 <div class="col-md-6">
                     <div class="card">
                         <div class="card-header">
-                            <h5 class="card-title mb-0">{{ _('Öncelik Dağılımı') }}</h5>
+                            <h5 class="card-title mb-0">{{ _('Durum Dağılımı') }}</h5>
                         </div>
                         <div class="card-body">
                             <div class="chart-container">
-                                <canvas id="priorityChart"></canvas>
+                                <canvas id="statusChart"></canvas>
                             </div>
                         </div>
                     </div>
@@ -304,6 +304,34 @@ const t = {
     columnCustomer: "{{ _('Müşteri') }}",
 };
 
+function getCurrentLang() {
+    return (document.documentElement.lang || 'tr').toLowerCase();
+}
+
+function translateStatusName(name) {
+    const lang = getCurrentLang();
+    const original = String(name || '').trim();
+    const tr = { 'Beklemede':'Beklemede','Devam Ediyor':'Devam Ediyor','Tamamlandı':'Tamamlandı' };
+    const en = { 'Beklemede':'Pending','Devam Ediyor':'In Progress','Tamamlandı':'Completed' };
+    const fr = { 'Beklemede':'En Attente','Devam Ediyor':'En Cours','Tamamlandı':'Terminé' };
+    const de = { 'Beklemede':'Ausstehend','Devam Ediyor':'In Bearbeitung','Tamamlandı':'Abgeschlossen' };
+    const maps = { tr, en, fr, de };
+    const m = maps[lang] || tr;
+    return m[original] || original;
+}
+
+function translatePriorityName(name) {
+    const lang = getCurrentLang();
+    const original = String(name || '').trim();
+    const tr = { 'Düşük':'Düşük','Orta':'Orta','Yüksek':'Yüksek' };
+    const en = { 'Düşük':'Low','Orta':'Medium','Yüksek':'High' };
+    const fr = { 'Düşük':'Faible','Orta':'Moyen','Yüksek':'Élevé' };
+    const de = { 'Düşük':'Niedrig','Orta':'Mittel','Yüksek':'Hoch' };
+    const maps = { tr, en, fr, de };
+    const m = maps[lang] || tr;
+    return m[original] || original;
+}
+
 // Sayfa yüklendiğinde
 document.addEventListener('DOMContentLoaded', function() {
     initializeFilters();
@@ -328,7 +356,7 @@ async function initializeFilters() {
             statusData.durumlar.forEach(durum => {
                 const option = document.createElement('option');
                 option.value = durum.DurumID;
-                option.textContent = durum.DurumAdi;
+                option.textContent = translateStatusName(durum.DurumAdi);
                 statusSelect.appendChild(option);
             });
         }
@@ -585,10 +613,12 @@ function updateTasksTable(tasks) {
     
     tasks.forEach(task => {
         const row = document.createElement('tr');
+        const statusText = translateStatusName(task.durum || '-');
+        const priorityText = translatePriorityName(task.oncelik || '-');
         row.innerHTML = `
             <td>${task.baslik || '-'}</td>
-            <td><span class="badge" style="background-color: ${task.durum_rengi || '#6c757d'}">${task.durum || '-'}</span></td>
-            <td><span class="badge bg-${getPriorityClass(task.oncelik)}">${task.oncelik || '-'}</span></td>
+            <td><span class="badge" style="background-color: ${task.durum_rengi || '#6c757d'}">${statusText}</span></td>
+            <td><span class="badge bg-${getPriorityClass(task.oncelik)}">${priorityText}</span></td>
             <td>${task.kullanici_adi || '-'}</td>
             <td>${formatDate(task.olusturma_tarihi)}</td>
             <td>${formatDate(task.bitis_tarihi)}</td>

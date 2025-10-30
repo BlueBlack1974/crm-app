@@ -1,3 +1,77 @@
+msgid "Excel"
+msgstr "Excel"
+
+msgid "PDF"
+msgstr "PDF"
+# Reports page translations
+msgid "Görev Raporları"
+msgstr "Task Reports"
+
+msgid "Durum Dağılımı"
+msgstr "Status Distribution"
+
+msgid "Öncelik Dağılımı"
+msgstr "Priority Distribution"
+
+msgid "Kullanıcı Bazlı Dağılım"
+msgstr "User Distribution"
+
+msgid "Kullanıcı Tamamlanan Görevler"
+msgstr "User Completed Tasks"
+
+msgid "Aylık Trend"
+msgstr "Monthly Trend"
+
+msgid "Görev Sayısı"
+msgstr "Task Count"
+
+msgid "Tamamlanan Görevler"
+msgstr "Completed Tasks"
+
+msgid "Oluşturulan Görevler"
+msgstr "Created Tasks"
+
+msgid "Veri bulunamadı"
+msgstr "No data found"
+
+msgid "Rapor yükleniyor..."
+msgstr "Loading report..."
+
+msgid "Görev Raporu"
+msgstr "Task Report"
+
+msgid "Rapor Tarihi"
+msgstr "Report Date"
+
+msgid "Önce rapor oluşturun"
+msgstr "Generate the report first"
+
+msgid "Detaylı Görev Listesi"
+msgstr "Detailed Task List"
+
+msgid "Başlangıç Tarihi"
+msgstr "Start Date"
+
+msgid "Bitiş Tarihi"
+msgstr "End Date"
+
+msgid "Tip"
+msgstr "Type"
+
+msgid "Kişisel"
+msgstr "Personal"
+
+msgid "Randevu"
+msgstr "Appointment"
+
+msgid "Oluşturma"
+msgstr "Created"
+
+msgid "Bitiş"
+msgstr "End"
+
+msgid "Müşteri"
+msgstr "Customer"
 # English translations for Crandyx CRM Project.
 # Copyright (C) 2025 Crandyx CRM Project
 # This file is distributed under the same license as the Crandyx CRM
@@ -126,9 +200,8 @@ msgstr "Tasks"
 
 #: templates/base.html:210 templates/gorev_raporlar.html:3
 #: templates/gorev_raporlar.html:87
-#, fuzzy
 msgid "Görev Raporları"
-msgstr "Tasks"
+msgstr "Task Reports"
 
 #: templates/base.html:216 templates/base.html:768
 #, fuzzy
@@ -456,9 +529,8 @@ msgid "Create New Appointment"
 msgstr "Create New Appointment"
 
 #: templates/gorev_raporlar.html:102
-#, fuzzy
 msgid "Başlangıç Tarihi"
-msgstr "End Date"
+msgstr "Start Date"
 
 #: templates/gorev_raporlar.html:106 templates/gorev_raporlar.html:260
 #: templates/gorevler.html:2062 templates/gorevler.html:2215
@@ -509,9 +581,8 @@ msgid "Yüksek"
 msgstr "High"
 
 #: templates/gorev_raporlar.html:131
-#, fuzzy
 msgid "Tip"
-msgstr "VIP"
+msgstr "Type"
 
 #: templates/gorev_raporlar.html:134
 msgid "Kişisel"
@@ -531,23 +602,20 @@ msgid "Tamamlanan"
 msgstr "Completed"
 
 #: templates/gorev_raporlar.html:164
-#, fuzzy
 msgid "Bekleyen"
 msgstr "Pending"
 
 #: templates/gorev_raporlar.html:170
-#, fuzzy
 msgid "Tamamlanma Oranı"
-msgstr "Completed"
+msgstr "Completion Rate"
 
 #: templates/gorev_raporlar.html:180
 msgid "Durum Dağılımı"
 msgstr ""
 
 #: templates/gorev_raporlar.html:192
-#, fuzzy
 msgid "Öncelik Dağılımı"
-msgstr "Priority"
+msgstr "Priority Distribution"
 
 #: templates/gorev_raporlar.html:207
 msgid "Kullanıcı Bazlı Dağılım"
@@ -562,27 +630,24 @@ msgid "Aylık Trend"
 msgstr ""
 
 #: templates/gorev_raporlar.html:248
-#, fuzzy
 msgid "Detaylı Görev Listesi"
-msgstr "Task List"
+msgstr "Detailed Task List"
 
 #: templates/gorev_raporlar.html:255
-#, fuzzy
 msgid "Görev"
-msgstr "Tasks"
+msgstr "Task"
 
 #: templates/gorev_raporlar.html:259
-#, fuzzy
 msgid "Oluşturma Tarihi"
-msgstr "Created"
+msgstr "Created Date"
 
 #: templates/gorev_raporlar.html:261
 msgid "Müşteri"
-msgstr ""
+msgstr "Customer"
 
 #: templates/gorev_raporlar.html:267
 msgid "Rapor yükleniyor..."
-msgstr ""
+msgstr "Loading report..."
 
 #: templates/gorevler.html:3
 msgid "Görevler Listesi"
