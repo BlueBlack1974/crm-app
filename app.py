@@ -8876,7 +8876,7 @@ def todo_durum_degistir(todo_id):
         todo.DurumID = yeni_durum_id
         print(f"Durum değiştiriliyor: {eski_durum} -> {yeni_durum_id}")
         
-        # Eğer durum "Tamamlandı" ise tamamlanma tarihini set et ve todo'yu sil
+        # Eğer durum "Tamamlandı" ise tamamlanma tarihini set et, KAYDI SİLME
         yeni_durum_adi = durum.DurumAdi if durum else None
         if yeni_durum_adi == 'Tamamlandı':
             if not todo.TamamlanmaTarihi:
@@ -8890,13 +8890,9 @@ def todo_durum_degistir(todo_id):
             ).delete(synchronize_session=False)
             print(f"Todo ile ilgili {deleted_notifications} bildirim silindi: {todo.Baslik}")
             
-            # Todo'yu sil
-            db.session.delete(todo)
-            print(f"Todo tamamlandı ve silindi: {todo.Baslik}")
-            
-            # Değişiklikleri kaydet
+            # Kaydı silmeden değişiklikleri kaydet
             db.session.commit()
-            print("Todo ve bildirimler başarıyla silindi")
+            print("Todo tamamlandı olarak işaretlendi (silinmedi)")
         else:
             todo.TamamlanmaTarihi = None
             db.session.commit()
@@ -8905,14 +8901,14 @@ def todo_durum_degistir(todo_id):
         # Log ekle
         if yeni_durum_adi == 'Tamamlandı':
             log_user_action(
-                action_type='Todo Tamamlandı ve Silindi',
+                action_type='Todo Tamamlandı',
                 table_name='Todos',
                 record_id=todo_id,
                 old_data={'durum': eski_durum},
-                new_data={'durum': yeni_durum_adi, 'action': 'deleted'},
-                detail=f"Başlık: {todo.Baslik} - {eski_durum} → {yeni_durum_adi} (Silindi)"
+                new_data={'durum': yeni_durum_adi, 'action': 'completed'},
+                detail=f"Başlık: {todo.Baslik} - {eski_durum} → {yeni_durum_adi} (Silinmedi)"
             )
-            return jsonify({'success': True, 'message': 'Todo tamamlandı ve silindi!'})
+            return jsonify({'success': True, 'message': 'Görev tamamlandı olarak işaretlendi!'})
         else:
             log_user_action(
                 action_type='Todo Durumu Değiştirildi',
