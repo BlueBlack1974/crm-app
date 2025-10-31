@@ -309,15 +309,8 @@ function getCurrentLang() {
 }
 
 function translateStatusName(name) {
-    const lang = getCurrentLang();
-    const original = String(name || '').trim();
-    const tr = { 'Beklemede':'Beklemede','Devam Ediyor':'Devam Ediyor','Tamamlandı':'Tamamlandı' };
-    const en = { 'Beklemede':'Pending','Devam Ediyor':'In Progress','Tamamlandı':'Completed' };
-    const fr = { 'Beklemede':'En Attente','Devam Ediyor':'En Cours','Tamamlandı':'Terminé' };
-    const de = { 'Beklemede':'Ausstehend','Devam Ediyor':'In Bearbeitung','Tamamlandı':'Abgeschlossen' };
-    const maps = { tr, en, fr, de };
-    const m = maps[lang] || tr;
-    return m[original] || original;
+    // Do not translate status values on reports page; keep original entries
+    return String(name || '').trim();
 }
 
 function translatePriorityName(name) {
