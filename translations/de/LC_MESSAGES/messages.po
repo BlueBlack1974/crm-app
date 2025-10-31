@@ -624,7 +624,7 @@ msgstr ""
 
 #: templates/gorev_raporlar.html:255
 msgid "Görev"
-msgstr ""
+msgstr "Aufgabe"
 
 #: templates/gorev_raporlar.html:259
 msgid "Oluşturma Tarihi"
