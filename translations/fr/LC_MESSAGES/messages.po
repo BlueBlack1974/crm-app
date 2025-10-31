@@ -590,11 +590,11 @@ msgstr "Total des Tâches"
 
 #: templates/gorev_raporlar.html:158
 msgid "Tamamlanan"
-msgstr ""
+msgstr "Terminé"
 
 #: templates/gorev_raporlar.html:164
 msgid "Bekleyen"
-msgstr ""
+msgstr "En attente"
 
 #: templates/gorev_raporlar.html:170
 msgid "Tamamlanma Oranı"
@@ -2670,7 +2670,7 @@ msgstr "Category Name"
 #: templates/ayarlar/gorev_durumlar.html:29
 #: templates/ayarlar/gorev_durumlar.html:120
 msgid "Color"
-msgstr "Color"
+msgstr "Couleur"
 
 #: templates/ayarlar/defter.html:354
 msgid "First save the book, then fill the block field."
@@ -2842,32 +2842,27 @@ msgstr "Modifier l'Entreprise"
 
 #: templates/ayarlar/gorev_durumlar.html:3
 #: templates/ayarlar/gorev_durumlar.html:7 templates/ayarlar/index.html:90
-#, fuzzy
 msgid "Task Status Settings"
-msgstr "Paramètres SMS"
+msgstr "Paramètres des Statuts de Tâche"
 
 #: templates/ayarlar/gorev_durumlar.html:10
 #: templates/ayarlar/gorev_durumlar.html:86
-#, fuzzy
 msgid "Add Status"
-msgstr "Statut"
+msgstr "Ajouter un Statut"
 
 #: templates/ayarlar/gorev_durumlar.html:19 templates/ayarlar/index.html:92
-#, fuzzy
 msgid "Task Statuses"
-msgstr "Tous les Statuts"
+msgstr "Statuts de Tâche"
 
 #: templates/ayarlar/gorev_durumlar.html:26
 #: templates/ayarlar/gorev_durumlar.html:128
-#, fuzzy
 msgid "Order"
-msgstr "Code"
+msgstr "Ordre"
 
 #: templates/ayarlar/gorev_durumlar.html:27
 #: templates/ayarlar/gorev_durumlar.html:110
-#, fuzzy
 msgid "Status Name"
-msgstr "Statut"
+msgstr "Nom du Statut"
 
 #: templates/ayarlar/gorev_durumlar.html:210
 #, fuzzy
@@ -2978,7 +2973,7 @@ msgstr ""
 
 #: templates/ayarlar/index.html:91
 msgid "Manage task statuses and customize their colors and order."
-msgstr ""
+msgstr "Gérez les statuts des tâches et personnalisez leurs couleurs et leur ordre."
 
 # Appointment Operations translations
 #: templates/ayarlar/islemler.html:21

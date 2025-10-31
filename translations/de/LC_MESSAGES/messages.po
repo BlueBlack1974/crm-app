@@ -912,7 +912,7 @@ msgstr "E-Mail"
 #: templates/randevular.html:474 templates/randevular.html:505
 #: templates/takvim.html:359 templates/takvim.html:480
 msgid "Description"
-msgstr "Description"
+msgstr "Beschreibung"
 
 #: templates/gorevler.html:2479 templates/randevu_ekle.html:468
 #: templates/randevular.html:480
@@ -2677,7 +2677,7 @@ msgstr "Category Name"
 #: templates/ayarlar/gorev_durumlar.html:29
 #: templates/ayarlar/gorev_durumlar.html:120
 msgid "Color"
-msgstr "Color"
+msgstr "Farbe"
 
 #: templates/ayarlar/defter.html:354
 msgid "First save the book, then fill the block field."
@@ -2847,32 +2847,27 @@ msgstr "Unternehmen bearbeiten"
 
 #: templates/ayarlar/gorev_durumlar.html:3
 #: templates/ayarlar/gorev_durumlar.html:7 templates/ayarlar/index.html:90
-#, fuzzy
 msgid "Task Status Settings"
-msgstr "SMS-Einstellungen"
+msgstr "Aufgabenstatus-Einstellungen"
 
 #: templates/ayarlar/gorev_durumlar.html:10
 #: templates/ayarlar/gorev_durumlar.html:86
-#, fuzzy
 msgid "Add Status"
-msgstr "Status"
+msgstr "Status hinzufügen"
 
 #: templates/ayarlar/gorev_durumlar.html:19 templates/ayarlar/index.html:92
-#, fuzzy
 msgid "Task Statuses"
-msgstr "Alle Status"
+msgstr "Aufgabenstatus"
 
 #: templates/ayarlar/gorev_durumlar.html:26
 #: templates/ayarlar/gorev_durumlar.html:128
-#, fuzzy
 msgid "Order"
-msgstr "Code"
+msgstr "Reihenfolge"
 
 #: templates/ayarlar/gorev_durumlar.html:27
 #: templates/ayarlar/gorev_durumlar.html:110
-#, fuzzy
 msgid "Status Name"
-msgstr "Status"
+msgstr "Statusname"
 
 #: templates/ayarlar/gorev_durumlar.html:210
 #, fuzzy
@@ -2985,7 +2980,7 @@ msgstr ""
 
 #: templates/ayarlar/index.html:91
 msgid "Manage task statuses and customize their colors and order."
-msgstr ""
+msgstr "Verwalten Sie Aufgabenstatus und passen Sie deren Farben und Reihenfolge an."
 
 # Appointment Operations translations
 #: templates/ayarlar/islemler.html:21
