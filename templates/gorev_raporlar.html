@@ -40,12 +40,14 @@
 }
 
 .stat-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 10px;
-    padding: 20px;
+    background: #ffffff;
+    color: #212529;
+    border-radius: 12px;
+    padding: 24px 20px;
     margin: 10px 0;
     text-align: center;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+    border: 1px solid #e9ecef;
 }
 
 .stat-card h3 {
@@ -56,7 +58,7 @@
 
 .stat-card p {
     margin: 5px 0 0 0;
-    opacity: 0.9;
+    color: #6c757d;
 }
 
 .table-responsive {
@@ -97,47 +99,47 @@
 
             <!-- Filtreleme Bölümü -->
             <div class="filter-section">
-                <div class="row">
-                    <div class="col-md-3">
+                <div class="row g-2 align-items-end flex-wrap">
+                    <div class="col-md-auto">
                         <label class="form-label">{{ _('Başlangıç Tarihi') }}</label>
-                        <input type="date" class="form-control" id="startDate">
+                        <input type="date" class="form-control" id="startDate" style="min-width:180px">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-auto">
                         <label class="form-label">{{ _('Bitiş Tarihi') }}</label>
-                        <input type="date" class="form-control" id="endDate">
+                        <input type="date" class="form-control" id="endDate" style="min-width:180px">
                     </div>
-                    <div class="col-md-2 col-sm-6">
+                    <div class="col-md-auto col-sm-6">
                         <label for="statusFilter" class="form-label">{{ _('Durum') }}</label>
-                        <select class="form-select" id="statusFilter">
+                        <select class="form-select" id="statusFilter" style="min-width:160px">
                             <option value="all">{{ _('Tümü') }}</option>
                         </select>
                     </div>
-                    <div class="col-md-2 col-sm-6">
+                    <div class="col-md-auto col-sm-6">
                         <label for="userFilter" class="form-label">{{ _('Kullanıcı') }}</label>
-                        <select class="form-select" id="userFilter">
+                        <select class="form-select" id="userFilter" style="min-width:160px">
                             <option value="all">{{ _('Tümü') }}</option>
                         </select>
                     </div>
-                    <div class="col-md-2 col-sm-6">
+                    <div class="col-md-auto col-sm-6">
                         <label for="priorityFilter" class="form-label">{{ _('Öncelik') }}</label>
-                        <select class="form-select" id="priorityFilter">
+                        <select class="form-select" id="priorityFilter" style="min-width:160px">
                             <option value="all">{{ _('Tümü') }}</option>
                             <option value="Düşük">{{ _('Düşük') }}</option>
                             <option value="Orta">{{ _('Orta') }}</option>
                             <option value="Yüksek">{{ _('Yüksek') }}</option>
                         </select>
                     </div>
-                    <div class="col-md-2 col-sm-6">
+                    <div class="col-md-auto col-sm-6">
                         <label for="typeFilter" class="form-label">{{ _('Tip') }}</label>
-                        <select class="form-select" id="typeFilter">
+                        <select class="form-select" id="typeFilter" style="min-width:160px">
                             <option value="all">{{ _('Tümü') }}</option>
                             <option value="Kisisel">{{ _('Kişisel') }}</option>
                             <option value="Randevu">{{ _('Randevu') }}</option>
                         </select>
                     </div>
-                    <div class="col-md-1">
+                    <div class="col-md-auto">
                         <label class="form-label">&nbsp;</label>
-                        <button type="button" class="btn btn-primary w-100" onclick="generateReport()">
+                        <button type="button" class="btn btn-primary" onclick="generateReport()">
                             <i class="fas fa-search"></i>
                         </button>
                     </div>
