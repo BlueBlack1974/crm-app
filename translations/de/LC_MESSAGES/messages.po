@@ -542,7 +542,7 @@ msgstr "Alle"
 
 #: templates/gorev_raporlar.html:116 templates/gorev_raporlar.html:258
 msgid "Kullanıcı"
-msgstr ""
+msgstr "Benutzer"
 
 #: templates/gorev_raporlar.html:122 templates/gorev_raporlar.html:257
 #: templates/gorevler.html:1753 templates/gorevler.html:2039
@@ -604,15 +604,15 @@ msgstr ""
 
 #: templates/gorev_raporlar.html:192
 msgid "Öncelik Dağılımı"
-msgstr ""
+msgstr "Verteilung nach Benutzer"
 
 #: templates/gorev_raporlar.html:207
 msgid "Kullanıcı Bazlı Dağılım"
-msgstr ""
+msgstr "Verteilung nach Benutzer"
 
 #: templates/gorev_raporlar.html:219
 msgid "Kullanıcı Tamamlanan Görevler"
-msgstr ""
+msgstr "Abgeschlossene Aufgaben nach Benutzer"
 
 #: templates/gorev_raporlar.html:234
 msgid "Aylık Trend"

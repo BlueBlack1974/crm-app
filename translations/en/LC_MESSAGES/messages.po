@@ -553,7 +553,7 @@ msgstr "All"
 
 #: templates/gorev_raporlar.html:116 templates/gorev_raporlar.html:258
 msgid "Kullanıcı"
-msgstr ""
+msgstr "User"
 
 #: templates/gorev_raporlar.html:122 templates/gorev_raporlar.html:257
 #: templates/gorevler.html:1753 templates/gorevler.html:2039
@@ -619,11 +619,11 @@ msgstr "Priority Distribution"
 
 #: templates/gorev_raporlar.html:207
 msgid "Kullanıcı Bazlı Dağılım"
-msgstr ""
+msgstr "User Distribution"
 
 #: templates/gorev_raporlar.html:219
 msgid "Kullanıcı Tamamlanan Görevler"
-msgstr ""
+msgstr "User Completed Tasks"
 
 #: templates/gorev_raporlar.html:234
 msgid "Aylık Trend"
