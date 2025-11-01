@@ -134,7 +134,8 @@
                 <img src="{{ url_for('static', filename='img/favicon.png') }}" alt="Crandyx Icon" class="me-2" style="width: 24px; height: 24px; filter: none; box-shadow: none;">
                 <span class="fs-4">Crandyx</span>
             </div>
-            <img src="{{ url_for('static', filename='uploads/users/user_' ~ session.user_id ~ '.jpg') }}" 
+            {% set default_avatar_url = url_for('static', filename='img/avatar-default.svg') %}
+            <img src="{{ url_for('serve_user_avatar', user_id=session.user_id) }}" 
                  alt="Kullanıcı Fotoğrafı"
                  class="rounded-circle my-2"
                  style="width: 72px; height: 72px; object-fit: cover;"
@@ -378,10 +379,22 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <script>
+    // setDefaultAvatar fonksiyonu - avatar resmi yüklenemediğinde varsayılan resmi göster
     function setDefaultAvatar(imgEl) {
-        imgEl.onerror = null;
-        imgEl.src = "{{ url_for('static', filename='img/avatar-default.svg') }}";
+        if (!imgEl) return;
+        try {
+            imgEl.onerror = null; // Sonsuz döngüyü önle
+            const defaultAvatar = "{{ url_for('static', filename='img/avatar-default.svg') }}";
+            if (imgEl.src !== defaultAvatar) {
+                imgEl.src = defaultAvatar;
+            }
+        } catch (e) {
+            console.warn('setDefaultAvatar error:', e);
+        }
     }
+    // Global olarak erişilebilir olduğundan emin ol
+    window.setDefaultAvatar = setDefaultAvatar;
+    
     function isLoggedIn() {
         const v = document.body?.dataset?.loggedIn;
         return v === 'true';

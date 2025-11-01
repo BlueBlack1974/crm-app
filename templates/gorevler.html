@@ -1776,12 +1776,16 @@
                 </select>
             </div>
             
-            <div class="col-md-2 mb-3">
-                <label class="form-label">{{ _('Tarih') }}</label>
-                <input type="date" class="form-control" id="dateFilter">
+            <div class="col-md-3 mb-3">
+                <label class="form-label">{{ _('Tarih Aralığı') }}</label>
+                <div class="input-group">
+                    <input type="date" class="form-control" id="dateFilterStart" lang="{{ session.get('language', 'tr') }}" value="{{ first_day_of_month.strftime('%Y-%m-%d') if first_day_of_month else '' }}">
+                    <span class="input-group-text">-</span>
+                    <input type="date" class="form-control" id="dateFilterEnd" lang="{{ session.get('language', 'tr') }}" value="{{ last_day_of_month.strftime('%Y-%m-%d') if last_day_of_month else '' }}">
+                </div>
             </div>
             
-            <div class="col-md-3 mb-3 d-flex align-items-end">
+            <div class="col-md-2 mb-3 d-flex align-items-end">
                 <button class="btn btn-outline-secondary me-2" onclick="clearFilters()">
                     <i class="fas fa-times me-1"></i>{{ _('Temizle') }}
                 </button>
@@ -1930,7 +1934,7 @@ if (!window.quickComplete) {
         <div class="row" id="gorevlerListesi">
     {% if gorevler %}
         {% for gorev in gorevler %}
-        <div class="col-md-6 col-lg-4 mb-3 gorev-item" data-gorev-id="{{ gorev.TodoID }}" data-durum-id="{{ gorev.durum.DurumID if gorev.durum else '' }}" data-priority="{{ gorev.Oncelik|lower|replace(' ', '') }}">
+        <div class="col-md-6 col-lg-4 mb-3 gorev-item" data-gorev-id="{{ gorev.TodoID }}" data-durum-id="{{ gorev.durum.DurumID if gorev.durum else '' }}" data-priority="{{ gorev.Oncelik|lower|replace(' ', '') }}" {% if gorev.BitisTarihi %}data-bitis-tarihi="{{ gorev.BitisTarihi.strftime('%Y-%m-%d') }}"{% endif %} {% if gorev.HatirlatmaTarihi %}data-hatirlatma-tarihi="{{ gorev.HatirlatmaTarihi.strftime('%Y-%m-%d') }}"{% endif %} {% if gorev.OlusturmaTarihi %}data-olusturma-tarihi="{{ gorev.OlusturmaTarihi.strftime('%Y-%m-%d') }}"{% endif %}>
             <div class="card shadow h-100 {{ 'tamamlandi' if gorev.durum and gorev.durum.DurumAdi == 'Tamamlandı' else '' }}">
                 <div class="card-header py-2 d-flex justify-content-between align-items-center">
                     <span class="badge durum-text" style="background-color: {{ gorev.durum.Renk if gorev.durum and gorev.durum.Renk else '#007bff' }}; color: white;" data-durum="{{ gorev.durum.DurumAdi if gorev.durum else 'Durum Yok' }}">
@@ -1950,7 +1954,7 @@ if (!window.quickComplete) {
                     {% endif %}
                     
                     {% if gorev.BitisTarihi %}
-                    <div class="mb-2">
+                    <div class="mb-2" data-bitis-tarihi="{{ gorev.BitisTarihi.strftime('%Y-%m-%d') if gorev.BitisTarihi else '' }}">
                         <small class="text-muted">
                             <i class="fas fa-calendar me-1"></i>
                             {{ _('Bitiş') }}: {{ gorev.BitisTarihi.strftime('%d.%m.%Y') }}
@@ -1959,7 +1963,7 @@ if (!window.quickComplete) {
                     {% endif %}
                     
                     {% if gorev.HatirlatmaTarihi %}
-                    <div class="mb-2">
+                    <div class="mb-2" data-hatirlatma-tarihi="{{ gorev.HatirlatmaTarihi.strftime('%Y-%m-%d') if gorev.HatirlatmaTarihi else '' }}">
                         <small class="text-muted">
                             <i class="fas fa-bell me-1"></i>
                             {{ _('Hatırlatma') }}: {{ gorev.HatirlatmaTarihi.strftime('%d.%m.%Y') }}
@@ -1967,7 +1971,7 @@ if (!window.quickComplete) {
                     </div>
                     {% endif %}
                     
-                    <div class="mb-2">
+                    <div class="mb-2" data-olusturma-tarihi="{{ gorev.OlusturmaTarihi.strftime('%Y-%m-%d') if gorev.OlusturmaTarihi else '' }}">
                         <small class="text-muted">
                             <i class="fas fa-clock me-1"></i>
                             {{ _('Oluşturulma') }}: {{ gorev.OlusturmaTarihi.strftime('%d.%m.%Y %H:%M') }}
@@ -1976,19 +1980,23 @@ if (!window.quickComplete) {
                 </div>
                 <div class="card-footer bg-transparent">
                     <div class="d-flex justify-content-between">
-                        {% if gorev.Durum != 'Tamamlandı' %}
-                        <button type="button" class="btn btn-sm btn-success" data-complete-btn="1" onclick="quickComplete({{ gorev.TodoID }})" title="{{ _('Tamamla') }}">
+                        {% if gorev.durum and gorev.durum.DurumAdi == 'Tamamlandı' %}
+                        <button type="button" class="btn btn-sm btn-success" disabled style="opacity: 0.5; cursor: not-allowed;" title="{{ _('Tamamlandı') }}">
+                            <i class="fas fa-check me-1"></i>{{ _('Tamamlandı') }}
+                        </button>
+                        {% else %}
+                        <button type="button" class="btn btn-sm btn-success" data-complete-btn="1" onclick="quickComplete({{ gorev.TodoID if gorev.TodoID else 0 }})" title="{{ _('Tamamla') }}">
                             <i class="fas fa-check me-1"></i>{{ _('Tamamla') }}
                         </button>
                         {% endif %}
                         <div>
-                            <button class="btn btn-sm btn-outline-success" onclick="moveToRandevu({{ gorev.TodoID }})" title="{{ _('Randevu Defterine Taşı') }}">
+                            <button class="btn btn-sm btn-outline-success" onclick="moveToRandevu({{ gorev.TodoID if gorev.TodoID else 0 }})" title="{{ _('Randevu Defterine Taşı') }}">
                                 <i class="fas fa-calendar-plus"></i>
                             </button>
-                            <button class="btn btn-sm btn-outline-primary" onclick="editGorev({{ gorev.TodoID }})" title="{{ _('Düzenle') }}">
+                            <button class="btn btn-sm btn-outline-primary" onclick="editGorev({{ gorev.TodoID if gorev.TodoID else 0 }})" title="{{ _('Düzenle') }}">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteGorev({{ gorev.TodoID }})" title="{{ _('Sil') }}">
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteGorev({{ gorev.TodoID if gorev.TodoID else 0 }})" title="{{ _('Sil') }}">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -2017,12 +2025,19 @@ if (!window.quickComplete) {
             <div class="card-body">
                 <div class="list-group list-group-flush">
                     {% for gorev in gorevler %}
-                    <div class="list-group-item d-flex justify-content-between align-items-center px-0 gorev-item" data-gorev-id="{{ gorev.TodoID }}" data-durum-id="{{ gorev.durum.DurumID if gorev.durum else '' }}" data-priority="{{ gorev.Oncelik|lower|replace(' ', '') }}">
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0 gorev-item" data-gorev-id="{{ gorev.TodoID }}" data-durum-id="{{ gorev.durum.DurumID if gorev.durum else '' }}" data-priority="{{ gorev.Oncelik|lower|replace(' ', '') }}" {% if gorev.BitisTarihi %}data-bitis-tarihi="{{ gorev.BitisTarihi.strftime('%Y-%m-%d') }}"{% endif %} {% if gorev.HatirlatmaTarihi %}data-hatirlatma-tarihi="{{ gorev.HatirlatmaTarihi.strftime('%Y-%m-%d') }}"{% endif %} {% if gorev.OlusturmaTarihi %}data-olusturma-tarihi="{{ gorev.OlusturmaTarihi.strftime('%Y-%m-%d') }}"{% endif %}>
                         <div class="d-flex align-items-center">
                             <div class="me-3">
-                                {% if not gorev.durum or gorev.durum.DurumAdi != 'Tamamlandı' %}
+                                {% if gorev.durum and gorev.durum.DurumAdi == 'Tamamlandı' %}
                                 <button type="button" class="btn btn-sm btn-outline-success" 
-                                        data-complete-btn="1" onclick="quickComplete({{ gorev.TodoID }})"
+                                        disabled style="opacity: 0.5; cursor: not-allowed;"
+                                        title="{{ _('Tamamlandı') }}">
+                                    <i class="fas fa-check"></i>
+                                    <span class="ms-1 d-none d-md-inline">{{ _('Tamamlandı') }}</span>
+                                </button>
+                                {% else %}
+                                <button type="button" class="btn btn-sm btn-outline-success" 
+                                        data-complete-btn="1" onclick="quickComplete({{ gorev.TodoID if gorev.TodoID else 0 }})"
                                         title="{{ _('Tamamla') }}">
                                     <i class="fas fa-check"></i>
                                     <span class="ms-1 d-none d-md-inline">{{ _('Tamamla') }}</span>
@@ -2044,10 +2059,14 @@ if (!window.quickComplete) {
                                         {% if gorev.Oncelik == 'Yüksek' %}{{ _('Yüksek') }}{% elif gorev.Oncelik == 'Orta' %}{{ _('Orta') }}{% else %}{{ _('Düşük') }}{% endif %}
                                     </span>
                                     {% if gorev.BitisTarihi %}
-                                    <i class="fas fa-calendar-alt me-1"></i>{{ gorev.BitisTarihi.strftime('%d.%m.%Y') }}
+                                    <span data-bitis-tarihi="{{ gorev.BitisTarihi.strftime('%Y-%m-%d') if gorev.BitisTarihi else '' }}">
+                                        <i class="fas fa-calendar-alt me-1"></i>{{ gorev.BitisTarihi.strftime('%d.%m.%Y') }}
+                                    </span>
                                     {% endif %}
                                     {% if gorev.HatirlatmaTarihi %}
-                                    <i class="fas fa-bell me-1"></i>{{ gorev.HatirlatmaTarihi.strftime('%d.%m.%Y') }}
+                                    <span data-hatirlatma-tarihi="{{ gorev.HatirlatmaTarihi.strftime('%Y-%m-%d') if gorev.HatirlatmaTarihi else '' }}">
+                                        <i class="fas fa-bell me-1"></i>{{ gorev.HatirlatmaTarihi.strftime('%d.%m.%Y') }}
+                                    </span>
                                     {% endif %}
                                 </small>
                             </div>
@@ -2057,13 +2076,13 @@ if (!window.quickComplete) {
                                 {{ gorev.Durum }}
                             </span>
                             <div class="btn-group btn-group-sm">
-                                <button class="btn btn-outline-success" onclick="moveToRandevu({{ gorev.TodoID }})" title="{{ _('Randevu Defterine Taşı') }}">
+                                <button class="btn btn-outline-success" onclick="moveToRandevu({{ gorev.TodoID if gorev.TodoID else 0 }})" title="{{ _('Randevu Defterine Taşı') }}">
                                     <i class="fas fa-calendar-plus"></i>
                                 </button>
-                                <button class="btn btn-outline-primary" onclick="editGorev({{ gorev.TodoID }})" title="{{ _('Düzenle') }}">
+                                <button class="btn btn-outline-primary" onclick="editGorev({{ gorev.TodoID if gorev.TodoID else 0 }})" title="{{ _('Düzenle') }}">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-outline-danger" onclick="deleteGorev({{ gorev.TodoID }})" title="{{ _('Sil') }}">
+                                <button class="btn btn-outline-danger" onclick="deleteGorev({{ gorev.TodoID if gorev.TodoID else 0 }})" title="{{ _('Sil') }}">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -3255,8 +3274,42 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Kaydedilen görünüm:', savedView);
     console.log('localStorage gorevlerView:', localStorage.getItem('gorevlerView'));
     
+    // Önce tarih aralığını bu ay olarak set et (tüm kontrollerden önce)
+    function setCurrentMonthDates() {
+        const dateFilterStartEl = document.getElementById('dateFilterStart');
+        const dateFilterEndEl = document.getElementById('dateFilterEnd');
+        
+        if (dateFilterStartEl && dateFilterEndEl) {
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            const startDateStr = firstDay.toISOString().split('T')[0];
+            const endDateStr = lastDay.toISOString().split('T')[0];
+            
+            dateFilterStartEl.value = startDateStr;
+            dateFilterEndEl.value = endDateStr;
+            
+            console.log('[INIT] Bu ayın tarih aralığı set edildi:', startDateStr, '-', endDateStr);
+            console.log('[INIT] Element kontrolü - Start:', dateFilterStartEl.value, 'End:', dateFilterEndEl.value);
+            
+            return true;
+        } else {
+            console.error('[INIT] Tarih aralığı elementleri bulunamadı!');
+            return false;
+        }
+    }
+    
+    // Hemen set et
+    setCurrentMonthDates();
+    
     // Filtre durumunu geri yükle
     const savedFilters = localStorage.getItem('gorevlerFilters');
+    const dateFilterStartEl = document.getElementById('dateFilterStart');
+    const dateFilterEndEl = document.getElementById('dateFilterEnd');
+    
+    // Tarih aralığını tekrar bu ay olarak set et (localStorage'dan tarih okumayı engellemek için)
+    setCurrentMonthDates();
+    
     if (savedFilters) {
         try {
             const filters = JSON.parse(savedFilters);
@@ -3265,13 +3318,39 @@ document.addEventListener('DOMContentLoaded', function() {
             if (filters.searchTerm) document.getElementById('searchInput').value = filters.searchTerm;
             if (filters.statusFilter) document.getElementById('statusFilter').value = filters.statusFilter;
             if (filters.priorityFilter) document.getElementById('priorityFilter').value = filters.priorityFilter;
-            if (filters.dateFilter) document.getElementById('dateFilter').value = filters.dateFilter;
+            // Tarih aralığı her zaman bu ay olarak set edildi (yukarıda)
             
-            console.log('Filtreler geri yüklendi');
+            console.log('Filtreler geri yüklendi (tarih aralığı bu ay olarak set edildi)');
         } catch (error) {
             console.error('Filtre geri yükleme hatası:', error);
         }
     }
+    
+    // Filtreyi uygula - tarih aralığı HTML'de zaten set edilmiş
+    setTimeout(function() {
+        // Tarih aralığını kontrol et ve eğer boşsa bu ayı set et
+        const dateFilterStartElCheck = document.getElementById('dateFilterStart');
+        const dateFilterEndElCheck = document.getElementById('dateFilterEnd');
+        if (dateFilterStartElCheck && dateFilterEndElCheck) {
+            // Eğer HTML'den değer gelmemişse bu ayı set et
+            if (!dateFilterStartElCheck.value || !dateFilterEndElCheck.value) {
+                const todayCheck = new Date();
+                const firstDayCheck = new Date(todayCheck.getFullYear(), todayCheck.getMonth(), 1);
+                const lastDayCheck = new Date(todayCheck.getFullYear(), todayCheck.getMonth() + 1, 0);
+                const expectedStartCheck = firstDayCheck.toISOString().split('T')[0];
+                const expectedEndCheck = lastDayCheck.toISOString().split('T')[0];
+                
+                dateFilterStartElCheck.value = expectedStartCheck;
+                dateFilterEndElCheck.value = expectedEndCheck;
+                console.log('[SETTIMEOUT] Tarih aralığı boştu, bu ay set edildi:', expectedStartCheck, '-', expectedEndCheck);
+            } else {
+                console.log('[SETTIMEOUT] Tarih aralığı HTML\'den geldi - Start:', dateFilterStartElCheck.value, 'End:', dateFilterEndElCheck.value);
+            }
+        }
+        // Filtreyi uygula
+        console.log('[SETTIMEOUT] filterTasks çağrılıyor...');
+        filterTasks();
+    }, 300);
     
     // Önce buton durumlarını güncelle
     console.log('=== SAYFA YÜKLENDİ - BUTON İŞARETLEME BAŞLADI ===');
@@ -3364,6 +3443,31 @@ window.addEventListener('load', function() {
         console.log('moveToRandevu çağrıldı:', gorevId);
         openRandevuModal(gorevId);
     };
+    
+    // Tarih aralığını kesinlikle bu ay olarak set et
+    const dateFilterStartEl = document.getElementById('dateFilterStart');
+    const dateFilterEndEl = document.getElementById('dateFilterEnd');
+    if (dateFilterStartEl && dateFilterEndEl) {
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        const startDateStr = firstDay.toISOString().split('T')[0];
+        const endDateStr = lastDay.toISOString().split('T')[0];
+        
+        // Her zaman bu ayı set et
+        dateFilterStartEl.value = startDateStr;
+        dateFilterEndEl.value = endDateStr;
+        console.log('[WINDOW LOAD] Bu ayın tarih aralığı set edildi:', startDateStr, '-', endDateStr);
+        console.log('[WINDOW LOAD] Element değerleri - Start:', dateFilterStartEl.value, 'End:', dateFilterEndEl.value);
+        
+        // Filtreyi uygula
+        setTimeout(function() {
+            if (typeof filterTasks === 'function') {
+                console.log('[WINDOW LOAD] filterTasks çağrılıyor...');
+                filterTasks();
+            }
+        }, 200);
+    }
     
     setupAllEventListeners();
     
@@ -3621,7 +3725,6 @@ function initializeAdvancedFilters() {
     const searchInput = document.getElementById('searchInput');
     const statusFilter = document.getElementById('statusFilter');
     const priorityFilter = document.getElementById('priorityFilter');
-    const dateFilter = document.getElementById('dateFilter');
     
     // Arama fonksiyonu
     if (searchInput) {
@@ -3644,11 +3747,41 @@ function initializeAdvancedFilters() {
         });
     }
     
-    // Tarih filtresi
-    if (dateFilter) {
-        dateFilter.addEventListener('change', function() {
+    // Tarih aralığı filtresi - değiştiğinde filtreyi uygula (tarihi değiştirmesine izin ver)
+    const dateFilterStart = document.getElementById('dateFilterStart');
+    const dateFilterEnd = document.getElementById('dateFilterEnd');
+    if (dateFilterStart) {
+        dateFilterStart.addEventListener('change', function() {
+            // Kullanıcı tarihi değiştirdi, filtreyi uygula
+            console.log('[DATE CHANGE] Başlangıç tarihi değişti:', dateFilterStart.value);
             filterTasks();
         });
+    }
+    if (dateFilterEnd) {
+        dateFilterEnd.addEventListener('change', function() {
+            // Kullanıcı tarihi değiştirdi, filtreyi uygula
+            console.log('[DATE CHANGE] Bitiş tarihi değişti:', dateFilterEnd.value);
+            filterTasks();
+        });
+    }
+    
+    // Tarih aralığı her zaman bu ay olarak set edilmeli
+    if (dateFilterStart && dateFilterEnd) {
+        const setCurrentMonth = function() {
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            const expectedStart = firstDay.toISOString().split('T')[0];
+            const expectedEnd = lastDay.toISOString().split('T')[0];
+            
+            // Her zaman bu ayı set et
+            dateFilterStart.value = expectedStart;
+            dateFilterEnd.value = expectedEnd;
+            console.log('[AUTO-SET] Tarih aralığı bu ay olarak set edildi:', expectedStart, '-', expectedEnd);
+        };
+        
+        // Sayfa yüklendikten sonra kesinlikle bu ayı set et
+        setTimeout(setCurrentMonth, 150);
     }
 }
 
@@ -3824,7 +3957,8 @@ function updateFilterChips() {
     const searchTerm = document.getElementById('searchInput').value;
     const statusFilter = document.getElementById('statusFilter').value;
     const priorityFilter = document.getElementById('priorityFilter').value;
-    const dateFilter = document.getElementById('dateFilter').value;
+    const dateFilterStart = document.getElementById('dateFilterStart').value;
+    const dateFilterEnd = document.getElementById('dateFilterEnd').value;
     
     let chips = [];
     
@@ -3851,9 +3985,12 @@ function updateFilterChips() {
         </div>`);
     }
     
-    if (dateFilter) {
+    if (dateFilterStart || dateFilterEnd) {
+        const dateRange = dateFilterStart && dateFilterEnd ? 
+            `${dateFilterStart} - ${dateFilterEnd}` : 
+            (dateFilterStart ? `Başlangıç: ${dateFilterStart}` : `Bitiş: ${dateFilterEnd}`);
         chips.push(`<div class="filter-chip" onclick="clearDateFilter()">
-            <span>Tarih: ${dateFilter}</span>
+            <span>Tarih: ${dateRange}</span>
             <span class="remove">×</span>
         </div>`);
     }
@@ -3953,7 +4090,17 @@ function clearPriorityFilter() {
 }
 
 function clearDateFilter() {
-    document.getElementById('dateFilter').value = '';
+    // Tarih aralığını bu ay olarak set et (temizleme değil, bu ayı göster)
+    const dateFilterStartEl = document.getElementById('dateFilterStart');
+    const dateFilterEndEl = document.getElementById('dateFilterEnd');
+    if (dateFilterStartEl && dateFilterEndEl) {
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        dateFilterStartEl.value = firstDay.toISOString().split('T')[0];
+        dateFilterEndEl.value = lastDay.toISOString().split('T')[0];
+        console.log('[CLEAR DATE FILTER] Tarih aralığı bu ay olarak set edildi');
+    }
     filterTasks();
     updateFilterChips();
 }
@@ -4199,12 +4346,38 @@ window.filterTasks = function() {
     console.log('filterTasks çağrıldı');
     
     try {
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-        const statusFilter = document.getElementById('statusFilter').value;
-        const priorityFilter = document.getElementById('priorityFilter').value;
-        const dateFilter = document.getElementById('dateFilter').value;
+        // Tarih input'larından değerleri oku
+        const dateFilterStartEl = document.getElementById('dateFilterStart');
+        const dateFilterEndEl = document.getElementById('dateFilterEnd');
         
-        console.log('Filtre değerleri:', { searchTerm, statusFilter, priorityFilter, dateFilter });
+        // Eğer tarih input'ları boşsa, bu ayı set et
+        if (dateFilterStartEl && dateFilterEndEl) {
+            if (!dateFilterStartEl.value || !dateFilterEndEl.value) {
+                const today = new Date();
+                const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                const expectedStart = firstDay.toISOString().split('T')[0];
+                const expectedEnd = lastDay.toISOString().split('T')[0];
+                
+                dateFilterStartEl.value = expectedStart;
+                dateFilterEndEl.value = expectedEnd;
+                console.log('[FILTER] Tarih aralığı boştu, bu ay set edildi:', expectedStart, '-', expectedEnd);
+            }
+        }
+        
+        const searchTerm = document.getElementById('searchInput') ? document.getElementById('searchInput').value.toLowerCase() : '';
+        const statusFilter = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : 'all';
+        const priorityFilter = document.getElementById('priorityFilter') ? document.getElementById('priorityFilter').value : 'all';
+        const dateFilterStart = dateFilterStartEl ? dateFilterStartEl.value : '';
+        const dateFilterEnd = dateFilterEndEl ? dateFilterEndEl.value : '';
+        
+        console.log('=== FİLTRE DEĞERLERİ ===');
+        console.log('Arama:', searchTerm);
+        console.log('Durum:', statusFilter);
+        console.log('Öncelik:', priorityFilter);
+        console.log('Tarih Başlangıç:', dateFilterStart);
+        console.log('Tarih Bitiş:', dateFilterEnd);
+        console.log('Tarih filtresi aktif mi?', !!(dateFilterStart && dateFilterEnd));
         
         // Durum filtresi seçeneklerini kontrol et
         const statusSelect = document.getElementById('statusFilter');
@@ -4317,15 +4490,108 @@ window.filterTasks = function() {
                 }
             }
             
-            // Tarih filtresi
-            if (dateFilter) {
-                const taskDate = task.querySelector('[data-bitis-tarihi], [data-hatirlatma-tarihi]');
-                const taskDateValue = taskDate ? 
-                    (taskDate.getAttribute('data-bitis-tarihi') || taskDate.getAttribute('data-hatirlatma-tarihi')) :
-                    task.getAttribute('data-start');
-                if (taskDateValue !== dateFilter) {
-                    showTask = false;
+            // Tarih aralığı filtresi - eğer tarih filtresi varsa kontrol et
+            // NOT: Tarih filtresi aktifken, görevin herhangi bir tarihi aralıkta olmalı
+            if (dateFilterStart && dateFilterEnd) {
+                console.log(`Görev ${index + 1} için tarih filtresi uygulanıyor: ${dateFilterStart} - ${dateFilterEnd}`);
+                let taskDateValues = [];
+                
+                // Tarih bilgisi olmayan görevleri atla (gösterilecek)
+                // Çünkü tarih filtresi sadece tarihi olan görevler için çalışmalı
+                
+                // Takvim event'i için
+                if (task.classList.contains('fc-event')) {
+                    const eventId = task.getAttribute('data-event-id');
+                    if (eventId && window.gorevlerCalendar) {
+                        const event = window.gorevlerCalendar.getEventById(eventId);
+                        if (event && event.start) {
+                            taskDateValues.push(event.start.toISOString().split('T')[0]);
+                        }
+                    }
+                } else {
+                    // Kart ve liste görünümü için - önce task elementinin kendisinden tarih bilgilerini al
+                    const bitisTarihi = task.getAttribute('data-bitis-tarihi');
+                    const hatirlatmaTarihi = task.getAttribute('data-hatirlatma-tarihi');
+                    const olusturmaTarihi = task.getAttribute('data-olusturma-tarihi');
+                    
+                    // Eğer task elementinde yoksa, içindeki elementlerden al
+                    if (!bitisTarihi || !hatirlatmaTarihi || !olusturmaTarihi) {
+                        const bitisEl = task.querySelector('[data-bitis-tarihi]');
+                        const hatirlatmaEl = task.querySelector('[data-hatirlatma-tarihi]');
+                        const olusturmaEl = task.querySelector('[data-olusturma-tarihi]');
+                        
+                        if (!bitisTarihi && bitisEl) {
+                            taskDateValues.push(bitisEl.getAttribute('data-bitis-tarihi'));
+                        }
+                        if (!hatirlatmaTarihi && hatirlatmaEl) {
+                            taskDateValues.push(hatirlatmaEl.getAttribute('data-hatirlatma-tarihi'));
+                        }
+                        if (!olusturmaTarihi && olusturmaEl) {
+                            taskDateValues.push(olusturmaEl.getAttribute('data-olusturma-tarihi'));
+                        }
+                    }
+                    
+                    // Task elementinden direkt alınan tarihler
+                    if (bitisTarihi) taskDateValues.push(bitisTarihi);
+                    if (hatirlatmaTarihi) taskDateValues.push(hatirlatmaTarihi);
+                    if (olusturmaTarihi) taskDateValues.push(olusturmaTarihi);
+                    
+                    // Eğer hiç tarih yoksa, task'ın kendisinden kontrol et
+                    if (taskDateValues.length === 0) {
+                        const taskStart = task.getAttribute('data-start');
+                        if (taskStart) taskDateValues.push(taskStart);
+                    }
                 }
+                
+                console.log(`Görev ${index + 1} tarih değerleri:`, taskDateValues);
+                
+                if (taskDateValues.length > 0) {
+                    // Tarih aralığı içinde olup olmadığını kontrol et
+                    // Görevin herhangi bir tarihi aralıkta ise göster
+                    const startDate = dateFilterStart ? new Date(dateFilterStart + 'T00:00:00') : null;
+                    const endDate = dateFilterEnd ? new Date(dateFilterEnd + 'T23:59:59') : null;
+                    
+                    console.log(`Görev ${index + 1} tarih aralığı kontrolü - Start:`, startDate, 'End:', endDate);
+                    
+                    let dateInRange = false;
+                    for (let dateStr of taskDateValues) {
+                        if (dateStr) {
+                            const taskDate = new Date(dateStr + 'T00:00:00');
+                            let isInRange = true;
+                            
+                            if (startDate && taskDate < startDate) {
+                                isInRange = false;
+                                console.log(`Görev ${index + 1} tarih ${dateStr} başlangıçtan önce`);
+                            }
+                            if (endDate && taskDate > endDate) {
+                                isInRange = false;
+                                console.log(`Görev ${index + 1} tarih ${dateStr} bitişten sonra`);
+                            }
+                            
+                            if (isInRange) {
+                                dateInRange = true;
+                                console.log(`Görev ${index + 1} tarih ${dateStr} aralıkta`);
+                                break; // Herhangi bir tarih aralıkta ise yeterli
+                            }
+                        }
+                    }
+                    
+                    if (!dateInRange) {
+                        console.log(`Görev ${index + 1} tarih aralığı dışında - gizleniyor`);
+                        showTask = false;
+                    } else {
+                        console.log(`Görev ${index + 1} tarih aralığında - gösteriliyor`);
+                    }
+                } else {
+                    // Tarih bilgisi yoksa - tarih filtresi varsa bile göster
+                    // Çünkü kullanıcı sadece tarihi olan görevleri filtrelemek ister, tarihi olmayan görevler her zaman görünür olmalı
+                    console.log(`Görev ${index + 1} tarih bilgisi yok - varsayılan olarak gösteriliyor`);
+                    // Tarih bilgisi olmayan görevleri her zaman göster
+                    // showTask zaten true, değiştirmeye gerek yok
+                }
+            } else {
+                // Tarih filtresi yoksa, tüm görevleri göster
+                console.log(`Görev ${index + 1} için tarih filtresi yok - gösteriliyor`);
             }
             
             // Görevi göster/gizle
@@ -4402,7 +4668,18 @@ window.clearFilters = function() {
         document.getElementById('searchInput').value = '';
         document.getElementById('statusFilter').value = 'all';
         document.getElementById('priorityFilter').value = 'all';
-        document.getElementById('dateFilter').value = '';
+        
+        // Tarih aralığını bu ay olarak set et (temizleme, bu ayı göster)
+        const dateFilterStartEl = document.getElementById('dateFilterStart');
+        const dateFilterEndEl = document.getElementById('dateFilterEnd');
+        if (dateFilterStartEl && dateFilterEndEl) {
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            dateFilterStartEl.value = firstDay.toISOString().split('T')[0];
+            dateFilterEndEl.value = lastDay.toISOString().split('T')[0];
+            console.log('[CLEAR FILTERS] Tarih aralığı bu ay olarak set edildi');
+        }
         
         // Tüm görevleri göster
         const cardTasks = document.querySelectorAll('.gorev-item');
@@ -5022,13 +5299,15 @@ function changeView(viewType) {
     const searchTerm = document.getElementById('searchInput').value;
     const statusFilter = document.getElementById('statusFilter').value;
     const priorityFilter = document.getElementById('priorityFilter').value;
-    const dateFilter = document.getElementById('dateFilter').value;
+    const dateFilterStart = document.getElementById('dateFilterStart').value;
+    const dateFilterEnd = document.getElementById('dateFilterEnd').value;
     
     localStorage.setItem('gorevlerFilters', JSON.stringify({
         searchTerm: searchTerm,
         statusFilter: statusFilter,
         priorityFilter: priorityFilter,
-        dateFilter: dateFilter
+        dateFilterStart: dateFilterStart,
+        dateFilterEnd: dateFilterEnd
     }));
     
     // Buton durumlarını güncelle

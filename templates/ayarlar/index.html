@@ -93,6 +93,17 @@
             </div>
         </div>
     </div>
+    {% if session.is_admin %}
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-database me-2"></i>{{ _('Database Settings') }}</h5>
+                <p class="card-text">{{ _('Configure database connection (MSSQL or MySQL).') }}</p>
+                <a href="{{ url_for('ayarlar_veritabani') }}" class="btn btn-primary">{{ _('Database Settings') }}</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 

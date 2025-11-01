@@ -27,7 +27,12 @@ import time
 from collections import Counter, defaultdict
 from io import BytesIO, StringIO
 import csv
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, create_engine, text
+from urllib.parse import quote_plus
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import base64
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -47,12 +52,75 @@ import tempfile
 load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-in-.env')
+
+# Şifreleme için key oluştur (SECRET_KEY'den türet)
+def get_encryption_key():
+    """SECRET_KEY'den encryption key oluştur"""
+    secret_key = app.config['SECRET_KEY']
+    # SECRET_KEY'i bytes'a çevir
+    password = secret_key.encode()
+    # Salt oluştur (SECRET_KEY'in ilk 16 byte'ı)
+    salt = password[:16] if len(password) >= 16 else password + b'0' * (16 - len(password))
+    # PBKDF2 ile key türet
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=100000,
+    )
+    key = base64.urlsafe_b64encode(kdf.derive(password))
+    return key
+
+# Encryption/Decryption fonksiyonları
+def encrypt_password(password):
+    """Şifreyi şifrele"""
+    if not password:
+        return ''
+    try:
+        key = get_encryption_key()
+        fernet = Fernet(key)
+        encrypted = fernet.encrypt(password.encode())
+        # Fernet token'ını direkt döndür (zaten base64 encoded string)
+        return encrypted.decode()
+    except Exception as e:
+        print(f"[ERROR] Şifre şifreleme hatası: {e}")
+        return password  # Hata durumunda plaintext döndür
+
+def decrypt_password(encrypted_password):
+    """Şifreyi deşifrele"""
+    if not encrypted_password:
+        return ''
+    try:
+        # Önce şifrelenmiş mi kontrol et (gAAAAA ile başlayan Fernet token'ı)
+        if encrypted_password.startswith('gAAAAA'):
+            # Şifrelenmiş, deşifrele
+            key = get_encryption_key()
+            fernet = Fernet(key)
+            # Fernet token'ını direkt decrypt et
+            decrypted = fernet.decrypt(encrypted_password.encode())
+            return decrypted.decode()
+        else:
+            # Eski plaintext şifre, direkt döndür (backward compatibility)
+            return encrypted_password
+    except Exception as e:
+        # Deşifreleme başarısızsa, muhtemelen plaintext şifre
+        print(f"[WARN] Şifre deşifreleme hatası (muhtemelen plaintext): {e}")
+        return encrypted_password  # Plaintext olarak döndür
+
 # Allow override via env; fallback to provided local credentials
 _db_uri = os.environ.get('DATABASE_URL')
 if not _db_uri:
     raise RuntimeError('DATABASE_URL is not set in environment (.env). Please define the SQLAlchemy URI.')
+# TrustServerCertificate parametresini ekle (yoksa)
+if 'TrustServerCertificate' not in _db_uri and 'trustservercertificate' not in _db_uri.lower():
+    separator = '&' if '?' in _db_uri else '?'
+    _db_uri = f"{_db_uri}{separator}TrustServerCertificate=yes"
 app.config['SQLALCHEMY_DATABASE_URI'] = _db_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+}
 
 # SMTP/E-posta ayarlari (env ile override edilebilir)
 app.config['SMTP_HOST'] = os.environ.get('SMTP_HOST', '')
@@ -62,8 +130,342 @@ app.config['SMTP_PASS'] = os.environ.get('SMTP_PASS', '')
 app.config['SMTP_USE_TLS'] = os.environ.get('SMTP_USE_TLS', '1') == '1'
 app.config['FROM_EMAIL'] = os.environ.get('FROM_EMAIL', app.config['SMTP_USER'])
 
+# Veritabanı bağlantı yardımcı fonksiyonları
+def build_mssql_uri(server, database, username, password, port=1433, driver='ODBC Driver 17 for SQL Server'):
+    """MSSQL için bağlantı string'i oluştur"""
+    # pyodbc için özel karakterleri encode et
+    password_encoded = quote_plus(password) if password else ''
+    username_encoded = quote_plus(username) if username else ''
+    driver_encoded = quote_plus(driver)  # Driver adındaki boşlukları encode et
+    return f"mssql+pyodbc://{username_encoded}:{password_encoded}@{server}:{port}/{database}?driver={driver_encoded}&TrustServerCertificate=yes"
+
+def build_mysql_uri(server, database, username, password, port=3306, charset='utf8mb4'):
+    """MySQL için bağlantı string'i oluştur"""
+    password_encoded = quote_plus(password) if password else ''
+    username_encoded = quote_plus(username) if username else ''
+    return f"mysql+pymysql://{username_encoded}:{password_encoded}@{server}:{port}/{database}?charset={charset}"
+
+def get_database_uri_from_settings(debug=True):
+    """SistemAyarlar tablosundan veritabanı bağlantı bilgilerini al ve URI oluştur"""
+    try:
+        # Önce .env'den varsayılan bağlantı ile tabloya eriş
+        if debug:
+            print("[CHECK] SistemAyarlar tablosundan veritabani ayarlari okunuyor...")
+        # SistemAyarlar tablosunun var olup olmadığını kontrol et
+        try:
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            table_names = inspector.get_table_names()
+            if debug:
+                print(f"   [INFO] Mevcut tablolar: {', '.join(table_names)}")
+            if 'SistemAyarlar' not in table_names:
+                if debug:
+                    print("   [WARN] SistemAyarlar tablosu bulunamadi!")
+                return None
+        except Exception as inspect_err:
+            if debug:
+                print(f"   [WARN] Tablo kontrolu sirasinda hata: {inspect_err}")
+            return None
+        
+        db_type_setting = SistemAyar.query.filter_by(AyarAdi='database_type').first()
+        if debug:
+            print(f"   database_type ayarı: {db_type_setting.AyarDegeri if db_type_setting else 'BULUNAMADI'}")
+        if not db_type_setting or not db_type_setting.AyarDegeri:
+            if debug:
+                print("   [WARN] database_type ayari bulunamadi veya bos!")
+                # Tüm SistemAyarlar kayıtlarını listele (debug için)
+                all_settings = SistemAyar.query.all()
+                print(f"   [INFO] SistemAyarlar'da toplam {len(all_settings)} kayit var:")
+                for setting in all_settings:
+                    print(f"      - {setting.AyarAdi} = {setting.AyarDegeri[:50] if setting.AyarDegeri and len(setting.AyarDegeri) > 50 else (setting.AyarDegeri or 'NULL')}")
+            return None
+        
+        db_type = db_type_setting.AyarDegeri.strip().lower()
+        if debug:
+            print(f"   [INFO] Veritabani tipi: {db_type}")
+        
+        if db_type == 'mysql':
+            # MySQL ayarlarını al
+            server_setting = SistemAyar.query.filter_by(AyarAdi='database_mysql_host').first()
+            port_setting = SistemAyar.query.filter_by(AyarAdi='database_mysql_port').first()
+            database_setting = SistemAyar.query.filter_by(AyarAdi='database_mysql_database').first()
+            username_setting = SistemAyar.query.filter_by(AyarAdi='database_mysql_username').first()
+            password_setting = SistemAyar.query.filter_by(AyarAdi='database_mysql_password').first()
+            
+            if not all([server_setting, database_setting, username_setting]):
+                return None
+            
+            server = server_setting.AyarDegeri or 'localhost'
+            port = int(port_setting.AyarDegeri) if port_setting and port_setting.AyarDegeri else 3306
+            database = database_setting.AyarDegeri
+            username = username_setting.AyarDegeri
+            password_encrypted = password_setting.AyarDegeri if password_setting else ''
+            password = decrypt_password(password_encrypted)  # Şifreyi deşifrele
+            charset_setting = SistemAyar.query.filter_by(AyarAdi='database_mysql_charset').first()
+            charset = charset_setting.AyarDegeri if charset_setting and charset_setting.AyarDegeri else 'utf8mb4'
+            
+            return build_mysql_uri(server, database, username, password, port, charset)
+        
+        elif db_type == 'mssql':
+            # MSSQL ayarlarını al
+            server_setting = SistemAyar.query.filter_by(AyarAdi='database_mssql_server').first()
+            port_setting = SistemAyar.query.filter_by(AyarAdi='database_mssql_port').first()
+            database_setting = SistemAyar.query.filter_by(AyarAdi='database_mssql_database').first()
+            username_setting = SistemAyar.query.filter_by(AyarAdi='database_mssql_username').first()
+            password_setting = SistemAyar.query.filter_by(AyarAdi='database_mssql_password').first()
+            driver_setting = SistemAyar.query.filter_by(AyarAdi='database_mssql_driver').first()
+            
+            if debug:
+                print(f"   [CHECK] MSSQL ayarlari kontrol ediliyor...")
+                print(f"      server: {server_setting.AyarDegeri if server_setting else 'BULUNAMADI'}")
+                print(f"      database: {database_setting.AyarDegeri if database_setting else 'BULUNAMADI'}")
+                print(f"      username: {username_setting.AyarDegeri if username_setting else 'BULUNAMADI'}")
+                print(f"      password: {'***' if password_setting and password_setting.AyarDegeri else 'BULUNAMADI/YOK'}")
+            
+            if not all([server_setting, database_setting, username_setting]):
+                if debug:
+                    print("   [ERROR] Eksik MSSQL ayarlari! (server, database veya username eksik)")
+                return None
+            
+            server = server_setting.AyarDegeri or 'localhost'
+            port = int(port_setting.AyarDegeri) if port_setting and port_setting.AyarDegeri else 1433
+            database = database_setting.AyarDegeri
+            username = username_setting.AyarDegeri
+            password_encrypted = password_setting.AyarDegeri if password_setting else ''
+            password = decrypt_password(password_encrypted)  # Şifreyi deşifrele
+            driver = driver_setting.AyarDegeri if driver_setting and driver_setting.AyarDegeri else 'ODBC Driver 17 for SQL Server'
+            
+            if debug:
+                print(f"   [OK] MSSQL URI olusturuluyor: {server}:{port}/{database}")
+            return build_mssql_uri(server, database, username, password, port, driver)
+        
+        return None
+    except Exception as e:
+        print(f"Veritabanı ayarları okunamadı: {e}")
+        return None
+
 # Initialize SQLAlchemy with app
+# Önce geçici olarak .env'den bağlantı kur (SistemAyarlar tablosuna erişmek için gerekli)
 db = SQLAlchemy(app)
+
+# Uygulama başlangıcında veritabanı ayarlarını yükle
+# Bu fonksiyon hem `python app.py` hem de `flask run` durumlarında çalışsın
+_app_initialized = False
+
+def initialize_database_from_settings():
+    """Uygulama başlangıcında SistemAyarlar'dan veritabanı bağlantısını yükle"""
+    global _app_initialized
+    
+    if _app_initialized:
+        return  # Zaten başlatıldı
+    
+    print("=" * 60)
+    print("[INIT] initialize_database_from_settings() cagrildi!")
+    print("=" * 60)
+    try:
+        with app.app_context():
+            # Önce SistemAyarlar tablosunun var olup olmadığını kontrol et ve oluştur
+            try:
+                from sqlalchemy import inspect
+                inspector = inspect(db.engine)
+                
+                # SistemAyarlar tablosu yoksa oluştur
+                if 'SistemAyarlar' not in inspector.get_table_names():
+                    db.create_all()
+                    print("[OK] SistemAyarlar tablosu olusturuldu.")
+            except Exception as e:
+                print(f"[WARN] SistemAyarlar tablosu kontrol edilemedi: {e}")
+                import traceback
+                traceback.print_exc()
+                return  # Hata varsa devam etme
+            
+            # Veritabanı ayarlarını oku
+            try:
+                print("[CHECK] SistemAyarlar'dan veritabani ayarlari okunmaya baslaniyor...")
+                db_uri_from_settings = get_database_uri_from_settings(debug=True)
+                if db_uri_from_settings:
+                    # Şifreyi log'da gösterme - mask'la
+                    masked_uri = db_uri_from_settings
+                    # Şifre kısmını mask'la (://username:password@ kısmı)
+                    if '@' in masked_uri and '://' in masked_uri:
+                        parts = masked_uri.split('://')
+                        if len(parts) > 1:
+                            auth_part = parts[1].split('@')[0] if '@' in parts[1] else ''
+                            if ':' in auth_part:
+                                username = auth_part.split(':')[0]
+                                masked_uri = masked_uri.replace(auth_part, f'{username}:***')
+                    print(f"[INFO] Veritabani ayarlari SistemAyarlar'dan yuklendi: {masked_uri[:80]}...")
+                    
+                    # Yeni engine oluştur (mevcut bağlantıları kapat)
+                    try:
+                        db.engine.dispose()
+                        print("[UPDATE] Eski veritabani baglantisi kapatildi.")
+                    except Exception as dispose_err:
+                        print(f"[WARN] Eski baglanti kapatilirken hata: {dispose_err}")
+                    
+                    # Yeni URI ile engine oluştur
+                    new_engine = create_engine(
+                        db_uri_from_settings,
+                        pool_pre_ping=True,
+                        pool_recycle=300
+                    )
+                    
+                    # SQLAlchemy'yi yeni engine ile güncelle
+                    # Flask-SQLAlchemy'nin internal state'ini güncelle
+                    # Önce mevcut session'ları temizle
+                    try:
+                        db.session.close()
+                        db.session.remove()
+                    except:
+                        pass
+                    
+                    # Engine'i ve config'i güncelle
+                    # Flask-SQLAlchemy 3.x'te db.engine bir property ve setter yok
+                    # Bu yüzden internal engine cache'ini ve config'i güncellememiz gerekiyor
+                    
+                    # Önce config'i güncelle
+                    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri_from_settings
+                    
+                    # Flask-SQLAlchemy'nin internal engine cache'ini güncelle
+                    # Flask-SQLAlchemy'nin _engine attribute'unu direkt set edemiyoruz
+                    # Bunun yerine get_engine metodunu override ediyoruz
+                    original_get_engine = db.get_engine
+                    def custom_get_engine(app=None, bind=None):
+                        # Flask-SQLAlchemy'nin get_engine metodu bazen app ve bind parametreleri alır
+                        return new_engine
+                    db.get_engine = custom_get_engine
+                    
+                    # Flask-SQLAlchemy'nin internal _engine attribute'unu da güncelle (eğer varsa)
+                    # Ama önce eski engine'i dispose et
+                    try:
+                        if hasattr(db, '_engine'):
+                            # Eski engine'i dispose et
+                            try:
+                                old_engine = db._engine
+                                if old_engine:
+                                    old_engine.dispose()
+                            except:
+                                pass
+                            # Yeni engine'i set et (bu çalışmayabilir ama deneyelim)
+                            db._engine = new_engine
+                    except:
+                        pass
+                    
+                    # Flask-SQLAlchemy'nin engine_for dict'ini de temizle
+                    if hasattr(db, '_engine_for'):
+                        db._engine_for = {}
+                        db._engine_for[None] = new_engine
+                    
+                    # Flask-SQLAlchemy'nin session yapısını yeniden başlat
+                    # Flask-SQLAlchemy 3.x için daha kapsamlı güncelleme
+                    try:
+                        from sqlalchemy.orm import scoped_session, sessionmaker
+                        from sqlalchemy.orm import Session
+                        
+                        # Mevcut binding'leri temizle
+                        db.Model.metadata.bind = new_engine
+                        # Tabloları kontrol et (oluşturma değil, sadece binding)
+                        
+                        # Flask-SQLAlchemy'nin get_engine metodunu override et (zaten yukarıda yaptık)
+                        # Bu Flask-SQLAlchemy 3.x için kritik
+                        # Yukarıda zaten get_engine override edildi, burada tekrar yapmaya gerek yok
+                        
+                        # Session maker'ı da güncelle (eğer varsa)
+                        if hasattr(db, '_make_session_factory'):
+                            def new_session_factory():
+                                return sessionmaker(bind=new_engine, class_=Session)()
+                            db._make_session_factory = new_session_factory
+                        
+                        # Session registry'yi güncelle
+                        # Flask-SQLAlchemy 3.x için session yapısını yeniden oluştur
+                        try:
+                            # Mevcut session'ı kapat ve temizle
+                            db.session.close()
+                            db.session.remove()
+                            
+                            # Flask-SQLAlchemy'nin internal session maker'ını güncelle
+                            # Flask-SQLAlchemy 3.x'te session, scoped_session kullanır
+                            # Ancak doğrudan registry'yi değiştirmek yerine, 
+                            # engine'i değiştirdiğimiz için Flask-SQLAlchemy otomatik olarak yeni engine'i kullanmalı
+                            # Ancak güvence için get_engine metodunu override ettik
+                            
+                            # Eğer Flask-SQLAlchemy'nin session registry'si varsa, onu da güncelle
+                            if hasattr(db.session, 'registry'):
+                                try:
+                                    # Eski registry'yi kapat
+                                    old_registry = db.session.registry
+                                    if hasattr(old_registry, 'close_all'):
+                                        old_registry.close_all()
+                                except:
+                                    pass
+                                
+                                # Yeni registry oluştur - ama Flask-SQLAlchemy bunu kendi yönetir
+                                # Bu yüzden sadece engine'i değiştirmek yeterli olmalı
+                                
+                        except Exception as session_update_err:
+                            print(f"[WARN] Session registry guncellenirken hata: {session_update_err}")
+                            # Devam et, engine güncellemesi yeterli olabilir
+                        
+                        print("[OK] Veritabani baglantisi SistemAyarlar'dan guncellendi.")
+                        print(f"   [LINK] Yeni URI: {db_uri_from_settings[:60]}...")
+                        print("   [OK] SQLAlchemy engine, session registry ve metadata guncellendi.")
+                    except Exception as session_err:
+                        print(f"[WARN] Engine guncellenirken hata: {session_err}")
+                        import traceback
+                        traceback.print_exc()
+                        # Yine de devam et
+                    
+                    # Bağlantıyı test et
+                    try:
+                        with new_engine.connect() as conn:
+                            result = conn.execute(text("SELECT 1 as test"))
+                            row = result.fetchone()
+                            if row and row[0] == 1:
+                                print("[OK] Veritabani baglantisi basariyla test edildi!")
+                            else:
+                                print("[WARN] Veritabani baglanti testi beklenmeyen sonuc dondurdu.")
+                    except Exception as test_err:
+                        print(f"[ERROR] Veritabani baglanti testi basarisiz: {test_err}")
+                        import traceback
+                        traceback.print_exc()
+                        # Test başarısızsa eski bağlantıya geri dön
+                        print("[WARN] SistemAyarlar baglantisi basarisiz, .env baglantisina geri donuluyor...")
+                        # Eski URI'yi geri yükle
+                        old_uri = _db_uri  # Başlangıçta kaydedilen .env URI'si
+                        app.config['SQLALCHEMY_DATABASE_URI'] = old_uri
+                        old_engine = create_engine(
+                            old_uri,
+                            pool_pre_ping=True,
+                            pool_recycle=300
+                        )
+                        # Eski engine'i geri yükle (get_engine override'ını da geri al)
+                        def restore_get_engine(app=None, bind=None):
+                            # Flask-SQLAlchemy'nin get_engine metodu bazen app ve bind parametreleri alır
+                            return old_engine
+                        db.get_engine = restore_get_engine
+                        if hasattr(db, '_engine_for'):
+                            db._engine_for = {}
+                            db._engine_for[None] = old_engine
+                        if hasattr(db, '_engine'):
+                            try:
+                                db._engine = old_engine
+                            except:
+                                pass
+                else:
+                    print("[INFO] SistemAyarlar'da veritabani ayari yok, .env'deki ayarlar kullaniliyor.")
+            except Exception as read_err:
+                print(f"[WARN] SistemAyarlar'dan veritabani ayarlari okunamadi: {read_err}")
+                import traceback
+                traceback.print_exc()
+    except Exception as e:
+        print(f"[ERROR] Veritabani ayarlari yuklenirken hata: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        _app_initialized = True
+        print("=" * 60)
+        print("[OK] initialize_database_from_settings() tamamlandi!")
+        print("=" * 60 + "\n")
 
 # Asenkron loglama sistemi
 log_queue = queue.Queue()
@@ -284,6 +686,17 @@ def is_password_strong(password: str) -> bool:
         return False
     return True
 
+# Flask uygulaması ilk request'te başlatılsın (flask run için)
+@app.before_request
+def ensure_app_initialized():
+    """İlk request'te veritabanı ayarlarını yükle (flask run için)"""
+    global _app_initialized
+    if not _app_initialized:
+        print("\n" + "=" * 60)
+        print("[WEB] Ilk request geldi - SistemAyarlar yukleniyor...")
+        print("=" * 60 + "\n")
+        initialize_database_from_settings()
+
 @app.before_request
 def enforce_password_change():
     # Zorunlu parola değişimi: giriş yapılmışsa ve bayrak açıksa, sadece izinli endpointlere erişsin
@@ -337,32 +750,47 @@ def login_required(f):
                         mevcut_kayit = AktifOturum.query.filter_by(KullaniciID=user_id).first()
                         if mevcut_kayit is None:
                             # Kayıt yoksa otomatik yeniden oluştur (tarayıcı çerezi duruyor ama DB kaydı silinmiş olabilir)
-                            try:
-                                yeni = AktifOturum(
-                                    KullaniciID=user_id,
-                                    SessionToken=session_token,
-                                    ClientIP=get_client_ip(),
-                                    UserAgent=request.headers.get('User-Agent', '')
-                                )
-                                db.session.add(yeni)
-                                db.session.commit()
-                            except Exception as db_error:
-                                # UNIQUE constraint hatası - başka bir kayıt oluşturulmuş
-                                db.session.rollback()
-                                print(f"Oturum kaydı oluşturma hatası: {db_error}")
+                            # Önce mevcut kaydı kontrol et - UNIQUE constraint hatasını önle
+                            mevcut_kayit = AktifOturum.query.filter_by(KullaniciID=user_id).first()
+                            if mevcut_kayit:
                                 # Mevcut kaydı güncelle
-                                mevcut_kayit = AktifOturum.query.filter_by(KullaniciID=user_id).first()
-                                if mevcut_kayit:
-                                    mevcut_kayit.SessionToken = session_token
-                                    mevcut_kayit.ClientIP = get_client_ip()
-                                    mevcut_kayit.UserAgent = request.headers.get('User-Agent', '')
-                                    mevcut_kayit.SonGorulmeZamani = datetime.now()
-                                    try:
-                                        db.session.commit()
-                                    except Exception as commit_error:
-                                        print(f"Oturum güncelleme hatası: {commit_error}")
-                                        db.session.rollback()
-                                # Güncelleme yapıldı, devam et (return yapma)
+                                mevcut_kayit.SessionToken = session_token
+                                mevcut_kayit.ClientIP = get_client_ip()
+                                mevcut_kayit.UserAgent = request.headers.get('User-Agent', '')
+                                mevcut_kayit.SonGorulmeZamani = datetime.now()
+                                try:
+                                    db.session.commit()
+                                except Exception as commit_error:
+                                    print(f"Oturum güncelleme hatası: {commit_error}")
+                                    db.session.rollback()
+                            else:
+                                # Yeni kayıt oluştur
+                                try:
+                                    yeni = AktifOturum(
+                                        KullaniciID=user_id,
+                                        SessionToken=session_token,
+                                        ClientIP=get_client_ip(),
+                                        UserAgent=request.headers.get('User-Agent', '')
+                                    )
+                                    db.session.add(yeni)
+                                    db.session.commit()
+                                except Exception as db_error:
+                                    # UNIQUE constraint hatası - race condition olabilir
+                                    db.session.rollback()
+                                    # Tekrar kontrol et ve güncelle
+                                    mevcut_kayit = AktifOturum.query.filter_by(KullaniciID=user_id).first()
+                                    if mevcut_kayit:
+                                        mevcut_kayit.SessionToken = session_token
+                                        mevcut_kayit.ClientIP = get_client_ip()
+                                        mevcut_kayit.UserAgent = request.headers.get('User-Agent', '')
+                                        mevcut_kayit.SonGorulmeZamani = datetime.now()
+                                        try:
+                                            db.session.commit()
+                                        except Exception as commit_error:
+                                            print(f"Oturum güncelleme hatası (2. deneme): {commit_error}")
+                                            db.session.rollback()
+                                    else:
+                                        print(f"Oturum kaydı oluşturma hatası: {db_error}")
                         else:
                             # Mevcut kayıt var ama token farklı
                             # Aynı IP ve User-Agent ise güncelle (race condition olabilir)
@@ -833,6 +1261,19 @@ class FirmaWhatsAppAyar(db.Model):
     
     def __repr__(self):
         return f'<FirmaWhatsAppAyar {self.WhatsAppAyarID} firma={self.FirmaID}>'
+
+# Sistem Ayarları (Veritabanı Konfigürasyonu)
+class SistemAyar(db.Model):
+    __tablename__ = 'SistemAyarlar'
+    
+    AyarID = db.Column(db.Integer, primary_key=True)
+    AyarAdi = db.Column(db.String(100), unique=True, nullable=False)  # 'database_type', 'database_mssql_url', 'database_mysql_url'
+    AyarDegeri = db.Column(db.Text, nullable=True)  # JSON veya string değer
+    Aciklama = db.Column(db.NVARCHAR(500))
+    GuncellemeTarihi = db.Column(db.DateTime, default=lambda: datetime.now(), onupdate=lambda: datetime.now())
+    
+    def __repr__(self):
+        return f'<SistemAyar {self.AyarAdi}={self.AyarDegeri}>'
 
 # Müşteri Kategorileri
 class MusteriKategori(db.Model):
@@ -1940,16 +2381,28 @@ def login():
             session['ayarlar_modulu'] = user.AyarlarModulu
             session['log_modulu'] = user.LogModulu
 
-            # Oturum kaydı oluştur
+            # Oturum kaydı oluştur - önce mevcut kaydı kontrol et
             token = secrets.token_hex(16)
             session['session_token'] = token
-            kayit = AktifOturum(
-                KullaniciID=user.KullaniciID,
-                SessionToken=token,
-                ClientIP=get_client_ip(),
-                UserAgent=request.headers.get('User-Agent', '')
-            )
-            db.session.add(kayit)
+            
+            # Mevcut kaydı kontrol et
+            mevcut_kayit = AktifOturum.query.filter_by(KullaniciID=user.KullaniciID).first()
+            if mevcut_kayit:
+                # Mevcut kaydı güncelle
+                mevcut_kayit.SessionToken = token
+                mevcut_kayit.ClientIP = get_client_ip()
+                mevcut_kayit.UserAgent = request.headers.get('User-Agent', '')
+                mevcut_kayit.SonGorulmeZamani = datetime.now()
+                mevcut_kayit.GirisZamani = datetime.now()  # Yeni giriş zamanı
+            else:
+                # Yeni kayıt oluştur
+                kayit = AktifOturum(
+                    KullaniciID=user.KullaniciID,
+                    SessionToken=token,
+                    ClientIP=get_client_ip(),
+                    UserAgent=request.headers.get('User-Agent', '')
+                )
+                db.session.add(kayit)
             db.session.commit()
             
             # Zorunlu parola değişimi: 123 ise yönlendir
@@ -2015,21 +2468,34 @@ def force_logout():
     session['ayarlar_modulu'] = pending_ayarlar_modulu
     session['log_modulu'] = pending_log_modulu
     
-    # Oturum kaydı oluştur
+    # Oturum kaydı oluştur - önce mevcut kaydı kontrol et
     token = secrets.token_hex(16)
     session['session_token'] = token
-    kayit = AktifOturum(
-        KullaniciID=user_id,
-        SessionToken=token,
-        ClientIP=get_client_ip(),
-        UserAgent=request.headers.get('User-Agent', '')
-    )
-    db.session.add(kayit)
+    
+    # Mevcut kaydı kontrol et (yukarıda silinmiş olabilir ama race condition için tekrar kontrol et)
+    mevcut_kayit = AktifOturum.query.filter_by(KullaniciID=user_id).first()
+    if mevcut_kayit:
+        # Mevcut kaydı güncelle
+        mevcut_kayit.SessionToken = token
+        mevcut_kayit.ClientIP = get_client_ip()
+        mevcut_kayit.UserAgent = request.headers.get('User-Agent', '')
+        mevcut_kayit.SonGorulmeZamani = datetime.now()
+        mevcut_kayit.GirisZamani = datetime.now()  # Yeni giriş zamanı
+    else:
+        # Yeni kayıt oluştur
+        kayit = AktifOturum(
+            KullaniciID=user_id,
+            SessionToken=token,
+            ClientIP=get_client_ip(),
+            UserAgent=request.headers.get('User-Agent', '')
+        )
+        db.session.add(kayit)
     
     try:
         db.session.commit()
     except Exception as e:
         db.session.rollback()
+        print(f"Oturum kaydı hatası (force-logout): {e}")
         flash('Oturum oluşturma hatası', 'error')
         return redirect(url_for('login'))
     
@@ -3402,6 +3868,277 @@ def ayarlar_gorev_durumlar():
     firma_id = session['firma_id']
     durumlar = TodoDurum.query.filter_by(FirmaID=firma_id).order_by(TodoDurum.Sira, TodoDurum.DurumAdi).all()
     return render_template('ayarlar/gorev_durumlar.html', durumlar=durumlar)
+
+# Veritabanı Ayarları
+@app.route('/ayarlar/veritabani', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def ayarlar_veritabani():
+    """Veritabanı ayarları sayfası ve kaydetme"""
+    # Tablo yoksa oluştur
+    try:
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        if 'SistemAyarlar' not in inspector.get_table_names():
+            db.create_all()
+    except Exception:
+        pass
+    
+    if request.method == 'POST':
+        try:
+            db_type = request.form.get('database_type', 'mssql').strip().lower()
+            
+            # Mevcut ayarları güncelle veya yeni oluştur
+            def save_setting(ayar_adi, deger, aciklama=None):
+                setting = SistemAyar.query.filter_by(AyarAdi=ayar_adi).first()
+                if setting:
+                    old_value = setting.AyarDegeri
+                    setting.AyarDegeri = deger if deger is not None else ''
+                    if aciklama:
+                        setting.Aciklama = aciklama
+                    # Değişiklik oldu mu kontrol et
+                    if old_value != setting.AyarDegeri:
+                        print(f"📝 Ayar güncellendi: {ayar_adi}")
+                else:
+                    setting = SistemAyar(AyarAdi=ayar_adi, AyarDegeri=deger if deger is not None else '', Aciklama=aciklama)
+                    db.session.add(setting)
+                    print(f"➕ Yeni ayar eklendi: {ayar_adi}")
+            
+            # Veritabanı tipini kaydet
+            save_setting('database_type', db_type, 'Veritabanı tipi (mssql veya mysql)')
+            
+            if db_type == 'mssql':
+                save_setting('database_mssql_server', request.form.get('mssql_server', ''), 'MSSQL sunucu adresi')
+                save_setting('database_mssql_port', request.form.get('mssql_port', '1433'), 'MSSQL port numarası')
+                save_setting('database_mssql_database', request.form.get('mssql_database', ''), 'MSSQL veritabanı adı')
+                save_setting('database_mssql_username', request.form.get('mssql_username', ''), 'MSSQL kullanıcı adı')
+                mssql_password = request.form.get('mssql_password', '').strip()
+                # Şifre kontrolü: boş değilse kaydet, boşsa mevcut şifreyi koru
+                if mssql_password:
+                    # Şifreyi şifreleyerek kaydet
+                    encrypted_password = encrypt_password(mssql_password)
+                    save_setting('database_mssql_password', encrypted_password, 'MSSQL şifresi (şifrelenmiş)')
+                    print(f"[OK] MSSQL sifre kaydedildi (şifrelenmiş, uzunluk: {len(encrypted_password)})")
+                else:
+                    # Mevcut şifre ayarını kontrol et
+                    existing_password = SistemAyar.query.filter_by(AyarAdi='database_mssql_password').first()
+                    if existing_password:
+                        print(f"[INFO] MSSQL sifre bos gonderildi, mevcut sifre korunuyor")
+                    else:
+                        print(f"[WARN] MSSQL sifre bos ve mevcut ayar yok, sifre kaydedilmedi")
+                save_setting('database_mssql_driver', request.form.get('mssql_driver', 'ODBC Driver 17 for SQL Server'), 'MSSQL ODBC Driver')
+            
+            elif db_type == 'mysql':
+                save_setting('database_mysql_host', request.form.get('mysql_host', ''), 'MySQL sunucu adresi')
+                save_setting('database_mysql_port', request.form.get('mysql_port', '3306'), 'MySQL port numarası')
+                save_setting('database_mysql_database', request.form.get('mysql_database', ''), 'MySQL veritabanı adı')
+                save_setting('database_mysql_username', request.form.get('mysql_username', ''), 'MySQL kullanıcı adı')
+                mysql_password = request.form.get('mysql_password', '').strip()
+                # Şifre kontrolü: boş değilse kaydet, boşsa mevcut şifreyi koru
+                if mysql_password:
+                    # Şifreyi şifreleyerek kaydet
+                    encrypted_password = encrypt_password(mysql_password)
+                    save_setting('database_mysql_password', encrypted_password, 'MySQL şifresi (şifrelenmiş)')
+                    print(f"[OK] MySQL sifre kaydedildi (şifrelenmiş, uzunluk: {len(encrypted_password)})")
+                else:
+                    # Mevcut şifre ayarını kontrol et
+                    existing_password = SistemAyar.query.filter_by(AyarAdi='database_mysql_password').first()
+                    if existing_password:
+                        print(f"[INFO] MySQL sifre bos gonderildi, mevcut sifre korunuyor")
+                    else:
+                        print(f"[WARN] MySQL sifre bos ve mevcut ayar yok, sifre kaydedilmedi")
+                save_setting('database_mysql_charset', request.form.get('mysql_charset', 'utf8mb4'), 'MySQL charset')
+            
+            db.session.commit()
+            flash(_('Database settings saved successfully. Please restart the application for changes to take effect.'), 'success')
+            return redirect(url_for('ayarlar_veritabani'))
+        except Exception as e:
+            db.session.rollback()
+            import traceback
+            error_detail = traceback.format_exc()
+            print(f"Veritabanı ayarları kaydetme hatası: {error_detail}")
+            flash(f'{_("Error saving database settings:")} {str(e)}', 'error')
+    
+    # GET isteği - mevcut ayarları yükle
+    try:
+        # Tablo yoksa oluştur
+        try:
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            if 'SistemAyarlar' not in inspector.get_table_names():
+                db.create_all()
+        except Exception:
+            pass
+        
+        db_type_setting = SistemAyar.query.filter_by(AyarAdi='database_type').first()
+        db_type = db_type_setting.AyarDegeri.strip().lower() if db_type_setting and db_type_setting.AyarDegeri else 'mssql'
+        
+        # MSSQL ayarları
+        mssql_server = SistemAyar.query.filter_by(AyarAdi='database_mssql_server').first()
+        mssql_port = SistemAyar.query.filter_by(AyarAdi='database_mssql_port').first()
+        mssql_database = SistemAyar.query.filter_by(AyarAdi='database_mssql_database').first()
+        mssql_username = SistemAyar.query.filter_by(AyarAdi='database_mssql_username').first()
+        mssql_driver = SistemAyar.query.filter_by(AyarAdi='database_mssql_driver').first()
+        
+        # MySQL ayarları
+        mysql_host = SistemAyar.query.filter_by(AyarAdi='database_mysql_host').first()
+        mysql_port = SistemAyar.query.filter_by(AyarAdi='database_mysql_port').first()
+        mysql_database = SistemAyar.query.filter_by(AyarAdi='database_mysql_database').first()
+        mysql_username = SistemAyar.query.filter_by(AyarAdi='database_mysql_username').first()
+        mysql_charset = SistemAyar.query.filter_by(AyarAdi='database_mysql_charset').first()
+        
+        return render_template('ayarlar/veritabani.html',
+                             db_type=db_type,
+                             mssql_server=mssql_server.AyarDegeri if mssql_server else '',
+                             mssql_port=mssql_port.AyarDegeri if mssql_port else '1433',
+                             mssql_database=mssql_database.AyarDegeri if mssql_database else '',
+                             mssql_username=mssql_username.AyarDegeri if mssql_username else '',
+                             mssql_driver=mssql_driver.AyarDegeri if mssql_driver else 'ODBC Driver 17 for SQL Server',
+                             mysql_host=mysql_host.AyarDegeri if mysql_host else '',
+                             mysql_port=mysql_port.AyarDegeri if mysql_port else '3306',
+                             mysql_database=mysql_database.AyarDegeri if mysql_database else '',
+                             mysql_username=mysql_username.AyarDegeri if mysql_username else '',
+                             mysql_charset=mysql_charset.AyarDegeri if mysql_charset else 'utf8mb4')
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"Veritabanı ayarları yükleme hatası: {error_detail}")
+        flash(f'{_("Error loading database settings:")} {str(e)}', 'error')
+        return render_template('ayarlar/veritabani.html', db_type='mssql')
+
+@app.route('/ayarlar/veritabani/durum', methods=['GET'])
+@login_required
+@admin_required
+def ayarlar_veritabani_durum():
+    """Mevcut veritabanı bağlantı durumunu kontrol et"""
+    try:
+        # SistemAyarlar'dan ayarları oku
+        db_type_setting = SistemAyar.query.filter_by(AyarAdi='database_type').first()
+        db_type = db_type_setting.AyarDegeri.strip().lower() if db_type_setting and db_type_setting.AyarDegeri else None
+        
+        # Mevcut bağlantı URI'sini al (gizli bilgileri gizle)
+        current_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+        # Şifreleri gizle
+        if '@' in current_uri and '://' in current_uri:
+            parts = current_uri.split('://')
+            if len(parts) > 1:
+                auth_part = parts[1].split('@')[0] if '@' in parts[1] else ''
+                if ':' in auth_part:
+                    username, password = auth_part.split(':', 1)
+                    masked_uri = current_uri.replace(f':{password}@', ':***@', 1)
+                else:
+                    masked_uri = current_uri
+            else:
+                masked_uri = current_uri
+        else:
+            masked_uri = current_uri
+        
+        # .env'den DATABASE_URL'i kontrol et
+        env_db_url = os.environ.get('DATABASE_URL', '')
+        masked_env_uri = env_db_url
+        if '@' in env_db_url and '://' in env_db_url:
+            parts = env_db_url.split('://')
+            if len(parts) > 1:
+                auth_part = parts[1].split('@')[0] if '@' in parts[1] else ''
+                if ':' in auth_part:
+                    username, password = auth_part.split(':', 1)
+                    masked_env_uri = env_db_url.replace(f':{password}@', ':***@', 1)
+        
+        # SistemAyarlar'dan URI oluştur (debug=False çünkü bu API route'dan çağrılıyor)
+        settings_uri = get_database_uri_from_settings(debug=False)
+        masked_settings_uri = None
+        if settings_uri:
+            # Şifreyi gizle
+            if '@' in settings_uri and '://' in settings_uri:
+                parts = settings_uri.split('://')
+                if len(parts) > 1:
+                    auth_part = parts[1].split('@')[0] if '@' in parts[1] else ''
+                    if ':' in auth_part:
+                        username, password = auth_part.split(':', 1)
+                        masked_settings_uri = settings_uri.replace(f':{password}@', ':***@', 1)
+                    else:
+                        masked_settings_uri = settings_uri
+                else:
+                    masked_settings_uri = settings_uri
+            else:
+                masked_settings_uri = settings_uri
+        
+        # Hangi ayarların aktif olduğunu belirle
+        # URI'leri karşılaştırırken şifre kısmını çıkararak karşılaştır
+        def normalize_uri_for_comparison(uri):
+            """URI'yi karşılaştırma için normalize et (şifreyi çıkar)"""
+            if '@' in uri and '://' in uri:
+                parts = uri.split('://')
+                if len(parts) > 1:
+                    auth_part = parts[1].split('@')[0] if '@' in parts[1] else ''
+                    if ':' in auth_part:
+                        username = auth_part.split(':')[0]
+                        return uri.replace(auth_part, username + ':***')
+            return uri
+        
+        current_uri_normalized = normalize_uri_for_comparison(current_uri)
+        settings_uri_normalized = normalize_uri_for_comparison(settings_uri) if settings_uri else None
+        
+        is_using_settings = settings_uri and current_uri_normalized == settings_uri_normalized
+        is_using_env = not is_using_settings and env_db_url
+        
+        return jsonify({
+            'current_database_type': db_type,
+            'current_uri': masked_uri,
+            'env_uri': masked_env_uri,
+            'settings_uri': masked_settings_uri,
+            'is_using_settings': is_using_settings,
+            'is_using_env': is_using_env,
+            'settings_available': settings_uri is not None
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/ayarlar/veritabani/test', methods=['POST'])
+@login_required
+@admin_required
+def ayarlar_veritabani_test():
+    """Veritabanı bağlantısını test et"""
+    try:
+        db_type = request.form.get('database_type', 'mssql').strip().lower()
+        
+        if db_type == 'mssql':
+            server = request.form.get('mssql_server', 'localhost')
+            port = int(request.form.get('mssql_port', '1433'))
+            database = request.form.get('mssql_database', '')
+            username = request.form.get('mssql_username', '')
+            password = request.form.get('mssql_password', '')
+            driver = request.form.get('mssql_driver', 'ODBC Driver 17 for SQL Server')
+            
+            if not all([server, database, username]):
+                return jsonify({'success': False, 'error': _('Missing required fields')})
+            
+            test_uri = build_mssql_uri(server, database, username, password, port, driver)
+            engine = create_engine(test_uri, pool_pre_ping=True)
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            
+        elif db_type == 'mysql':
+            host = request.form.get('mysql_host', 'localhost')
+            port = int(request.form.get('mysql_port', '3306'))
+            database = request.form.get('mysql_database', '')
+            username = request.form.get('mysql_username', '')
+            password = request.form.get('mysql_password', '')
+            charset = request.form.get('mysql_charset', 'utf8mb4')
+            
+            if not all([host, database, username]):
+                return jsonify({'success': False, 'error': _('Missing required fields')})
+            
+            test_uri = build_mysql_uri(host, database, username, password, port, charset)
+            engine = create_engine(test_uri, pool_pre_ping=True)
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+        else:
+            return jsonify({'success': False, 'error': _('Invalid database type')})
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 # Görev Durumları API
 @app.route('/api/gorev-durumlar', methods=['POST'])
@@ -8420,11 +9157,22 @@ def gorevler():
                         if t.HatirlatmaTarihi and (not t.durum or t.durum.DurumAdi != 'Tamamlandı')
                         and bugun <= t.HatirlatmaTarihi.date() <= uc_gun_sonra]
     
+    # Bu ayın ilk ve son gününü hesapla
+    from datetime import date
+    today = date.today()
+    first_day_of_month = date(today.year, today.month, 1)
+    if today.month == 12:
+        last_day_of_month = date(today.year + 1, 1, 1) - timedelta(days=1)
+    else:
+        last_day_of_month = date(today.year, today.month + 1, 1) - timedelta(days=1)
+    
     return render_template('gorevler.html', 
                          gorevler=user_todos,
                          toplam_gorev=toplam_gorev,
                          durum_istatistikleri=durum_istatistikleri,
-                         yaklasan_gorevler=yaklasan_gorevler)
+                         yaklasan_gorevler=yaklasan_gorevler,
+                         first_day_of_month=first_day_of_month,
+                         last_day_of_month=last_day_of_month)
 
 @app.route('/gorev-raporlar')
 @login_required
@@ -9660,9 +10408,40 @@ def reset_password(token):
             flash(_('User not found.'), 'error')
             return redirect(url_for('login'))
 
+# Avatar resimleri için özel route - 404'ü önlemek için
+@app.route('/avatar/<int:user_id>')
+def serve_user_avatar(user_id):
+    """Kullanıcı avatar resmini gönder, yoksa varsayılan avatar'ı gönder"""
+    import os
+    avatar_path = os.path.join('static', 'uploads', 'users', f'user_{user_id}.jpg')
+    
+    # Avatar dosyası var mı kontrol et
+    if os.path.exists(avatar_path) and os.path.isfile(avatar_path):
+        return send_file(avatar_path, mimetype='image/jpeg')
+    else:
+        # Varsayılan avatar'ı gönder
+        default_avatar = os.path.join('static', 'img', 'avatar-default.svg')
+        if os.path.exists(default_avatar):
+            return send_file(default_avatar, mimetype='image/svg+xml')
+        else:
+            # Varsayılan avatar da yoksa 404 döndür
+            from flask import abort
+            abort(404)
+
 if __name__ == '__main__':
+    print("\n" + "=" * 60)
+    print("[START] Flask uygulamasi baslatiliyor...")
+    print("=" * 60 + "\n")
+    
     with app.app_context():
+        print("[LOAD] Veritabani tablolari olusturuluyor/kontrol ediliyor...")
         db.create_all()
+        print("[OK] Tablo kontrolu tamamlandi.\n")
+        
+        # Veritabanı ayarlarını SistemAyarlar'dan yükle
+        print("[INFO] SistemAyarlar'dan veritabani ayarlari yukleniyor...")
+        initialize_database_from_settings()
+        print("[OK] Veritabani ayarlari yukleme islemi tamamlandi.\n")
     # Hatirlatma worker'i arka planda baslat
     worker_thread = threading.Thread(target=reminder_worker, daemon=True)
     worker_thread.start()

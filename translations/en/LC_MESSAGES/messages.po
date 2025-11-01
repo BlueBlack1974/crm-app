@@ -70,6 +70,15 @@ msgstr "Created"
 msgid "Bitiş"
 msgstr "End"
 
+msgid "Tarih Aralığı"
+msgstr "Date Range"
+
+msgid "Başlangıç"
+msgstr "Start"
+
+msgid "Bu Ay"
+msgstr "This Month"
+
 msgid "Müşteri"
 msgstr "Customer"
 # English translations for Crandyx CRM Project.
