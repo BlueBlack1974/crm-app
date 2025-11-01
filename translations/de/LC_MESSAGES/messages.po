@@ -3782,3 +3782,183 @@ msgstr "Nachrichtenvariablen"
 #~ "Die Termindauer muss ein Vielfaches der"
 #~ " Minuten des ausgewählten Buchs sein"
 
+msgid "Database Settings"
+msgstr "Datenbankeinstellungen"
+
+msgid "Configure database connection. Select MSSQL or MySQL and enter connection details."
+msgstr "Datenbankverbindung konfigurieren. Wählen Sie MSSQL oder MySQL und geben Sie Verbindungsdetails ein."
+
+msgid "Database Configuration"
+msgstr "Datenbankkonfiguration"
+
+msgid "Database Type"
+msgstr "Datenbanktyp"
+
+msgid "Select the database type you want to use."
+msgstr "Wählen Sie den Datenbanktyp aus, den Sie verwenden möchten."
+
+msgid "MSSQL Connection Settings"
+msgstr "MSSQL-Verbindungseinstellungen"
+
+msgid "Server"
+msgstr "Server"
+
+msgid "Example: localhost, server.domain.com, or localhost\\SQLEXPRESS"
+msgstr "Beispiel: localhost, server.domain.com oder localhost\\SQLEXPRESS"
+
+msgid "Port"
+msgstr "Port"
+
+msgid "Default: 1433"
+msgstr "Standard: 1433"
+
+msgid "Database Name"
+msgstr "Datenbankname"
+
+msgid "ODBC Driver"
+msgstr "ODBC-Treiber"
+
+msgid "Username"
+msgstr "Benutzername"
+
+msgid "Password"
+msgstr "Passwort"
+
+msgid "Enter database password"
+msgstr "Datenbankpasswort eingeben"
+
+msgid "Enter the database user password. Required for connection."
+msgstr "Geben Sie das Datenbankbenutzerpasswort ein. Erforderlich für die Verbindung."
+
+msgid "MySQL Connection Settings"
+msgstr "MySQL-Verbindungseinstellungen"
+
+msgid "Host"
+msgstr "Host"
+
+msgid "Example: localhost, 127.0.0.1, or mysql.example.com"
+msgstr "Beispiel: localhost, 127.0.0.1 oder mysql.example.com"
+
+msgid "Default: 3306"
+msgstr "Standard: 3306"
+
+msgid "Charset"
+msgstr "Zeichensatz"
+
+msgid "Current Database Connection Status"
+msgstr "Aktueller Datenbankverbindungsstatus"
+
+msgid "Checking connection status..."
+msgstr "Verbindungsstatus wird geprüft..."
+
+msgid "Instructions:"
+msgstr "Anweisungen:"
+
+msgid "Fill in all required fields (marked with *)"
+msgstr "Füllen Sie alle erforderlichen Felder aus (mit * gekennzeichnet)"
+
+msgid "Click \"Test Connection\" to verify your settings"
+msgstr "Klicken Sie auf \"Verbindung testen\", um Ihre Einstellungen zu überprüfen"
+
+msgid "If test is successful, click \"Save Settings\" to save"
+msgstr "Wenn der Test erfolgreich ist, klicken Sie auf \"Einstellungen speichern\" zum Speichern"
+
+msgid "Restart the application after saving for changes to take effect"
+msgstr "Starten Sie die Anwendung nach dem Speichern neu, damit die Änderungen wirksam werden"
+
+msgid "Also export settings to .env file"
+msgstr "Einstellungen auch in .env-Datei exportieren"
+
+msgid "This will update the .env file with your current database settings. A backup will be created automatically."
+msgstr "Dies aktualisiert die .env-Datei mit Ihren aktuellen Datenbankeinstellungen. Ein Backup wird automatisch erstellt."
+
+msgid "Test Connection"
+msgstr "Verbindung testen"
+
+msgid "Save Settings"
+msgstr "Einstellungen speichern"
+
+msgid "You can save settings even without testing, but testing is recommended to ensure the connection works."
+msgstr "Sie können Einstellungen auch ohne Test speichern, aber ein Test wird empfohlen, um sicherzustellen, dass die Verbindung funktioniert."
+
+msgid "Active Connection:"
+msgstr "Aktive Verbindung:"
+
+msgid "Using System Settings"
+msgstr "Systemeinstellungen verwenden"
+
+msgid "Using .env File"
+msgstr ".env-Datei verwenden"
+
+msgid "Unknown"
+msgstr "Unbekannt"
+
+msgid "Current Connection URI:"
+msgstr "Aktuelle Verbindungs-URI:"
+
+msgid "Not available"
+msgstr "Nicht verfügbar"
+
+msgid "System Settings URI:"
+msgstr "Systemeinstellungen URI:"
+
+msgid "No database settings found in System Settings."
+msgstr "Keine Datenbankeinstellungen in den Systemeinstellungen gefunden."
+
+msgid "Database Type:"
+msgstr "Datenbanktyp:"
+
+msgid "Error loading status:"
+msgstr "Fehler beim Laden des Status:"
+
+msgid "Please fill in all required MSSQL fields"
+msgstr "Bitte füllen Sie alle erforderlichen MSSQL-Felder aus"
+
+msgid "Please fill in all required MySQL fields"
+msgstr "Bitte füllen Sie alle erforderlichen MySQL-Felder aus"
+
+msgid "Please fill in all required fields"
+msgstr "Bitte füllen Sie alle erforderlichen Felder aus"
+
+msgid "Testing..."
+msgstr "Testen..."
+
+msgid "Connection successful! Database connection is working correctly."
+msgstr "Verbindung erfolgreich! Die Datenbankverbindung funktioniert korrekt."
+
+msgid "Connection failed:"
+msgstr "Verbindung fehlgeschlagen:"
+
+msgid "Unknown error"
+msgstr "Unbekannter Fehler"
+
+msgid "Error:"
+msgstr "Fehler:"
+
+msgid "Database settings saved and exported to .env file"
+msgstr "Datenbankeinstellungen gespeichert und in .env-Datei exportiert"
+
+msgid "Database settings saved, but failed to export to .env file"
+msgstr "Datenbankeinstellungen gespeichert, aber Export in .env-Datei fehlgeschlagen"
+
+msgid "Database changed. All sessions have been terminated. Please log in again with the new database."
+msgstr "Datenbank geändert. Alle Sitzungen wurden beendet. Bitte melden Sie sich erneut mit der neuen Datenbank an."
+
+msgid "Database settings saved successfully"
+msgstr "Datenbankeinstellungen erfolgreich gespeichert"
+
+msgid "Error saving database settings:"
+msgstr "Fehler beim Speichern der Datenbankeinstellungen:"
+
+msgid "Error loading database settings:"
+msgstr "Fehler beim Laden der Datenbankeinstellungen:"
+
+msgid "Missing required fields"
+msgstr "Fehlende erforderliche Felder"
+
+msgid "Invalid database type"
+msgstr "Ungültiger Datenbanktyp"
+
+msgid "Configure database connection (MSSQL or MySQL)."
+msgstr "Datenbankverbindung konfigurieren (MSSQL oder MySQL)."
+

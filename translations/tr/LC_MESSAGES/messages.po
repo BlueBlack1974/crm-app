@@ -287,17 +287,14 @@ msgid "In Progress"
 msgstr "Devam Ediyor"
 
 #: templates/dashboard.html:232
-#, fuzzy
 msgid "My Tasks"
-msgstr "Yapılacaklarım"
+msgstr "Görevlerim"
 
 #: templates/dashboard.html:295
-#, fuzzy
 msgid "No tasks yet"
 msgstr "Henüz görev yok"
 
 #: templates/dashboard.html:297
-#, fuzzy
 msgid "Create First Task"
 msgstr "İlk Görevi Oluştur"
 
@@ -3752,4 +3749,184 @@ msgstr "Mesaj Değişkenleri"
 #~ "Appointment duration must be multiples "
 #~ "of the selected book's slot minutes"
 #~ msgstr "Randevu süresi seçilen defterin slot dakikasının katları olmalı"
+
+msgid "Database Settings"
+msgstr "Veritabanı Ayarları"
+
+msgid "Configure database connection. Select MSSQL or MySQL and enter connection details."
+msgstr "Veritabanı bağlantısını yapılandırın. MSSQL veya MySQL seçin ve bağlantı bilgilerini girin."
+
+msgid "Database Configuration"
+msgstr "Veritabanı Yapılandırması"
+
+msgid "Database Type"
+msgstr "Veritabanı Tipi"
+
+msgid "Select the database type you want to use."
+msgstr "Kullanmak istediğiniz veritabanı tipini seçin."
+
+msgid "MSSQL Connection Settings"
+msgstr "MSSQL Bağlantı Ayarları"
+
+msgid "Server"
+msgstr "Sunucu"
+
+msgid "Example: localhost, server.domain.com, or localhost\\SQLEXPRESS"
+msgstr "Örnek: localhost, server.domain.com veya localhost\\SQLEXPRESS"
+
+msgid "Port"
+msgstr "Port"
+
+msgid "Default: 1433"
+msgstr "Varsayılan: 1433"
+
+msgid "Database Name"
+msgstr "Veritabanı Adı"
+
+msgid "ODBC Driver"
+msgstr "ODBC Sürücüsü"
+
+msgid "Username"
+msgstr "Kullanıcı Adı"
+
+msgid "Password"
+msgstr "Şifre"
+
+msgid "Enter database password"
+msgstr "Veritabanı şifresini girin"
+
+msgid "Enter the database user password. Required for connection."
+msgstr "Veritabanı kullanıcı şifresini girin. Bağlantı için gereklidir."
+
+msgid "MySQL Connection Settings"
+msgstr "MySQL Bağlantı Ayarları"
+
+msgid "Host"
+msgstr "Sunucu"
+
+msgid "Example: localhost, 127.0.0.1, or mysql.example.com"
+msgstr "Örnek: localhost, 127.0.0.1 veya mysql.example.com"
+
+msgid "Default: 3306"
+msgstr "Varsayılan: 3306"
+
+msgid "Charset"
+msgstr "Karakter Seti"
+
+msgid "Current Database Connection Status"
+msgstr "Mevcut Veritabanı Bağlantı Durumu"
+
+msgid "Checking connection status..."
+msgstr "Bağlantı durumu kontrol ediliyor..."
+
+msgid "Instructions:"
+msgstr "Talimatlar:"
+
+msgid "Fill in all required fields (marked with *)"
+msgstr "Tüm zorunlu alanları doldurun (işaretli *)"
+
+msgid "Click \"Test Connection\" to verify your settings"
+msgstr "Ayarlarınızı doğrulamak için \"Bağlantıyı Test Et\" butonuna tıklayın"
+
+msgid "If test is successful, click \"Save Settings\" to save"
+msgstr "Test başarılıysa, kaydetmek için \"Ayarları Kaydet\" butonuna tıklayın"
+
+msgid "Restart the application after saving for changes to take effect"
+msgstr "Değişikliklerin etkili olması için ayarları kaydettikten sonra uygulamayı yeniden başlatın"
+
+msgid "Also export settings to .env file"
+msgstr "Ayarları .env dosyasına da aktar"
+
+msgid "This will update the .env file with your current database settings. A backup will be created automatically."
+msgstr "Bu, .env dosyasını mevcut veritabanı ayarlarınızla güncelleyecektir. Otomatik olarak yedek oluşturulacaktır."
+
+msgid "Test Connection"
+msgstr "Bağlantıyı Test Et"
+
+msgid "Save Settings"
+msgstr "Ayarları Kaydet"
+
+msgid "You can save settings even without testing, but testing is recommended to ensure the connection works."
+msgstr "Test etmeden de ayarları kaydedebilirsiniz, ancak bağlantının çalıştığından emin olmak için test edilmesi önerilir."
+
+msgid "Active Connection:"
+msgstr "Aktif Bağlantı:"
+
+msgid "Using System Settings"
+msgstr "Sistem Ayarları Kullanılıyor"
+
+msgid "Using .env File"
+msgstr ".env Dosyası Kullanılıyor"
+
+msgid "Unknown"
+msgstr "Bilinmiyor"
+
+msgid "Current Connection URI:"
+msgstr "Mevcut Bağlantı URI:"
+
+msgid "Not available"
+msgstr "Mevcut değil"
+
+msgid "System Settings URI:"
+msgstr "Sistem Ayarları URI:"
+
+msgid "No database settings found in System Settings."
+msgstr "Sistem Ayarlarında veritabanı ayarı bulunamadı."
+
+msgid "Database Type:"
+msgstr "Veritabanı Tipi:"
+
+msgid "Error loading status:"
+msgstr "Durum yüklenirken hata:"
+
+msgid "Please fill in all required MSSQL fields"
+msgstr "Lütfen tüm zorunlu MSSQL alanlarını doldurun"
+
+msgid "Please fill in all required MySQL fields"
+msgstr "Lütfen tüm zorunlu MySQL alanlarını doldurun"
+
+msgid "Please fill in all required fields"
+msgstr "Lütfen tüm zorunlu alanları doldurun"
+
+msgid "Testing..."
+msgstr "Test ediliyor..."
+
+msgid "Connection successful! Database connection is working correctly."
+msgstr "Bağlantı başarılı! Veritabanı bağlantısı doğru çalışıyor."
+
+msgid "Connection failed:"
+msgstr "Bağlantı başarısız:"
+
+msgid "Unknown error"
+msgstr "Bilinmeyen hata"
+
+msgid "Error:"
+msgstr "Hata:"
+
+msgid "Database settings saved and exported to .env file"
+msgstr "Veritabanı ayarları kaydedildi ve .env dosyasına aktarıldı"
+
+msgid "Database settings saved, but failed to export to .env file"
+msgstr "Veritabanı ayarları kaydedildi, ancak .env dosyasına aktarılamadı"
+
+msgid "Database changed. All sessions have been terminated. Please log in again with the new database."
+msgstr "Veritabanı değiştirildi. Tüm oturumlar sonlandırıldı. Lütfen yeni veritabanı ile tekrar giriş yapın."
+
+msgid "Database settings saved successfully"
+msgstr "Veritabanı ayarları başarıyla kaydedildi"
+
+msgid "Error saving database settings:"
+msgstr "Veritabanı ayarları kaydedilirken hata:"
+
+msgid "Error loading database settings:"
+msgstr "Veritabanı ayarları yüklenirken hata:"
+
+msgid "Missing required fields"
+msgstr "Eksik zorunlu alanlar"
+
+msgid "Invalid database type"
+msgstr "Geçersiz veritabanı tipi"
+
+msgid "Configure database connection (MSSQL or MySQL)."
+msgstr "Veritabanı bağlantısını yapılandırın (MSSQL veya MySQL)."
 

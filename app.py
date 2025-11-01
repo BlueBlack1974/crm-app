@@ -244,6 +244,153 @@ def get_database_uri_from_settings(debug=True):
         print(f"Veritabanı ayarları okunamadı: {e}")
         return None
 
+def export_settings_to_env(db_type=None):
+    """SistemAyarlar'dan ayarları .env dosyasına kaydet
+    
+    Args:
+        db_type: Veritabanı tipi ('mysql' veya 'mssql'). 
+                 Eğer None ise SistemAyarlar'dan 'database_type' ayarını okur.
+    """
+    try:
+        # SistemAyarlar'dan database_type ayarını oku (eğer db_type parametresi verilmemişse)
+        if db_type is None:
+            db_type_setting = SistemAyar.query.filter_by(AyarAdi='database_type').first()
+            if not db_type_setting or not db_type_setting.AyarDegeri:
+                print("[HATA] SistemAyarlar'da database_type ayari bulunamadi!")
+                return
+            db_type = db_type_setting.AyarDegeri.strip().lower()
+            print(f"[INFO] SistemAyarlar'dan database_type okundu: {db_type}")
+        
+        env_lines = []
+        env_lines.append("# CRM Uygulamasi - Ortam Degiskenleri")
+        env_lines.append("# Bu dosya otomatik olarak SistemAyarlar'dan olusturulmustur")
+        env_lines.append(f"# Aktif Veritabani Tipi: {db_type.upper()}")
+        env_lines.append("")
+        
+        # Flask ayarları (.env'den okumaya devam et)
+        env_lines.append("# Flask Ayarlari")
+        env_lines.append(f"SECRET_KEY={os.environ.get('SECRET_KEY', app.config.get('SECRET_KEY', 'change-this-in-.env'))}")
+        env_lines.append(f"FLASK_DEBUG={os.environ.get('FLASK_DEBUG', 'True')}")
+        env_lines.append(f"FLASK_HOST={os.environ.get('FLASK_HOST', '0.0.0.0')}")
+        env_lines.append(f"FLASK_PORT={os.environ.get('FLASK_PORT', '5000')}")
+        env_lines.append("")
+        
+        # Veritabanı ayarları
+        env_lines.append("# Veritabani Ayarlari")
+        database_uri = None
+        
+        if db_type == 'mysql':
+            mysql_host = SistemAyar.query.filter_by(AyarAdi='database_mysql_host').first()
+            mysql_port = SistemAyar.query.filter_by(AyarAdi='database_mysql_port').first()
+            mysql_database = SistemAyar.query.filter_by(AyarAdi='database_mysql_database').first()
+            mysql_username = SistemAyar.query.filter_by(AyarAdi='database_mysql_username').first()
+            mysql_password = SistemAyar.query.filter_by(AyarAdi='database_mysql_password').first()
+            mysql_charset = SistemAyar.query.filter_by(AyarAdi='database_mysql_charset').first()
+            
+            if all([mysql_host, mysql_database, mysql_username, mysql_password]):
+                host = mysql_host.AyarDegeri
+                port = mysql_port.AyarDegeri if mysql_port else '3306'
+                database = mysql_database.AyarDegeri
+                username = mysql_username.AyarDegeri
+                password_encrypted = mysql_password.AyarDegeri
+                password = decrypt_password(password_encrypted)  # Şifreyi deşifrele
+                charset = mysql_charset.AyarDegeri if mysql_charset else 'utf8mb4'
+                
+                # URI oluştur
+                password_encoded = quote_plus(password)
+                username_encoded = quote_plus(username)
+                database_uri = f"mysql+pymysql://{username_encoded}:{password_encoded}@{host}:{port}/{database}?charset={charset}"
+                
+                env_lines.append(f"# MySQL baglantisi (Aktif)")
+                env_lines.append(f"DATABASE_URL={database_uri}")
+            else:
+                print("[WARN] MySQL ayarlari eksik, DATABASE_URL olusturulamadi!")
+                
+        elif db_type == 'mssql':
+            mssql_server = SistemAyar.query.filter_by(AyarAdi='database_mssql_server').first()
+            mssql_port = SistemAyar.query.filter_by(AyarAdi='database_mssql_port').first()
+            mssql_database = SistemAyar.query.filter_by(AyarAdi='database_mssql_database').first()
+            mssql_username = SistemAyar.query.filter_by(AyarAdi='database_mssql_username').first()
+            mssql_password = SistemAyar.query.filter_by(AyarAdi='database_mssql_password').first()
+            mssql_driver = SistemAyar.query.filter_by(AyarAdi='database_mssql_driver').first()
+            
+            if all([mssql_server, mssql_database, mssql_username, mssql_password]):
+                server = mssql_server.AyarDegeri
+                port = mssql_port.AyarDegeri if mssql_port else '1433'
+                database = mssql_database.AyarDegeri
+                username = mssql_username.AyarDegeri
+                password_encrypted = mssql_password.AyarDegeri
+                password = decrypt_password(password_encrypted)  # Şifreyi deşifrele
+                driver = mssql_driver.AyarDegeri if mssql_driver else 'ODBC Driver 17 for SQL Server'
+                
+                # URI oluştur
+                password_encoded = quote_plus(password)
+                username_encoded = quote_plus(username)
+                driver_encoded = quote_plus(driver)
+                database_uri = f"mssql+pyodbc://{username_encoded}:{password_encoded}@{server}:{port}/{database}?driver={driver_encoded}&TrustServerCertificate=yes"
+                
+                env_lines.append(f"# MSSQL Server baglantisi (Aktif)")
+                env_lines.append(f"DATABASE_URL={database_uri}")
+            else:
+                print("[WARN] MSSQL ayarlari eksik, DATABASE_URL olusturulamadi!")
+        else:
+            print(f"[WARN] Gecersiz veritabani tipi: {db_type}")
+        
+        if not database_uri:
+            print("[HATA] DATABASE_URL olusturulamadi, .env dosyasi guncellenmedi!")
+            return
+        
+        # Diğer ayarlar (.env'den okumaya devam et)
+        env_lines.append("")
+        env_lines.append("# SMTP Ayarlari (istege bagli)")
+        env_lines.append(f"SMTP_HOST={os.environ.get('SMTP_HOST', '')}")
+        env_lines.append(f"SMTP_PORT={os.environ.get('SMTP_PORT', '587')}")
+        env_lines.append(f"SMTP_USER={os.environ.get('SMTP_USER', '')}")
+        env_lines.append(f"SMTP_PASS={os.environ.get('SMTP_PASS', '')}")
+        env_lines.append(f"SMTP_USE_TLS={os.environ.get('SMTP_USE_TLS', '1')}")
+        env_lines.append(f"FROM_EMAIL={os.environ.get('FROM_EMAIL', '')}")
+        env_lines.append(f"CSC_API_KEY={os.environ.get('CSC_API_KEY', '')}")
+        
+        # .env dosyasına yaz
+        env_content = '\n'.join(env_lines)
+        env_file_path = '.env'
+        
+        try:
+            # Mevcut .env dosyasını yedekle
+            if os.path.exists(env_file_path):
+                backup_path = '.env.backup'
+                with open(env_file_path, 'r', encoding='utf-8') as f:
+                    backup_content = f.read()
+                with open(backup_path, 'w', encoding='utf-8') as f:
+                    f.write(backup_content)
+                print(f"[INFO] Mevcut .env dosyasi yedeklendi: {backup_path}")
+            
+            # Yeni .env dosyasını yaz
+            with open(env_file_path, 'w', encoding='utf-8') as f:
+                f.write(env_content)
+            
+            print(f"[OK] .env dosyasi guncellendi: {env_file_path}")
+            
+            # Ortam değişkenlerini de güncelle (runtime için)
+            if 'DATABASE_URL' in env_content:
+                for line in env_content.split('\n'):
+                    if line.startswith('DATABASE_URL='):
+                        db_url = line.split('=', 1)[1].strip()
+                        os.environ['DATABASE_URL'] = db_url
+                        app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+                        print("[OK] DATABASE_URL ortam degiskeni guncellendi")
+                        break
+            
+        except Exception as write_err:
+            print(f"[HATA] .env dosyasina yazma hatasi: {write_err}")
+            raise
+        
+    except Exception as e:
+        print(f"[HATA] .env dosyasina aktarma hatasi: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
+
 # Initialize SQLAlchemy with app
 # Önce geçici olarak .env'den bağlantı kur (SistemAyarlar tablosuna erişmek için gerekli)
 db = SQLAlchemy(app)
@@ -462,6 +609,47 @@ def initialize_database_from_settings():
         import traceback
         traceback.print_exc()
     finally:
+        # Gerçek bağlantı tipini kontrol et ve SistemAyarlar'ı senkronize et
+        try:
+            with app.app_context():
+                current_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+                if current_uri:
+                    # Gerçek bağlantı tipini belirle
+                    if 'mssql' in current_uri.lower():
+                        gercek_tip = 'mssql'
+                    elif 'mysql' in current_uri.lower():
+                        gercek_tip = 'mysql'
+                    else:
+                        gercek_tip = None
+                    
+                    if gercek_tip:
+                        # SistemAyarlar'daki database_type değerini kontrol et ve güncelle
+                        try:
+                            db_type_setting = SistemAyar.query.filter_by(AyarAdi='database_type').first()
+                            if db_type_setting:
+                                mevcut_tip = db_type_setting.AyarDegeri.strip().lower() if db_type_setting.AyarDegeri else None
+                                if mevcut_tip != gercek_tip:
+                                    print(f"[SYNC] SistemAyarlar database_type guncelleniyor: {mevcut_tip} -> {gercek_tip}")
+                                    db_type_setting.AyarDegeri = gercek_tip
+                                    db.session.commit()
+                                    print(f"[OK] SistemAyarlar database_type senkronize edildi: {gercek_tip}")
+                            else:
+                                # database_type ayarı yoksa oluştur
+                                print(f"[SYNC] SistemAyarlar database_type olusturuluyor: {gercek_tip}")
+                                yeni_ayar = SistemAyar(
+                                    AyarAdi='database_type',
+                                    AyarDegeri=gercek_tip,
+                                    Aciklama='Veritabani tipi (mssql veya mysql) - otomatik guncellenir'
+                                )
+                                db.session.add(yeni_ayar)
+                                db.session.commit()
+                                print(f"[OK] SistemAyarlar database_type olusturuldu: {gercek_tip}")
+                        except Exception as sync_err:
+                            print(f"[WARN] SistemAyarlar senkronizasyonu basarisiz: {sync_err}")
+                            # Devam et, kritik değil
+        except Exception as sync_err:
+            print(f"[WARN] Gercek baglanti tipi kontrol edilemedi: {sync_err}")
+        
         _app_initialized = True
         print("=" * 60)
         print("[OK] initialize_database_from_settings() tamamlandi!")
@@ -943,14 +1131,23 @@ class Kullanici(db.Model):
 
 class AktifOturum(db.Model):
     __tablename__ = 'AktifOturumlar'
-
-    AktifOturumID = db.Column(db.Integer, primary_key=True)
-    KullaniciID = db.Column(db.Integer, db.ForeignKey('Kullanicilar.KullaniciID'), nullable=False, unique=True)
-    SessionToken = db.Column(db.String(64), nullable=False)
+    
+    # MSSQL ve MySQL uyumluluğu için:
+    # Her iki veritabanında da aynı kolon isimleri kullanılıyor:
+    # AktifOturumID, ClientIP, GirisZamani, SonGorulmeZamani
+    
+    # Primary key
+    AktifOturumID = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    KullaniciID = db.Column(db.Integer, db.ForeignKey('Kullanicilar.KullaniciID'), nullable=False)
+    SessionToken = db.Column(db.String(255), nullable=False, unique=True)
+    
+    # IP ve UserAgent
+    ClientIP = db.Column(db.String(50), nullable=True)
+    UserAgent = db.Column(db.Text, nullable=True)
+    
+    # Tarih kolonları
     GirisZamani = db.Column(db.DateTime, default=lambda: datetime.now(), nullable=False)
     SonGorulmeZamani = db.Column(db.DateTime, default=lambda: datetime.now(), onupdate=lambda: datetime.now(), nullable=False)
-    ClientIP = db.Column(db.String(64))
-    UserAgent = db.Column(db.String(255))
 
     kullanici = db.relationship('Kullanici', backref='aktif_oturum', uselist=False)
 
@@ -2336,7 +2533,8 @@ def login():
         # Kullanici kontrolu
         user = Kullanici.query.filter_by(KullaniciAdi=username, Aktif=True).first()
         
-        if user and user.Sifre == password:  # Geçici olarak düz metin karşılaştırma
+        # Şifre kontrolü - hash'lenmiş şifreyi kontrol et
+        if user and user.Sifre and check_password_hash(user.Sifre, password):
             # Eski oturumları temizle (24 saatten eski)
             eski_oturumlar = AktifOturum.query.filter(
                 AktifOturum.SonGorulmeZamani < datetime.now() - timedelta(hours=24)
@@ -2406,7 +2604,7 @@ def login():
             db.session.commit()
             
             # Zorunlu parola değişimi: 123 ise yönlendir
-            if user.Sifre == '123':
+            if user.Sifre and check_password_hash(user.Sifre, '123'):
                 session['must_change_password'] = True
                 flash('Lütfen güvenlik için şifrenizi değiştirin.', 'warning')
                 return redirect(url_for('sifre_degistir'))
@@ -3886,7 +4084,14 @@ def ayarlar_veritabani():
     
     if request.method == 'POST':
         try:
+            # Önce mevcut database_type'ı oku (değişiklik kontrolü için)
+            old_db_type_setting = SistemAyar.query.filter_by(AyarAdi='database_type').first()
+            old_db_type = old_db_type_setting.AyarDegeri.strip().lower() if old_db_type_setting and old_db_type_setting.AyarDegeri else None
+            
             db_type = request.form.get('database_type', 'mssql').strip().lower()
+            
+            # Veritabanı değişti mi kontrol et
+            db_changed = (old_db_type != db_type) if old_db_type else False
             
             # Mevcut ayarları güncelle veya yeni oluştur
             def save_setting(ayar_adi, deger, aciklama=None):
@@ -3898,11 +4103,11 @@ def ayarlar_veritabani():
                         setting.Aciklama = aciklama
                     # Değişiklik oldu mu kontrol et
                     if old_value != setting.AyarDegeri:
-                        print(f"📝 Ayar güncellendi: {ayar_adi}")
+                        print(f"[UPDATE] Ayar guncellendi: {ayar_adi}")
                 else:
                     setting = SistemAyar(AyarAdi=ayar_adi, AyarDegeri=deger if deger is not None else '', Aciklama=aciklama)
                     db.session.add(setting)
-                    print(f"➕ Yeni ayar eklendi: {ayar_adi}")
+                    print(f"[ADD] Yeni ayar eklendi: {ayar_adi}")
             
             # Veritabanı tipini kaydet
             save_setting('database_type', db_type, 'Veritabanı tipi (mssql veya mysql)')
@@ -3950,8 +4155,65 @@ def ayarlar_veritabani():
                 save_setting('database_mysql_charset', request.form.get('mysql_charset', 'utf8mb4'), 'MySQL charset')
             
             db.session.commit()
-            flash(_('Database settings saved successfully. Please restart the application for changes to take effect.'), 'success')
-            return redirect(url_for('ayarlar_veritabani'))
+            
+            # Ayarları .env dosyasına da kaydet (isteğe bağlı checkbox ile kontrol edilebilir)
+            export_to_env = request.form.get('export_to_env', 'false').lower() == 'true'
+            
+            if export_to_env:
+                try:
+                    # SistemAyarlar'dan database_type'ı oku ve ona göre .env dosyasını güncelle
+                    export_settings_to_env(None)  # None göndererek SistemAyarlar'dan okumasını sağla
+                    print("[OK] Ayarlar .env dosyasina kaydedildi!")
+                    flash(_('Database settings saved and exported to .env file'), 'success')
+                except Exception as env_err:
+                    print(f"[WARN] .env dosyasina kaydetme hatasi: {env_err}")
+                    import traceback
+                    traceback.print_exc()
+                    flash(_('Database settings saved, but failed to export to .env file'), 'warning')
+            
+            # Ayarlar kaydedildikten sonra bağlantıyı güncelle
+            print("\n" + "=" * 60)
+            print("[UPDATE] Veritabani ayarlari kaydedildi, baglanti guncelleniyor...")
+            print("=" * 60)
+            
+            # _app_initialized flag'ini sıfırla ki initialize_database_from_settings tekrar çalışsın
+            global _app_initialized
+            _app_initialized = False
+            
+            # Yeni ayarları yükle
+            try:
+                initialize_database_from_settings()
+                print("[OK] Veritabani baglantisi guncellendi!")
+            except Exception as init_err:
+                print(f"[WARN] Veritabani baglantisi guncellenirken hata: {init_err}")
+                import traceback
+                traceback.print_exc()
+            
+            # Veritabanı değiştiyse: Tüm aktif oturumları sonlandır ve logout yap
+            if db_changed:
+                print("\n[INFO] Veritabani degisti (eski: {old_db_type}, yeni: {db_type}), tum aktif oturumlar sonlandiriliyor...".format(
+                    old_db_type=old_db_type or 'yok',
+                    db_type=db_type
+                ))
+                try:
+                    # Tüm aktif oturumları sil (yeni veritabanında)
+                    # Önce yeni bağlantı üzerinden silme işlemi yapılabilir
+                    deleted_count = AktifOturum.query.delete()
+                    db.session.commit()
+                    print(f"[OK] {deleted_count} aktif oturum sonlandirildi")
+                except Exception as session_err:
+                    print(f"[WARN] Oturum sonlandirma hatasi (normal olabilir): {session_err}")
+                    db.session.rollback()
+                
+                # Session'ı temizle ve logout yap
+                session.clear()
+                flash(_('Database changed. All sessions have been terminated. Please log in again with the new database.'), 'info')
+                return redirect(url_for('login'))
+            else:
+                # Veritabanı değişmediyse normal mesaj
+                if not export_to_env:
+                    flash(_('Database settings saved successfully'), 'success')
+                return redirect(url_for('ayarlar_veritabani'))
         except Exception as e:
             db.session.rollback()
             import traceback
@@ -4012,6 +4274,9 @@ def ayarlar_veritabani():
 def ayarlar_veritabani_durum():
     """Mevcut veritabanı bağlantı durumunu kontrol et"""
     try:
+        # Admin kontrolü - eğer admin değilse JSON olarak hata döndür
+        if not session.get('is_admin', False):
+            return jsonify({'error': 'Admin yetkisi gerekli'}), 403
         # SistemAyarlar'dan ayarları oku
         db_type_setting = SistemAyar.query.filter_by(AyarAdi='database_type').first()
         db_type = db_type_setting.AyarDegeri.strip().lower() if db_type_setting and db_type_setting.AyarDegeri else None
@@ -4090,9 +4355,12 @@ def ayarlar_veritabani_durum():
             'is_using_settings': is_using_settings,
             'is_using_env': is_using_env,
             'settings_available': settings_uri is not None
-        })
+        }), 200, {'Content-Type': 'application/json'}
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"[HATA] ayarlar_veritabani_durum hatasi: {error_detail}")
+        return jsonify({'error': str(e)}), 500, {'Content-Type': 'application/json'}
 
 @app.route('/ayarlar/veritabani/test', methods=['POST'])
 @login_required
@@ -10278,7 +10546,7 @@ def check_todo_reminders():
                 bildirim = Bildirim(
                     KullaniciID=todo.KullaniciID,
                     FirmaID=1,  # Varsayılan firma ID
-                    Metin=f'📋 "{todo.Baslik}" görevinin hatırlatma tarihi bugün!',
+                    Metin=f'[HATIRLATMA] "{todo.Baslik}" gorevinin hatirlatma tarihi bugun!',
                     Tip='todo_reminder',
                     Okundu=False
                 )

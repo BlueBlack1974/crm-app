@@ -168,6 +168,16 @@
                         </ol>
                     </div>
 
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="export_to_env" name="export_to_env" value="true">
+                            <label class="form-check-label" for="export_to_env">
+                                <strong>{{ _('Also export settings to .env file') }}</strong>
+                                <small class="d-block text-muted">{{ _('This will update the .env file with your current database settings. A backup will be created automatically.') }}</small>
+                            </label>
+                        </div>
+                    </div>
+
                     <div class="mt-4 d-flex gap-2">
                         <button type="button" class="btn btn-success btn-lg" onclick="testConnection()" id="test_btn">
                             <i class="fas fa-plug me-2"></i>{{ _('Test Connection') }}
@@ -239,7 +249,21 @@ document.addEventListener('DOMContentLoaded', function() {
 // Veritabanı bağlantı durumunu kontrol et
 function checkDatabaseStatus() {
     fetch('{{ url_for("ayarlar_veritabani_durum") }}')
-        .then(response => response.json())
+        .then(response => {
+            // Önce response tipini kontrol et
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const contentType = response.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                // JSON değil, HTML döndürülmüş olabilir (redirect veya hata sayfası)
+                return response.text().then(text => {
+                    console.error("Expected JSON but got:", text.substring(0, 200));
+                    throw new Error("Server returned non-JSON response. Please check server logs.");
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             const statusDiv = document.getElementById('db_status_info');
             

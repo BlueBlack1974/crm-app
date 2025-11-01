@@ -19,7 +19,7 @@ try:
     from dotenv import load_dotenv
     from functools import wraps
     
-    print("✅ Tüm kütüphaneler başarıyla yüklendi!")
+    print("[OK] Tum kutuphaneler basariyla yuklendi!")
     
     # Flask uygulaması oluştur
     app = Flask(__name__)
@@ -31,7 +31,7 @@ try:
         <html>
         <head><title>CRM Test</title></head>
         <body>
-            <h1>🎉 Flask Çalışıyor!</h1>
+            <h1>[OK] Flask Calisiyor!</h1>
             <p>Python 3.13 ile Flask başarıyla çalıştı!</p>
             <p>Şimdi ana uygulamayı çalıştırabilirsiniz.</p>
         </body>
@@ -39,13 +39,13 @@ try:
         """
     
     if __name__ == '__main__':
-        print("🚀 Basit Flask sunucusu başlatılıyor...")
+        print("[START] Basit Flask sunucusu baslatiliyor...")
         app.run(debug=True, host='127.0.0.1', port=5000)
         
 except ImportError as e:
-    print(f"❌ Kütüphane hatası: {e}")
-    print("💡 Çözüm: pip install flask flask-sqlalchemy werkzeug python-dotenv")
+    print(f"[HATA] Kutuphane hatasi: {e}")
+    print("[COZUM] pip install flask flask-sqlalchemy werkzeug python-dotenv")
 except Exception as e:
-    print(f"❌ Genel hata: {e}")
-    print("💡 Python 3.11 veya 3.12 kullanmayı deneyin")
+    print(f"[HATA] Genel hata: {e}")
+    print("[ONERI] Python 3.11 veya 3.12 kullanmayi deneyin")
 
