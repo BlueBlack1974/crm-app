@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% block title %}Crandyx CRM{% endblock %}</title>
     
     <!-- Favicon -->
@@ -1010,6 +1011,51 @@ function handleLanguageChange(lang) {
 document.addEventListener('languageChanged', function() {
     translateSidebar();
 });
+
+// CSRF Token Helper - Tüm fetch isteklerine otomatik CSRF token ekle
+(function() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    
+    // Fetch'i override et
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+        const [url, options = {}] = args;
+        
+        // POST, PUT, PATCH, DELETE istekleri için CSRF token ekle
+        if (options.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method.toUpperCase())) {
+            if (!options.headers) {
+                options.headers = {};
+            }
+            
+            // JSON istekleri için header'a ekle
+            if (options.headers['Content-Type']?.includes('application/json') || 
+                (!options.headers['Content-Type'] && options.body && typeof options.body === 'string')) {
+                options.headers['X-CSRFToken'] = csrfToken;
+            }
+        }
+        
+        return originalFetch.apply(this, args);
+    };
+    
+    // XMLHttpRequest'i de override et (eski kodlar için)
+    const originalXHROpen = XMLHttpRequest.prototype.open;
+    const originalXHRSend = XMLHttpRequest.prototype.send;
+    
+    XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+        this._method = method;
+        this._url = url;
+        return originalXHROpen.apply(this, [method, url, ...rest]);
+    };
+    
+    XMLHttpRequest.prototype.send = function(data) {
+        if (this._method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(this._method.toUpperCase())) {
+            if (!this.getRequestHeader('X-CSRFToken')) {
+                this.setRequestHeader('X-CSRFToken', csrfToken);
+            }
+        }
+        return originalXHRSend.apply(this, [data]);
+    };
+})();
 </script>
 
 {% block scripts %}{% endblock %}

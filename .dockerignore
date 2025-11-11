@@ -8,6 +8,12 @@ venv/
 env/
 ENV/
 
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
 # Environment
 .env
 .env.local
@@ -19,16 +25,25 @@ ENV/
 # Logs
 *.log
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!README.md
 
 # Uploads
 uploads/
-static/uploads/users/
+static/uploads/
 
 # Temporary files
 *.tmp
 *.bak
+
+
+
+
+
+
+

@@ -32,6 +32,7 @@
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('ayarlar_veritabani') }}" onsubmit="return validateForm()">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-4">
                         <label for="database_type" class="form-label">{{ _('Database Type') }} <span class="text-danger">*</span></label>
                         <select class="form-select" id="database_type" name="database_type" required onchange="toggleDatabaseFields()">

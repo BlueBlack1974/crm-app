@@ -10,6 +10,7 @@ os.environ.setdefault('PYTHONTZPATH', '')
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_babel import Babel, gettext, ngettext, get_locale
+from flask_wtf.csrf import CSRFProtect
 _ = gettext
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta, time
@@ -48,10 +49,29 @@ import pandas as pd
 from werkzeug.utils import secure_filename
 import re
 import tempfile
+import warnings
 
 load_dotenv()
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-in-.env')
+# SECRET_KEY - Production'da mutlaka .env dosyasında güçlü bir değer kullanılmalı
+default_secret_key = 'change-this-in-.env'
+secret_key = os.environ.get('SECRET_KEY', default_secret_key)
+
+# Production ortamında varsayılan SECRET_KEY kullanılıyorsa uyar
+if secret_key == default_secret_key and not os.environ.get('FLASK_DEBUG', '').lower() == 'true':
+    warnings.warn(
+        "SECURITY WARNING: SECRET_KEY için varsayılan değer kullanılıyor! "
+        "Production ortamında güçlü bir SECRET_KEY tanımlayın.",
+        UserWarning
+    )
+
+app.config['SECRET_KEY'] = secret_key
+
+# CSRF Protection
+csrf = CSRFProtect(app)
+
+# CSRF token'ı JSON istekler için header'dan da oku
+# Flask-WTF varsayılan olarak X-CSRFToken header'ını destekler
 
 # Şifreleme için key oluştur (SECRET_KEY'den türet)
 def get_encryption_key():
@@ -2527,8 +2547,12 @@ def login():
                 session.pop(key, None)
 
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        
+        if not username or not password:
+            flash('Kullanıcı adı ve şifre gereklidir!', 'error')
+            return render_template('login.html')
         
         # Kullanici kontrolu
         user = Kullanici.query.filter_by(KullaniciAdi=username, Aktif=True).first()
@@ -10696,11 +10720,9 @@ def serve_user_avatar(user_id):
             from flask import abort
             abort(404)
 
-if __name__ == '__main__':
-    print("\n" + "=" * 60)
-    print("[START] Flask uygulamasi baslatiliyor...")
-    print("=" * 60 + "\n")
-    
+# Production'da WSGI server kullanıldığında da çalışması için
+def initialize_app():
+    """Uygulamayı başlat - WSGI server'lar için"""
     with app.app_context():
         print("[LOAD] Veritabani tablolari olusturuluyor/kontrol ediliyor...")
         db.create_all()
@@ -10710,6 +10732,7 @@ if __name__ == '__main__':
         print("[INFO] SistemAyarlar'dan veritabani ayarlari yukleniyor...")
         initialize_database_from_settings()
         print("[OK] Veritabani ayarlari yukleme islemi tamamlandi.\n")
+    
     # Hatirlatma worker'i arka planda baslat
     worker_thread = threading.Thread(target=reminder_worker, daemon=True)
     worker_thread.start()
@@ -10718,4 +10741,19 @@ if __name__ == '__main__':
     todo_worker_thread = threading.Thread(target=todo_reminder_worker, daemon=True)
     todo_worker_thread.start()
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    return app
+
+# Development server için
+if __name__ == '__main__':
+    print("\n" + "=" * 60)
+    print("[START] Flask uygulamasi baslatiliyor (Development Mode)...")
+    print("=" * 60 + "\n")
+    
+    initialize_app()
+    
+    # Development modunda debug=True
+    debug_mode = os.environ.get('FLASK_DEBUG', 'True').lower() == 'true'
+    app.run(debug=debug_mode, host='0.0.0.0', port=int(os.environ.get('FLASK_PORT', 5000)))
+else:
+    # WSGI server'lar için (Gunicorn, uWSGI, etc.)
+    initialize_app()

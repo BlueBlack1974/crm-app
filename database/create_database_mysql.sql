@@ -59,16 +59,23 @@ CREATE TABLE IF NOT EXISTS AktifOturumlar (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- KullaniciLoglari tablosu
+-- MSSQL ile uyumlu kolon isimleri kullanılıyor
 CREATE TABLE IF NOT EXISTS KullaniciLoglari (
     LogID INT AUTO_INCREMENT PRIMARY KEY,
     KullaniciID INT NOT NULL,
-    IslemTipi VARCHAR(50),
-    IslemDetayi TEXT,
-    IPAdresi VARCHAR(50),
-    OlusturmaTarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
+    IslemTipi VARCHAR(30) NOT NULL,
+    TabloAdi VARCHAR(30) NOT NULL,
+    KayitID INT,
+    EskiVeri TEXT,
+    YeniVeri TEXT,
+    IslemDetayi VARCHAR(500),
+    IPAdresi VARCHAR(45),
+    UserAgent VARCHAR(500),
+    OlusturmaTarihi DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
     FOREIGN KEY (KullaniciID) REFERENCES Kullanicilar(KullaniciID) ON DELETE CASCADE,
     INDEX idx_KullaniciID (KullaniciID),
-    INDEX idx_OlusturmaTarihi (OlusturmaTarihi)
+    INDEX idx_OlusturmaTarihi (OlusturmaTarihi),
+    INDEX idx_TabloAdi (TabloAdi)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Yetki tipleri tablosu

@@ -15,6 +15,7 @@
                 </div>
                 
                 <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <label for="username" class="form-label">{{ _('Username') }}</label>
                         <div class="input-group">
@@ -52,6 +53,7 @@
                         <i class="fas fa-exclamation-triangle text-warning mb-2"></i>
                         <p class="mb-3">{{ _('This user is already logged in. Do you want to close the existing session and login again?') }}</p>
                         <form method="POST" action="{{ url_for('force_logout') }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="pending_user_id" value="{{ session.get('pending_user_id', '') }}">
                             <input type="hidden" name="pending_username" value="{{ session.get('pending_username', '') }}">
                             <input type="hidden" name="pending_user_name" value="{{ session.get('pending_user_name', '') }}">
@@ -91,6 +93,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="forgotPasswordForm" method="POST" action="{{ url_for('forgot_password') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
