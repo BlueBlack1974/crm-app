@@ -10,7 +10,7 @@ os.environ.setdefault('PYTHONTZPATH', '')
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_babel import Babel, gettext, ngettext, get_locale
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, CSRFError
 _ = gettext
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta, time
@@ -72,6 +72,16 @@ csrf = CSRFProtect(app)
 
 # CSRF token'ı JSON istekler için header'dan da oku
 # Flask-WTF varsayılan olarak X-CSRFToken header'ını destekler
+
+# CSRF error handler - JSON API endpoint'leri için JSON döndür
+@app.errorhandler(CSRFError)
+def csrf_error(e):
+    """CSRF hatası durumunda JSON döndür (API endpoint'leri için)"""
+    # Eğer JSON isteği ise veya Accept header'ı JSON içeriyorsa JSON döndür
+    if request.is_json or 'application/json' in request.headers.get('Accept', ''):
+        return jsonify({'success': False, 'error': f'CSRF validation failed: {e.description}'}), 400
+    # Aksi halde basit mesaj döndür
+    return jsonify({'success': False, 'error': f'CSRF validation failed: {e.description}'}), 400
 
 # Şifreleme için key oluştur (SECRET_KEY'den türet)
 def get_encryption_key():

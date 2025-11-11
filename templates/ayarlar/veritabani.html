@@ -380,6 +380,12 @@ function testConnection() {
     const formData = new FormData();
     formData.append('database_type', dbType);
     
+    // CSRF token ekle
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (csrfToken) {
+        formData.append('csrf_token', csrfToken);
+    }
+    
     // Validation
     let isValid = true;
     let errorMsg = '';
@@ -437,9 +443,22 @@ function testConnection() {
     
     fetch('{{ url_for("ayarlar_veritabani_test") }}', {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: {
+            'X-CSRFToken': csrfToken || ''
+        }
     })
-    .then(response => response.json())
+    .then(response => {
+        // Response tipini kontrol et
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            // JSON değilse, HTML hata sayfası dönmüş demektir
+            return response.text().then(text => {
+                throw new Error('{{ _("Server returned an error. Please check your connection and try again.") }}');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         testBtn.disabled = false;
         testBtn.innerHTML = originalHtml;
@@ -453,7 +472,7 @@ function testConnection() {
     .catch(error => {
         testBtn.disabled = false;
         testBtn.innerHTML = originalHtml;
-        showTestResult(false, '{{ _("Error:") }} ' + error.message);
+        showTestResult(false, '{{ _("Error:") }} ' + (error.message || '{{ _("Unknown error occurred") }}'));
     });
 }
 
