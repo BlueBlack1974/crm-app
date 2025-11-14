@@ -481,3 +481,5 @@ SELECT 'CRM veritabanı başarıyla oluşturuldu!' AS Mesaj;
 SELECT 'Admin kullanıcı: admin' AS Mesaj;
 SELECT 'Admin şifre: admin123' AS Mesaj;
 
+-- Dosya güncellendi: 2025
+
