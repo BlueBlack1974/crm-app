@@ -29,7 +29,7 @@ from collections import Counter, defaultdict
 from io import BytesIO, StringIO
 import csv
 from sqlalchemy import or_, and_, create_engine, text
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse, parse_qs, urlencode, urlunparse
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -44,17 +44,10 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
-import pandas as pd
-from werkzeug.utils import secure_filename
-import re
-import tempfile
 import warnings
 
 load_dotenv()
-app = Flask(__name__)
-# SECRET_KEY - Production'da mutlaka .env dosyasında güçlü bir değer kullanılmalı
-default_secret_key = 'change-this-in-.env'
+default_secret_key = 'dev-secret-key-change-in-production'
 secret_key = os.environ.get('SECRET_KEY', default_secret_key)
 
 # Production ortamında varsayılan SECRET_KEY kullanılıyorsa uyar
@@ -65,10 +58,71 @@ if secret_key == default_secret_key and not os.environ.get('FLASK_DEBUG', '').lo
         UserWarning
     )
 
-app.config['SECRET_KEY'] = secret_key
+from app.utils.logging import log_user_action, log_user_action_decorator, get_record_info, start_logger
+from app.utils.tasks import reminder_worker, todo_reminder_worker
+from app.utils.helpers import get_client_ip, format_ip_for_display
+from app.extensions import db, csrf, babel
+from app.models import SistemAyar
 
-# CSRF Protection
-csrf = CSRFProtect(app)
+app = Flask(__name__, 
+            template_folder='app/templates',
+            static_folder='app/static')
+app.config['SECRET_KEY'] = secret_key
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['LANGUAGES'] = ['tr', 'en', 'fr', 'de']
+app.config['BABEL_TRANSLATION_DIRECTORIES'] = os.path.join(app.root_path, 'translations')
+
+# Initialize extensions
+# Initialize extensions
+db.init_app(app)
+csrf.init_app(app)
+
+def get_locale():
+    # Session varsa ve language set edilmişse onu kullan
+    if session and session.get('language'):
+        lang = session.get('language')
+        print(f"[LOCALE DEBUG] Session language: {lang}")
+        return lang
+    # Yoksa request'ten en iyi eşleşmeyi bul
+    best_match = request.accept_languages.best_match(['tr', 'en', 'de', 'fr'])
+    print(f"[LOCALE DEBUG] Best match: {best_match}")
+    return best_match
+
+babel.init_app(app, locale_selector=get_locale)
+
+# Blueprint'leri kaydet
+from app.routes.auth import auth_bp
+from app.routes.main import main_bp
+from app.routes.settings import settings_bp
+from app.routes.api import api_bp
+from app.routes.randevu import randevu_bp
+from app.routes.gorev import gorev_bp
+from app.routes.musteri import musteri_bp
+from app.routes.rapor import rapor_bp
+from app.routes.kullanici_mesaj import kullanici_mesaj_bp
+
+app.register_blueprint(auth_bp)
+app.register_blueprint(main_bp)
+app.register_blueprint(settings_bp)
+app.register_blueprint(api_bp)
+app.register_blueprint(randevu_bp)
+app.register_blueprint(gorev_bp)
+app.register_blueprint(musteri_bp)
+app.register_blueprint(rapor_bp)
+app.register_blueprint(kullanici_mesaj_bp)
+
+from app.routes.instagram import instagram_bp
+app.register_blueprint(instagram_bp)
+
+from app.routes.ai import ai_bp
+app.register_blueprint(ai_bp)
+
+# Context processor - datetime'ı tüm şablonlarda kullanılabilir yap
+@app.context_processor
+def inject_datetime():
+    from datetime import timedelta
+    return {'datetime': datetime, 'timedelta': timedelta}
+
 
 # CSRF token'ı JSON istekler için header'dan da oku
 # Flask-WTF varsayılan olarak X-CSRFToken header'ını destekler
@@ -137,20 +191,96 @@ def decrypt_password(encrypted_password):
         print(f"[WARN] Şifre deşifreleme hatası (muhtemelen plaintext): {e}")
         return encrypted_password  # Plaintext olarak döndür
 
-# Allow override via env; fallback to provided local credentials
+# Veritabanı bağlantısı SistemAyarlar tablosundan alınacak
+# .env dosyasında DATABASE_URL varsa sadece ilk başlangıç için kullanılır (SistemAyarlar tablosuna erişmek için)
+# SistemAyarlar tablosundan okunan ayarlar önceliklidir
 _db_uri = os.environ.get('DATABASE_URL')
 if not _db_uri:
-    raise RuntimeError('DATABASE_URL is not set in environment (.env). Please define the SQLAlchemy URI.')
-# TrustServerCertificate parametresini ekle (yoksa)
-if 'TrustServerCertificate' not in _db_uri and 'trustservercertificate' not in _db_uri.lower():
+    # DATABASE_URL yoksa, SistemAyarlar tablosuna erişmek için varsayılan bir bağlantı gerekli
+    # İlk kurulum için varsayılan MySQL bağlantısı kullanılabilir
+    # Ancak bu durumda SistemAyarlar tablosuna erişmek için bağlantı bilgileri gerekli
+    print("[INFO] DATABASE_URL .env dosyasinda bulunamadi.")
+    print("[INFO] Veritabani bilgileri SistemAyarlar tablosundan alinacak.")
+    print("[WARN] İlk kurulum için SistemAyarlar tablosuna erismek gerekiyor.")
+    print("[WARN] SistemAyarlar tablosuna erismek icin gecici bir baglanti kullanilacak.")
+    # Geçici olarak None kullan - initialize_database_from_settings() fonksiyonu bağlantıyı kuracak
+    # Ancak SQLAlchemy için geçici bir URI gerekli, bu yüzden varsayılan bir değer kullan
+    # SistemAyarlar tablosu MySQL veya MSSQL'de
+    # En iyi çözüm: SistemAyarlar tablosuna erişmek için önce bir bağlantı kurmaya çalış
+    # Ama şimdilik geçici bir URI kullan (initialize_database_from_settings() gerçek bağlantıyı kuracak)
+    _db_uri = None  # None olarak bırak, initialize_database_from_settings() gerçek bağlantıyı kuracak
+
+# MySQL URI'lerinden TrustServerCertificate parametresini temizle (MySQL için geçerli değil)
+# _db_uri None olabilir (SistemAyarlar'dan okunacak)
+if _db_uri and 'mysql' in _db_uri.lower():
+    original_uri = _db_uri
+    try:
+        # URL'i parse et
+        parsed = urlparse(_db_uri)
+        # Query parametrelerini parse et
+        query_params = parse_qs(parsed.query, keep_blank_values=True)
+        
+        # TrustServerCertificate parametresini kaldır (case-insensitive)
+        keys_to_remove = [k for k in query_params.keys() if k.lower() == 'trustservercertificate']
+        if keys_to_remove:
+            print(f"[INFO] MySQL URI'den TrustServerCertificate parametresi kaldiriliyor...")
+            for key in keys_to_remove:
+                del query_params[key]
+        
+        # Yeni query string oluştur
+        new_query = urlencode(query_params, doseq=True)
+        
+        # Yeni URL'i oluştur
+        new_parsed = parsed._replace(query=new_query)
+        _db_uri = urlunparse(new_parsed)
+        
+        if original_uri != _db_uri:
+            print(f"[OK] MySQL URI temizlendi: TrustServerCertificate parametresi kaldirildi")
+    except Exception as e:
+        # Parse hatası olursa, regex ile dene
+        print(f"[WARN] URL parse hatası, regex ile temizleme deneniyor: {e}")
+        _db_uri = re.sub(r'[&?]TrustServerCertificate=[^&]*', '', _db_uri, flags=re.IGNORECASE)
+        _db_uri = re.sub(r'\?&', '?', _db_uri)
+        if _db_uri.endswith('?'):
+            _db_uri = _db_uri[:-1]
+
+# TrustServerCertificate parametresini ekle (sadece MSSQL için)
+if _db_uri and 'mssql' in _db_uri.lower() and 'TrustServerCertificate' not in _db_uri and 'trustservercertificate' not in _db_uri.lower():
     separator = '&' if '?' in _db_uri else '?'
     _db_uri = f"{_db_uri}{separator}TrustServerCertificate=yes"
+# _db_uri None ise, SistemAyarlar'dan okunacak (initialize_database_from_settings() tarafından)
+# İlk kurulum için veritabanına bağlanacak varsayılan fallback
+if _db_uri is None:
+    # Kullanıcının ayarlardan UI aracılığıyla .env dosyasını geçersiz kılması durumu için
+    # Sırayla her iki database engine uri'ni de SistemAyarlar okumak için default fallback olarak atıyoruz.
+    # initialize_database_from_settings() bu fallback'leri deneyip doğru database_type'a karar verecek
+    _db_uri = 'mysql+pymysql://root:Sa19977991@localhost:3306/crandyx_crm_db?charset=utf8mb4'
+    print("[INFO] Ilk kurulum icin MySQL baglantisi kullaniliyor (SistemAyarlar tablosuna erismek icin).")
+
 app.config['SQLALCHEMY_DATABASE_URI'] = _db_uri
+# Debug: MySQL URI'lerinde TrustServerCertificate olmamalı
+if _db_uri and 'mysql' in _db_uri.lower() and ('TrustServerCertificate' in _db_uri or 'trustservercertificate' in _db_uri.lower()):
+    print(f"[ERROR] MySQL URI'de hala TrustServerCertificate var! URI: {_db_uri[:100]}...")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+
+# MySQL için connect_args'da TrustServerCertificate parametresini filtrele
+engine_options = {
     'pool_pre_ping': True,
     'pool_recycle': 300,
+    'pool_size': 10,
+    'max_overflow': 20,
+    'pool_timeout': 60,
 }
+# MySQL için connect_args'ı ayarla - TrustServerCertificate parametresini filtrele
+if _db_uri and 'mysql' in _db_uri.lower():
+    # MySQL için connect_args'da TrustServerCertificate'ı filtrele
+    # SQLAlchemy, query parametrelerini connect_args olarak geçirir
+    # Bu yüzden connect_args'ı boş bırakarak query parametrelerinin geçirilmesini engelleyemeyiz
+    # Ancak, SQLAlchemy'nin MySQL dialect'i query parametrelerini doğrudan pymysql.connect()'e geçirir
+    # Bu yüzden URI'den temizlemek yeterli olmalı
+    pass
+
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
 
 # SMTP/E-posta ayarlari (env ile override edilebilir)
 app.config['SMTP_HOST'] = os.environ.get('SMTP_HOST', '')
@@ -182,47 +312,116 @@ def get_database_uri_from_settings(debug=True):
         if debug:
             print("[CHECK] SistemAyarlar tablosundan veritabani ayarlari okunuyor...")
         # SistemAyarlar tablosunun var olup olmadığını kontrol et
+        # Eğer mevcut engine MSSQL ise ve bağlantı başarısız olursa, varsayılan DB stringlerine fallback at
         try:
             from sqlalchemy import inspect
             inspector = inspect(db.engine)
             table_names = inspector.get_table_names()
             if debug:
                 print(f"   [INFO] Mevcut tablolar: {', '.join(table_names)}")
-            if 'SistemAyarlar' not in table_names:
+            if 'SistemAyarlar' not in table_names and 'sistemayarlar' not in [t.lower() for t in table_names]:
                 if debug:
                     print("   [WARN] SistemAyarlar tablosu bulunamadi!")
                 return None
         except Exception as inspect_err:
             if debug:
-                print(f"   [WARN] Tablo kontrolu sirasinda hata: {inspect_err}")
-            return None
+                print(f"   [WARN] Tablo kontrolu sirasinda hata (inspect): {inspect_err}")
+                print(f"   [INFO] Standart fallback zinciri uygulanacak...")
         
-        db_type_setting = SistemAyar.query.filter_by(AyarAdi='database_type').first()
+        # SistemAyarlar tablosuna erişim - mevcut engine başarısız olursa default bağlantılarla doğrudan oku
+        db_type_setting = None
+        fallback_engine_used = None
+        
+        try:
+            db_type_setting = SistemAyar.query.filter_by(AyarAdi='database_type').first()
+        except Exception as query_err:
+            if debug:
+                print(f"   [WARN] ORM sorgusu basarisiz: {query_err}")
+                print(f"   [INFO] Dogrudan SQL sorgusu ile varsayilan baglantilar deneniyor...")
+            # Doğrudan SQL ile oku
+            default_urllist = [
+                'mssql+pyodbc://sa:YourPassword@localhost/Crandyx_CRM_DB?driver=ODBC+Driver+17+for+SQL+Server',
+                'mysql+pymysql://root:Sa19977991@localhost:3306/crandyx_crm_db?charset=utf8mb4'
+            ]
+            
+            for d_uri in default_urllist:
+                try:
+                    connect_args = {'connect_timeout': 3} if 'mysql' in d_uri else {}
+                    temp_engine = create_engine(d_uri, connect_args=connect_args)
+                    with temp_engine.connect() as conn:
+                        result = conn.execute(text("SELECT AyarDegeri FROM sistemayarlar WHERE AyarAdi = 'database_type'"))
+                        row = result.fetchone()
+                        if row:
+                            class SettingProxy:
+                                def __init__(self, value):
+                                    self.AyarDegeri = value
+                            db_type_setting = SettingProxy(row[0])
+                            fallback_engine_used = temp_engine
+                            if debug:
+                                print(f"   [OK] database_type SQL ile ({d_uri.split('://')[0]}) uzerinden okundu: {row[0]}")
+                            break
+                except Exception as iter_err:
+                    if debug:
+                        print(f"   [WARN] {d_uri.split('://')[0]} ile okuma basarisiz: {iter_err}")
+        
         if debug:
             print(f"   database_type ayarı: {db_type_setting.AyarDegeri if db_type_setting else 'BULUNAMADI'}")
         if not db_type_setting or not db_type_setting.AyarDegeri:
             if debug:
                 print("   [WARN] database_type ayari bulunamadi veya bos!")
                 # Tüm SistemAyarlar kayıtlarını listele (debug için)
-                all_settings = SistemAyar.query.all()
-                print(f"   [INFO] SistemAyarlar'da toplam {len(all_settings)} kayit var:")
-                for setting in all_settings:
-                    print(f"      - {setting.AyarAdi} = {setting.AyarDegeri[:50] if setting.AyarDegeri and len(setting.AyarDegeri) > 50 else (setting.AyarDegeri or 'NULL')}")
+                try:
+                    all_settings = SistemAyar.query.all()
+                    print(f"   [INFO] SistemAyarlar'da toplam {len(all_settings)} kayit var:")
+                    for setting in all_settings:
+                        value = setting.AyarDegeri[:50] if setting.AyarDegeri and len(setting.AyarDegeri) > 50 else (setting.AyarDegeri or 'NULL')
+                        print(f"      - {setting.AyarAdi} = {value}")
+                except Exception as list_err:
+                    if debug:
+                        print(f"   [WARN] SistemAyarlar listesi okunamadi: {list_err}")
             return None
         
         db_type = db_type_setting.AyarDegeri.strip().lower()
         if debug:
             print(f"   [INFO] Veritabani tipi: {db_type}")
         
+        # Eğer ORM tablosunda değilsek, dictionary fallback ile değerleri okuyalım
+        fallback_settings = {}
+        if fallback_engine_used:
+            try:
+                with fallback_engine_used.connect() as conn:
+                    result = conn.execute(text("SELECT AyarAdi, AyarDegeri FROM sistemayarlar WHERE AyarAdi LIKE 'database_%'"))
+                    settings_rows = result.fetchall()
+                    if settings_rows:
+                        fallback_settings = {row[0]: row[1] for row in settings_rows}
+            except Exception as e:
+                if debug:
+                    print(f"   [WARN] SQL fallback okuma basarisiz: {e}")
+
+        def get_setting(key):
+            if fallback_engine_used:
+                val = fallback_settings.get(key)
+                class SettingProxy:
+                    def __init__(self, value):
+                        self.AyarDegeri = value
+                return SettingProxy(val) if val is not None else None
+            else:
+                try:
+                    return SistemAyar.query.filter_by(AyarAdi=key).first()
+                except:
+                    return None
+                    
         if db_type == 'mysql':
             # MySQL ayarlarını al
-            server_setting = SistemAyar.query.filter_by(AyarAdi='database_mysql_host').first()
-            port_setting = SistemAyar.query.filter_by(AyarAdi='database_mysql_port').first()
-            database_setting = SistemAyar.query.filter_by(AyarAdi='database_mysql_database').first()
-            username_setting = SistemAyar.query.filter_by(AyarAdi='database_mysql_username').first()
-            password_setting = SistemAyar.query.filter_by(AyarAdi='database_mysql_password').first()
+            server_setting = get_setting('database_mysql_host')
+            port_setting = get_setting('database_mysql_port')
+            database_setting = get_setting('database_mysql_database')
+            username_setting = get_setting('database_mysql_username')
+            password_setting = get_setting('database_mysql_password')
             
             if not all([server_setting, database_setting, username_setting]):
+                if debug:
+                    print(f"   [WARN] Eksik MySQL ayarlari: server={bool(server_setting)}, database={bool(database_setting)}, username={bool(username_setting)}")
                 return None
             
             server = server_setting.AyarDegeri or 'localhost'
@@ -231,19 +430,33 @@ def get_database_uri_from_settings(debug=True):
             username = username_setting.AyarDegeri
             password_encrypted = password_setting.AyarDegeri if password_setting else ''
             password = decrypt_password(password_encrypted)  # Şifreyi deşifrele
-            charset_setting = SistemAyar.query.filter_by(AyarAdi='database_mysql_charset').first()
+            charset_setting = get_setting('database_mysql_charset')
             charset = charset_setting.AyarDegeri if charset_setting and charset_setting.AyarDegeri else 'utf8mb4'
             
-            return build_mysql_uri(server, database, username, password, port, charset)
+            mysql_uri = build_mysql_uri(server, database, username, password, port, charset)
+            # MySQL URI'den TrustServerCertificate parametresini temizle (güvenlik için)
+            if 'TrustServerCertificate' in mysql_uri or 'trustservercertificate' in mysql_uri.lower():
+                try:
+                    parsed = urlparse(mysql_uri)
+                    query_params = parse_qs(parsed.query, keep_blank_values=True)
+                    keys_to_remove = [k for k in query_params.keys() if k.lower() == 'trustservercertificate']
+                    for key in keys_to_remove:
+                        del query_params[key]
+                    new_query = urlencode(query_params, doseq=True)
+                    new_parsed = parsed._replace(query=new_query)
+                    mysql_uri = urlunparse(new_parsed)
+                except Exception:
+                    pass  # Hata olursa orijinal URI'yi kullan
+            return mysql_uri
         
         elif db_type == 'mssql':
             # MSSQL ayarlarını al
-            server_setting = SistemAyar.query.filter_by(AyarAdi='database_mssql_server').first()
-            port_setting = SistemAyar.query.filter_by(AyarAdi='database_mssql_port').first()
-            database_setting = SistemAyar.query.filter_by(AyarAdi='database_mssql_database').first()
-            username_setting = SistemAyar.query.filter_by(AyarAdi='database_mssql_username').first()
-            password_setting = SistemAyar.query.filter_by(AyarAdi='database_mssql_password').first()
-            driver_setting = SistemAyar.query.filter_by(AyarAdi='database_mssql_driver').first()
+            server_setting = get_setting('database_mssql_server')
+            port_setting = get_setting('database_mssql_port')
+            database_setting = get_setting('database_mssql_database')
+            username_setting = get_setting('database_mssql_username')
+            password_setting = get_setting('database_mssql_password')
+            driver_setting = get_setting('database_mssql_driver')
             
             if debug:
                 print(f"   [CHECK] MSSQL ayarlari kontrol ediliyor...")
@@ -274,6 +487,87 @@ def get_database_uri_from_settings(debug=True):
         print(f"Veritabanı ayarları okunamadı: {e}")
         return None
 
+def initialize_database_from_settings():
+    """SistemAyarlar tablosundan veritabanı ayarlarını oku ve bağlantıyı güncelle"""
+    print("=" * 60)
+    print("[INIT] Veritabani bilgileri SistemAyarlar tablosundan okunuyor...")
+    print("=" * 60)
+    
+    # İlk olarak SistemAyarlar tablosunun var olduğundan emin ol
+    try:
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        table_names = inspector.get_table_names()
+        
+        if 'SistemAyarlar' not in table_names and 'sistemayarlar' not in [t.lower() for t in table_names]:
+            print("[WARN] SistemAyarlar tablosu bulunamadi, olusturuluyor...")
+            db.create_all()
+            print("[OK] SistemAyarlar tablosu olusturuldu.")
+    except Exception as e:
+        print(f"[WARN] Tablo kontrolu yapilamadi: {e}")
+    
+    # SistemAyarlar'dan URI oku
+    print("[CHECK] SistemAyarlar'dan veritabani ayarlari okunmaya baslaniyor...")
+    new_uri = get_database_uri_from_settings(debug=True)
+    
+    if new_uri:
+        print(f"[INFO] Veritabani ayarlari SistemAyarlar'dan yuklendi: {new_uri[:50]}...")
+        
+        # Eski engine'i kapat
+        try:
+            db.engine.dispose()
+            print("[UPDATE] Eski veritabani baglantisi kapatildi.")
+        except Exception as e:
+            print(f"[WARN] Engine dispose hatasi: {e}")
+        
+        # Yeni engine oluştur
+        try:
+            # Flask-SQLAlchemy için app config'i güncelle
+            app.config['SQLALCHEMY_DATABASE_URI'] = new_uri
+            
+            # Yeni engine oluştur
+            new_engine = create_engine(
+                new_uri,
+                pool_pre_ping=True,
+                pool_recycle=300
+            )
+            
+            # Flask-SQLAlchemy'nin engine'ini güncelle
+            db.engine = new_engine
+            
+            # Session registry'yi güncelle
+            db.session.remove()
+            db.session.configure(bind=new_engine)
+            
+            # Metadata'yı güncelle
+            db.metadata.bind = new_engine
+            
+            print("[OK] Veritabani baglantisi SistemAyarlar'dan guncellendi.")
+            print(f"   [LINK] Yeni URI: {new_uri[:50]}...")
+            print(f"   [OK] SQLAlchemy engine, session registry ve metadata guncellendi.")
+            
+            # Bağlantıyı test et
+            with new_engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            print("[OK] Veritabani baglantisi basariyla test edildi!")
+            
+            print("=" * 60)
+            print("[OK] initialize_database_from_settings() tamamlandi!")
+            print("=" * 60)
+            print()
+            
+            return new_engine
+            
+        except Exception as e:
+            print(f"[ERROR] Yeni engine olusturma hatasi: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+    else:
+        print("[WARN] SistemAyarlar'dan URI alinamadi, varsayilan baglanti kullaniliyor.")
+        return None
+
+
 def export_settings_to_env(db_type=None):
     """SistemAyarlar'dan ayarları .env dosyasına kaydet
     
@@ -284,7 +578,31 @@ def export_settings_to_env(db_type=None):
     try:
         # SistemAyarlar'dan database_type ayarını oku (eğer db_type parametresi verilmemişse)
         if db_type is None:
-            db_type_setting = SistemAyar.query.filter_by(AyarAdi='database_type').first()
+            db_type_setting = None
+            try:
+                db_type_setting = SistemAyar.query.filter_by(AyarAdi='database_type').first()
+            except Exception as e:
+                # ORM fail olduysa raw DB bağlantısıyla config tablosunu oku
+                default_urllist = [
+                    'mssql+pyodbc://sa:YourPassword@localhost/Crandyx_CRM_DB?driver=ODBC+Driver+17+for+SQL+Server',
+                    'mysql+pymysql://root:Sa19977991@localhost:3306/crandyx_crm_db?charset=utf8mb4'
+                ]
+                for d_uri in default_urllist:
+                    try:
+                        connect_args = {'connect_timeout': 3} if 'mysql' in d_uri else {}
+                        temp_engine = create_engine(d_uri, connect_args=connect_args)
+                        with temp_engine.connect() as conn:
+                            result = conn.execute(text("SELECT AyarDegeri FROM sistemayarlar WHERE AyarAdi = 'database_type'"))
+                            row = result.fetchone()
+                            if row:
+                                class SettingProxy:
+                                    def __init__(self, value):
+                                        self.AyarDegeri = value
+                                db_type_setting = SettingProxy(row[0])
+                                break
+                    except:
+                        pass
+                        
             if not db_type_setting or not db_type_setting.AyarDegeri:
                 print("[HATA] SistemAyarlar'da database_type ayari bulunamadi!")
                 return
@@ -305,70 +623,6 @@ def export_settings_to_env(db_type=None):
         env_lines.append(f"FLASK_PORT={os.environ.get('FLASK_PORT', '5000')}")
         env_lines.append("")
         
-        # Veritabanı ayarları
-        env_lines.append("# Veritabani Ayarlari")
-        database_uri = None
-        
-        if db_type == 'mysql':
-            mysql_host = SistemAyar.query.filter_by(AyarAdi='database_mysql_host').first()
-            mysql_port = SistemAyar.query.filter_by(AyarAdi='database_mysql_port').first()
-            mysql_database = SistemAyar.query.filter_by(AyarAdi='database_mysql_database').first()
-            mysql_username = SistemAyar.query.filter_by(AyarAdi='database_mysql_username').first()
-            mysql_password = SistemAyar.query.filter_by(AyarAdi='database_mysql_password').first()
-            mysql_charset = SistemAyar.query.filter_by(AyarAdi='database_mysql_charset').first()
-            
-            if all([mysql_host, mysql_database, mysql_username, mysql_password]):
-                host = mysql_host.AyarDegeri
-                port = mysql_port.AyarDegeri if mysql_port else '3306'
-                database = mysql_database.AyarDegeri
-                username = mysql_username.AyarDegeri
-                password_encrypted = mysql_password.AyarDegeri
-                password = decrypt_password(password_encrypted)  # Şifreyi deşifrele
-                charset = mysql_charset.AyarDegeri if mysql_charset else 'utf8mb4'
-                
-                # URI oluştur
-                password_encoded = quote_plus(password)
-                username_encoded = quote_plus(username)
-                database_uri = f"mysql+pymysql://{username_encoded}:{password_encoded}@{host}:{port}/{database}?charset={charset}"
-                
-                env_lines.append(f"# MySQL baglantisi (Aktif)")
-                env_lines.append(f"DATABASE_URL={database_uri}")
-            else:
-                print("[WARN] MySQL ayarlari eksik, DATABASE_URL olusturulamadi!")
-                
-        elif db_type == 'mssql':
-            mssql_server = SistemAyar.query.filter_by(AyarAdi='database_mssql_server').first()
-            mssql_port = SistemAyar.query.filter_by(AyarAdi='database_mssql_port').first()
-            mssql_database = SistemAyar.query.filter_by(AyarAdi='database_mssql_database').first()
-            mssql_username = SistemAyar.query.filter_by(AyarAdi='database_mssql_username').first()
-            mssql_password = SistemAyar.query.filter_by(AyarAdi='database_mssql_password').first()
-            mssql_driver = SistemAyar.query.filter_by(AyarAdi='database_mssql_driver').first()
-            
-            if all([mssql_server, mssql_database, mssql_username, mssql_password]):
-                server = mssql_server.AyarDegeri
-                port = mssql_port.AyarDegeri if mssql_port else '1433'
-                database = mssql_database.AyarDegeri
-                username = mssql_username.AyarDegeri
-                password_encrypted = mssql_password.AyarDegeri
-                password = decrypt_password(password_encrypted)  # Şifreyi deşifrele
-                driver = mssql_driver.AyarDegeri if mssql_driver else 'ODBC Driver 17 for SQL Server'
-                
-                # URI oluştur
-                password_encoded = quote_plus(password)
-                username_encoded = quote_plus(username)
-                driver_encoded = quote_plus(driver)
-                database_uri = f"mssql+pyodbc://{username_encoded}:{password_encoded}@{server}:{port}/{database}?driver={driver_encoded}&TrustServerCertificate=yes"
-                
-                env_lines.append(f"# MSSQL Server baglantisi (Aktif)")
-                env_lines.append(f"DATABASE_URL={database_uri}")
-            else:
-                print("[WARN] MSSQL ayarlari eksik, DATABASE_URL olusturulamadi!")
-        else:
-            print(f"[WARN] Gecersiz veritabani tipi: {db_type}")
-        
-        if not database_uri:
-            print("[HATA] DATABASE_URL olusturulamadi, .env dosyasi guncellenmedi!")
-            return
         
         # Diğer ayarlar (.env'den okumaya devam et)
         env_lines.append("")
@@ -430,14 +684,18 @@ db = SQLAlchemy(app)
 _app_initialized = False
 
 def initialize_database_from_settings():
-    """Uygulama başlangıcında SistemAyarlar'dan veritabanı bağlantısını yükle"""
+    """Uygulama başlangıcında SistemAyarlar'dan veritabanı bağlantısını yükle
+    
+    Bu fonksiyon SistemAyarlar tablosundan veritabanı bilgilerini okur ve bağlantıyı kurar.
+    SistemAyarlar tablosunda veritabanı ayarları yoksa, mevcut bağlantıyı kullanmaya devam eder.
+    """
     global _app_initialized
     
     if _app_initialized:
         return  # Zaten başlatıldı
     
     print("=" * 60)
-    print("[INIT] initialize_database_from_settings() cagrildi!")
+    print("[INIT] Veritabani bilgileri SistemAyarlar tablosundan okunuyor...")
     print("=" * 60)
     try:
         with app.app_context():
@@ -448,13 +706,25 @@ def initialize_database_from_settings():
                 
                 # SistemAyarlar tablosu yoksa oluştur
                 if 'SistemAyarlar' not in inspector.get_table_names():
-                    db.create_all()
-                    print("[OK] SistemAyarlar tablosu olusturuldu.")
+                    # SistemAyarlar tablosunu oluşturmaya çalış
+                    # Bu durumda SistemAyarlar tablosu zaten başka bir veritabanında olabilir
+                    try:
+                        # Sadece SistemAyarlar modelini kullanarak tablo oluştur
+                        # SistemAyar modeli app.py dosyasında tanımlı
+                        SistemAyar.__table__.create(bind=db.engine, checkfirst=True)
+                        print("[OK] SistemAyarlar tablosu olusturuldu.")
+                    except Exception as create_err:
+                        print(f"[WARN] SistemAyarlar tablosu olusturulamadi: {create_err}")
+                        print("[INFO] SistemAyarlar tablosu zaten baska bir veritabaninda olabilir.")
+                        # Devam et, SistemAyarlar'dan okumayı dene
             except Exception as e:
                 print(f"[WARN] SistemAyarlar tablosu kontrol edilemedi: {e}")
                 import traceback
                 traceback.print_exc()
-                return  # Hata varsa devam etme
+                # Hata olsa bile devam et - belki SistemAyarlar tablosu farklı bir veritabanında
+                print("[INFO] SistemAyarlar tablosuna erisilemedi, mevcut baglanti kullanilmaya devam edilecek.")
+                _app_initialized = True
+                return
             
             # Veritabanı ayarlarını oku
             try:
@@ -481,10 +751,18 @@ def initialize_database_from_settings():
                         print(f"[WARN] Eski baglanti kapatilirken hata: {dispose_err}")
                     
                     # Yeni URI ile engine oluştur
+                    # MySQL için connect_args'da TrustServerCertificate'ı filtrele
+                    engine_kwargs = {
+                        'pool_pre_ping': True,
+                        'pool_recycle': 300
+                    }
+                    # MySQL için connect_args'ı ayarla - query parametrelerini filtrelemek için
+                    # SQLAlchemy, query parametrelerini connect_args olarak geçirir
+                    # Boş connect_args dict'i, query parametrelerinin geçirilmesini engellemez
+                    # Bu yüzden URI'den temizlemek yeterli olmalı (zaten yukarıda yapıldı)
                     new_engine = create_engine(
                         db_uri_from_settings,
-                        pool_pre_ping=True,
-                        pool_recycle=300
+                        **engine_kwargs
                     )
                     
                     # SQLAlchemy'yi yeni engine ile güncelle
@@ -629,7 +907,11 @@ def initialize_database_from_settings():
                             except:
                                 pass
                 else:
-                    print("[INFO] SistemAyarlar'da veritabani ayari yok, .env'deki ayarlar kullaniliyor.")
+                    print("[INFO] SistemAyarlar'da veritabani ayari yok.")
+                    print("[INFO] Mevcut baglanti kullanilmaya devam edilecek.")
+                    # SistemAyarlar'da ayar yoksa, mevcut bağlantıyı kullanmaya devam et
+                    _app_initialized = True
+                    return
             except Exception as read_err:
                 print(f"[WARN] SistemAyarlar'dan veritabani ayarlari okunamadi: {read_err}")
                 import traceback
@@ -685,188 +967,11 @@ def initialize_database_from_settings():
         print("[OK] initialize_database_from_settings() tamamlandi!")
         print("=" * 60 + "\n")
 
-# Asenkron loglama sistemi
-log_queue = queue.Queue()
-
-def background_logger():
-    """Arka planda log kayıtlarını veritabanına yazan thread"""
-    with app.app_context():
-        while True:
-            try:
-                log_data = log_queue.get(timeout=1)
-                if log_data is None:  # Shutdown signal
-                    break
-                db.session.add(log_data)
-                db.session.commit()
-            except queue.Empty:
-                # Timeout - bu normal, devam et
-                continue
-            except Exception as e:
-                print(f"Log yazma hatası: {e}")
-                try:
-                    db.session.rollback()
-                except:
-                    pass
-
-# Background thread başlat
-log_thread = threading.Thread(target=background_logger, daemon=True)
-log_thread.start()
+# Asenkron loglama sistemi app/utils/logging.py içinde yönetiliyor
+# start_logger(app) çağrısı __init__.py içinde yapılıyor
 
 # IP adresi alma yardımcı fonksiyonu
-def get_client_ip():
-    """Gerçek client IP adresini al (proxy arkasında çalışırken)"""
-    # X-Forwarded-For header'ını kontrol et (proxy arkasında)
-    x_forwarded = request.headers.get('X-Forwarded-For')
-    if x_forwarded:
-        # İlk IP adresini al (client IP)
-        ip = x_forwarded.split(',')[0].strip()
-        return format_ip_for_display(ip)
-    
-    # X-Real-IP header'ını kontrol et (nginx gibi)
-    x_real_ip = request.headers.get('X-Real-IP')
-    if x_real_ip:
-        return format_ip_for_display(x_real_ip)
-    
-    # Localhost'ta test için gerçek IP kullan
-    remote_addr = request.remote_addr
-    if remote_addr == '127.0.0.1':
-        # Gerçek IP adresinizi kullan (Wi-Fi IP'si)
-        return "192.168.1.11"
-    
-    # IPv6 adresi ise IPv4'e çevirmeye çalış
-    if ':' in remote_addr and len(remote_addr) > 20:
-        # Arkadaşınızın IPv4 adresini kullan (test için)
-        return "192.168.1.106"
-    
-    return format_ip_for_display(remote_addr)
 
-def format_ip_for_display(ip):
-    """IP adresini loglama için uygun formata çevir"""
-    if not ip:
-        return "Unknown"
-    
-    # IPv6 adreslerini kısalt ama göster
-    if ':' in ip and len(ip) > 20:
-        # IPv6 adresini kısalt: ilk 2 segment + son 2 segment
-        parts = ip.split(':')
-        if len(parts) >= 8:
-            # İlk 2 ve son 2 segmenti al
-            first_part = ':'.join(parts[:2])
-            last_part = ':'.join(parts[-2:])
-            return f"{first_part}...{last_part}"
-        else:
-            return f"{parts[0]}...{parts[-1]}"
-    
-    return ip
-
-# Loglama yardımcı fonksiyonları
-def log_user_action(action_type, table_name, record_id=None, old_data=None, new_data=None, detail=None):
-    """Kullanıcı işlemini asenkron olarak logla"""
-    try:
-        if 'user_id' not in session:
-            return
-    except RuntimeError:
-        # Session context yoksa (test ortamı gibi) loglama yapma
-        return
-    
-    log_data = KullaniciLog(
-        KullaniciID=session['user_id'],
-        IslemTipi=action_type,
-        TabloAdi=table_name,
-        KayitID=record_id,
-        EskiVeri=json.dumps(old_data, ensure_ascii=False) if old_data else None,
-        YeniVeri=json.dumps(new_data, ensure_ascii=False) if new_data else None,
-        IslemDetayi=detail,
-        IPAdresi=get_client_ip(),
-        UserAgent=request.headers.get('User-Agent', '')
-    )
-    log_queue.put(log_data)
-
-def log_user_action_decorator(action_type, table_name, record_id_param=None, detail_func=None):
-    """Loglama decorator'ı"""
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            result = f(*args, **kwargs)
-            
-            # Record ID'yi al
-            record_id = None
-            if record_id_param and record_id_param in kwargs:
-                record_id = kwargs[record_id_param]
-            
-            # Detay fonksiyonu varsa çalıştır
-            detail = None
-            if detail_func:
-                try:
-                    detail = detail_func(result, *args, **kwargs)
-                except:
-                    pass
-            
-            # Logla
-            log_user_action(action_type, table_name, record_id, detail=detail)
-            
-            return result
-        return decorated_function
-    return decorator
-
-def get_record_info(log):
-    """Log için record bilgisini hazırla"""
-    try:
-        if not log.KayitID:
-            return None
-            
-        if log.TabloAdi == 'Randevu':
-            randevu = Randevu.query.filter_by(RandevuID=log.KayitID, FirmaID=log.kullanici.FirmaID).first()
-            if randevu:
-                tarih_str = randevu.RandevuTarihi.strftime('%d.%m.%Y %H:%M')
-                musteri_adi = f"{randevu.MusteriAdi or ''} {randevu.MusteriSoyadi or ''}".strip()
-                if musteri_adi:
-                    return f"{tarih_str} - {musteri_adi} ({randevu.RandevuBaslik})"
-                else:
-                    return f"{tarih_str} - {randevu.RandevuBaslik}"
-            else:
-                return f"ID: {log.KayitID}"
-                
-        elif log.TabloAdi == 'Musteri':
-            musteri = Musteri.query.filter_by(MusteriID=log.KayitID, FirmaID=log.kullanici.FirmaID).first()
-            if musteri:
-                musteri_adi = f"{musteri.Ad or ''} {musteri.Soyad or ''}".strip()
-                if musteri_adi and musteri.Telefon:
-                    return f"{musteri_adi} ({musteri.Telefon})"
-                elif musteri_adi:
-                    return musteri_adi
-                elif musteri.Telefon:
-                    return musteri.Telefon
-                else:
-                    return f"ID: {log.KayitID}"
-            else:
-                return f"ID: {log.KayitID}"
-                
-        elif log.TabloAdi == 'Kullanici':
-            kullanici = Kullanici.query.filter_by(KullaniciID=log.KayitID, FirmaID=log.kullanici.FirmaID).first()
-            if kullanici:
-                kullanici_adi = f"{kullanici.Ad or ''} {kullanici.Soyad or ''}".strip()
-                if kullanici_adi:
-                    return f"{kullanici_adi} ({kullanici.KullaniciAdi})"
-                else:
-                    return kullanici.KullaniciAdi
-            else:
-                return f"ID: {log.KayitID}"
-                
-        elif log.TabloAdi == 'Sistem':
-            # Sistem logları için detay bilgisini kullan
-            if log.IslemDetayi:
-                return log.IslemDetayi[:50] + "..." if len(log.IslemDetayi) > 50 else log.IslemDetayi
-            else:
-                return "Sistem İşlemi"
-                
-        else:
-            # Diğer tablolar için sadece ID göster
-            return f"ID: {log.KayitID}"
-            
-    except Exception:
-        # Hata durumunda sadece ID göster
-        return f"ID: {log.KayitID}" if log.KayitID else None
 
 # Babel konfigürasyonu
 app.config['LANGUAGES'] = {
@@ -919,9 +1024,9 @@ def ensure_app_initialized():
 def enforce_password_change():
     # Zorunlu parola değişimi: giriş yapılmışsa ve bayrak açıksa, sadece izinli endpointlere erişsin
     if 'user_id' in session and session.get('must_change_password'):
-        allowed = set(['sifre_degistir', 'logout', 'set_language', 'static'])
+        allowed = set(['sifre_degistir', 'logout', 'set_language', 'static', 'auth.sifre_degistir', 'auth.logout'])
         if request.endpoint not in allowed:
-            return redirect(url_for('sifre_degistir'))
+            return redirect(url_for('auth.sifre_degistir'))
 
 # Yardımcı: İstek JSON/AJAX mi?
 def _wants_json_response():
@@ -1149,6 +1254,8 @@ class Kullanici(db.Model):
     RaporlarModulu = db.Column(db.Boolean, default=True)  # Raporlar modülüne erişim
     AyarlarModulu = db.Column(db.Boolean, default=False)  # Ayarlar modülüne erişim
     LogModulu = db.Column(db.Boolean, default=False)      # Log modülüne erişim
+    WhatsAppModulu = db.Column(db.Boolean, default=False) # WhatsApp modülüne erişim
+    ProfilFotografi = db.Column(db.NVARCHAR(500))  # Profil fotoğrafı dosya yolu
     OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
     GuncellemeTarihi = db.Column(db.DateTime, default=lambda: datetime.now(), onupdate=lambda: datetime.now())
     
@@ -1472,6 +1579,7 @@ class FirmaWhatsAppAyar(db.Model):
     PhoneNumberID = db.Column(db.String(50), nullable=True)
     BusinessAccountID = db.Column(db.String(50), nullable=True)
     WebhookVerifyToken = db.Column(db.String(100), nullable=True)
+    TestNumarasi = db.Column(db.String(20), nullable=True)  # Test için kayıtlı numara
     # Varsayılan mesaj şablonları
     RandevuOlusturmaMesaji = db.Column(db.Text, nullable=True)
     RandevuHatirlatmaMesaji = db.Column(db.Text, nullable=True)
@@ -1488,6 +1596,67 @@ class FirmaWhatsAppAyar(db.Model):
     
     def __repr__(self):
         return f'<FirmaWhatsAppAyar {self.WhatsAppAyarID} firma={self.FirmaID}>'
+
+# Instagram Ayarları
+class FirmaInstagramAyar(db.Model):
+    __tablename__ = 'FirmaInstagramAyarlari'
+    
+    InstagramAyarID = db.Column(db.Integer, primary_key=True)
+    FirmaID = db.Column(db.Integer, db.ForeignKey('Firmalar.FirmaID'), nullable=False)
+    FacebookPageID = db.Column(db.String(50), nullable=True)
+    InstagramBusinessAccountID = db.Column(db.String(50), nullable=True)
+    AccessToken = db.Column(db.Text, nullable=True)
+    WebhookSecret = db.Column(db.String(100), nullable=True)
+    Aktif = db.Column(db.Boolean, default=True)
+    OlusturmaTarihi = db.Column(db.DateTime, default=lambda: datetime.now())
+    GuncellemeTarihi = db.Column(db.DateTime, default=lambda: datetime.now(), onupdate=lambda: datetime.now())
+    
+    firma = db.relationship('Firma', backref='instagram_ayarlar')
+    
+    def __repr__(self):
+        return f'<FirmaInstagramAyar {self.InstagramAyarID} firma={self.FirmaID}>'
+
+# WhatsApp Mesajları
+class WhatsAppMesaj(db.Model):
+    __tablename__ = 'WhatsAppMesajlar'
+    
+    MesajID = db.Column(db.Integer, primary_key=True)
+    WhatsAppMessageID = db.Column(db.String(100), unique=True, nullable=False)
+    FirmaID = db.Column(db.Integer, db.ForeignKey('Firmalar.FirmaID'), nullable=False)
+    MusteriID = db.Column(db.Integer, db.ForeignKey('Musteriler.MusteriID'), nullable=True)
+    GonderenTelefon = db.Column(db.String(20), nullable=False)
+    AliciTelefon = db.Column(db.String(20), nullable=False)
+    MesajMetni = db.Column(db.Text)
+    Yyon = db.Column(db.String(10), nullable=False)  # 'GELEN' veya 'GIDEN'
+    Okundu = db.Column(db.Boolean, default=False, nullable=False)
+    Tarih = db.Column(db.DateTime, default=lambda: datetime.now())
+    
+    firma = db.relationship('Firma', backref='whatsapp_mesajlar')
+    musteri = db.relationship('Musteri', backref='whatsapp_mesajlar')
+    
+    def __repr__(self):
+        return f'<WhatsAppMesaj {self.MesajID}>'
+
+# Instagram Mesajları (app.py'de tekrar tanımlama - badge için)
+class InstagramMesaj(db.Model):
+    __tablename__ = 'InstagramMesajlar'
+    
+    MesajID = db.Column(db.Integer, primary_key=True)
+    InstagramMessageID = db.Column(db.String(100), unique=True, nullable=False)
+    FirmaID = db.Column(db.Integer, db.ForeignKey('Firmalar.FirmaID'), nullable=False)
+    MusteriID = db.Column(db.Integer, db.ForeignKey('Musteriler.MusteriID'), nullable=True)
+    GonderenID = db.Column(db.String(50), nullable=False)
+    AliciID = db.Column(db.String(50), nullable=False)
+    MesajMetni = db.Column(db.Text)
+    Yyon = db.Column(db.String(10), nullable=False)  # 'GELEN' veya 'GIDEN'
+    Okundu = db.Column(db.Boolean, default=False, nullable=False)
+    Tarih = db.Column(db.DateTime, default=lambda: datetime.now())
+    
+    firma = db.relationship('Firma', backref='instagram_mesajlar_app')
+    musteri = db.relationship('Musteri', backref='instagram_mesajlar')
+    
+    def __repr__(self):
+        return f'<InstagramMesaj {self.MesajID}>'
 
 # Sistem Ayarları (Veritabanı Konfigürasyonu)
 class SistemAyar(db.Model):
@@ -1912,96 +2081,411 @@ def send_sms_corvass(sms_ayar, phone_number: str, message: str) -> bool:
         print(f"Corvass SMS gönderim hatası: {e}")
         return False
 
-# Country State City API entegrasyonu
+# GeoNames API entegrasyonu
 import requests
 import json
 
-# API Base URL
-CSC_API_BASE = "https://api.countrystatecity.in/v1"
+# GeoNames API Base URL
+GEONAMES_API_BASE = "http://api.geonames.org"
 
-# API Key (ücretsiz tier için)
-CSC_API_KEY = os.environ.get("CSC_API_KEY", "")  # https://countrystatecity.in/ adresinden alın
+# GeoNames Username (ücretsiz tier için)
+GEONAMES_USERNAME = os.environ.get("GEONAMES_USERNAME", "blueblack")  # GeoNames username
+
+# Eski CountryStateCity API desteği (fallback için)
+CSC_API_BASE = "https://api.countrystatecity.in/v1"
+CSC_API_KEY = os.environ.get("CSC_API_KEY", "")
 
 def _csc_headers():
-    """CountryStateCity API için header üretir ve anahtardaki boşluk/çevresel boşlukları temizler."""
+    """CountryStateCity API için header üretir (fallback için)."""
     key = (CSC_API_KEY or "").strip().replace(" ", "")
     return {"X-CSCAPI-KEY": key}
 
 def get_countries():
-    """Tüm ülkeleri getir"""
+    """Tüm ülkeleri getir - GeoNames API kullanır, seçilen dile göre"""
+    if not GEONAMES_USERNAME or not GEONAMES_USERNAME.strip():
+        print(f"[GeoNames] Username yok, fallback kullanılıyor (ülkeler için)")
+        return get_fallback_countries()
+    
+    # Session'dan dil bilgisini al
+    lang = 'tr'  # Varsayılan
     try:
-        headers = _csc_headers()
-        url = f"{CSC_API_BASE}/countries"
-        response = requests.get(url, headers=headers, timeout=10)
-        if app.debug:
-            print(f"CSC GET {url} -> {response.status_code}")
+        from flask import session, has_request_context
+        if has_request_context() and session and session.get('language'):
+            lang = session.get('language', 'tr')[:2]  # İlk 2 karakteri al (tr, en, fr, de)
+            print(f"[GeoNames] get_countries: Session'dan dil alındı: {lang}")
+        else:
+            print(f"[GeoNames] get_countries: Session yok veya request context yok, varsayılan dil kullanılıyor: {lang}")
+    except Exception as e:
+        print(f"[GeoNames] get_countries: Session dil hatası: {e}, varsayılan dil kullanılıyor: {lang}")
+    
+    try:
+        url = f"{GEONAMES_API_BASE}/countryInfoJSON"
+        params = {
+            "username": GEONAMES_USERNAME,
+            "lang": lang  # GeoNames dil parametresi
+        }
+        response = requests.get(url, params=params, timeout=10)
+        print(f"[GeoNames] GET {url} (lang={lang}) -> {response.status_code}")
+        print(f"[GeoNames] Params: {params}")
         if response.status_code == 200:
-            countries = response.json()
-            return [{"iso2": country["iso2"], "name": country["name"]} for country in countries]
+            data = response.json()
+            print(f"[GeoNames] Response keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
+            countries = data.get("geonames", [])
+            print(f"[GeoNames] Countries count: {len(countries) if countries else 0}")
+            if countries and len(countries) > 0:
+                print(f"[GeoNames] First country sample: {countries[0]}")
+            # Eğer API boş array döndürüyorsa fallback kullan
+            if not countries or len(countries) == 0:
+                print(f"[GeoNames] API boş array döndürdü (ülkeler), fallback kullanılıyor")
+                print(f"[GeoNames] Response body: {response.text[:500]}")
+                return get_fallback_countries()
+            # GeoNames formatını bizim formatımıza çevir
+            try:
+                formatted_countries = []
+                skipped_count = 0
+                for country in countries:
+                    iso2 = country.get("isoAlpha2") or country.get("countryCode", "")
+                    name = country.get("countryName", "")
+                    if iso2 and name:
+                        formatted_countries.append({"iso2": iso2, "name": name})
+                    else:
+                        skipped_count += 1
+                        if skipped_count <= 5:  # İlk 5 atlanan ülkeyi logla
+                            print(f"[GeoNames] Country skipped (missing data): iso2={iso2}, name={name}, country={country}")
+                
+                if skipped_count > 0:
+                    print(f"[GeoNames] Toplam {skipped_count} ülke atlandı (iso2 veya name eksik)")
+                
+                print(f"[GeoNames] API'den {len(formatted_countries)} ülke formatlandı (lang={lang})")
+                if len(formatted_countries) > 0:
+                    print(f"[GeoNames] First formatted country: {formatted_countries[0]}")
+                    print(f"[GeoNames] Last formatted country: {formatted_countries[-1]}")
+                    # Türkçe kontrolü için bazı ülkeleri logla
+                    test_countries = ['TR', 'US', 'DE', 'FR', 'GB', 'PL']
+                    for test_iso2 in test_countries:
+                        test_country = next((c for c in formatted_countries if c.get('iso2') == test_iso2), None)
+                        if test_country:
+                            print(f"[GeoNames] {test_iso2}: {test_country.get('name')}")
+                        else:
+                            print(f"[GeoNames] {test_iso2}: Bulunamadı")
+                    # Türkçe kontrolü için bazı ülkeleri logla
+                    test_countries = ['TR', 'US', 'DE', 'FR', 'GB', 'PL']
+                    for test_iso2 in test_countries:
+                        test_country = next((c for c in formatted_countries if c.get('iso2') == test_iso2), None)
+                        if test_country:
+                            print(f"[GeoNames] {test_iso2}: {test_country.get('name')}")
+                
+                # Eğer formatlanmış ülke yoksa fallback kullan
+                if len(formatted_countries) == 0:
+                    print(f"[GeoNames] API'den formatlanmış ülke yok, fallback kullanılıyor")
+                    return get_fallback_countries()
+                
+                print(f"[GeoNames] Returning {len(formatted_countries)} countries from API")
+                return formatted_countries
+            except Exception as e:
+                print(f"[GeoNames] API veri formatlama hatası (ülkeler): {e}")
+                import traceback
+                traceback.print_exc()
+                return get_fallback_countries()
         else:
             # Fallback: Statik liste
-            if app.debug:
-                try:
-                    print(f"CSC countries non-200: {response.status_code} body={response.text[:200]}")
-                except Exception:
-                    pass
+            print(f"[GeoNames] Countries non-200: {response.status_code}")
+            try:
+                print(f"[GeoNames] Response body: {response.text[:200]}")
+            except Exception:
+                pass
             return get_fallback_countries()
     except Exception as e:
-        if app.debug:
-            print(f"API hatası (ülkeler): {e}")
+        print(f"[GeoNames] API hatası (ülkeler): {e}")
+        import traceback
+        traceback.print_exc()
         return get_fallback_countries()
 
 def get_states(country_iso2):
-    """Belirli bir ülkenin eyaletlerini/şehirlerini getir"""
-    try:
-        headers = _csc_headers()
-        url = f"{CSC_API_BASE}/countries/{country_iso2}/states"
-        response = requests.get(url, headers=headers, timeout=10)
+    """Belirli bir ülkenin eyaletlerini/şehirlerini getir - GeoNames API kullanır, seçilen dile göre"""
+    if not GEONAMES_USERNAME or not GEONAMES_USERNAME.strip():
         if app.debug:
-            print(f"CSC GET {url} -> {response.status_code}")
+            print(f"GeoNames username yok, fallback kullanılıyor (TR için {len(get_fallback_states('TR'))} il)")
+        return get_fallback_states(country_iso2)
+    
+    # Session'dan dil bilgisini al
+    lang = 'tr'  # Varsayılan
+    try:
+        from flask import session
+        if session and session.get('language'):
+            lang = session.get('language', 'tr')[:2]  # İlk 2 karakteri al (tr, en, fr, de)
+    except:
+        pass
+    
+    try:
+        # GeoNames'ta şehirler için searchJSON kullanılır
+        # Türkiye için: featureClass=A (Administrative boundaries) ve featureCode=ADM1 (il seviyesi)
+        url = f"{GEONAMES_API_BASE}/searchJSON"
+        params = {
+            "country": country_iso2,
+            "featureClass": "A",  # Administrative boundaries
+            "maxRows": 1000,
+            "username": GEONAMES_USERNAME,
+            "lang": lang  # GeoNames dil parametresi
+        }
+        
+        # Ülkeye göre featureCode ekle (ADM1 = eyalet/il seviyesi)
+        # Tüm ülkeler için ADM1 kullan (eyalet/il seviyesi idari birimler)
+        params["featureCode"] = "ADM1"
+        
+        response = requests.get(url, params=params, timeout=10)
+        print(f"[GeoNames] GET {url} -> {response.status_code}")
+        print(f"[GeoNames] Params: {params}")
         if response.status_code == 200:
-            states = response.json()
-            return [{"iso2": state["iso2"], "name": state["name"]} for state in states]
+            data = response.json()
+            places = data.get("geonames", [])
+            # Debug: API yanıtını logla
+            print(f"[GeoNames] API yanıtı (status 200): {len(places) if places else 0} place bulundu (country={country_iso2})")
+            if not places or len(places) == 0:
+                print(f"[GeoNames] API boş array döndürdü, response body: {response.text[:500]}")
+            # Eğer API boş array döndürüyorsa fallback kullan
+            if not places or len(places) == 0:
+                print(f"[GeoNames] API boş array döndürdü, fallback kullanılıyor (country={country_iso2})")
+                return get_fallback_states(country_iso2)
+            # GeoNames formatını bizim formatımıza çevir
+            try:
+                formatted_states = []
+                seen_codes = set()
+                for place in places:
+                    name = place.get("name", "")
+                    if not name:
+                        print(f"[GeoNames] Place skipped (no name): {place.get('geonameId', 'unknown')}")
+                        continue
+                    
+                    # Ülkeye göre admin code belirleme
+                    if country_iso2 == "TR":
+                        # Türkiye için adminCode1'i iso2 olarak kullan (örn: 34 = İstanbul)
+                        admin_code = place.get("adminCode1", "")
+                    else:
+                        # Diğer ülkeler için ISO3166_2 kodunu kullan (örn: DE için NW, BY, etc.)
+                        admin_codes = place.get("adminCodes1", {})
+                        if isinstance(admin_codes, dict):
+                            admin_code = admin_codes.get("ISO3166_2", "")
+                            if not admin_code:
+                                print(f"[GeoNames] Place {name}: adminCodes1={admin_codes}, ISO3166_2 not found")
+                        else:
+                            admin_code = place.get("adminCode1", "")
+                            print(f"[GeoNames] Place {name}: adminCodes1 is not dict, using adminCode1={admin_code}")
+                    
+                    # Eğer admin_code yoksa, name'in ilk harflerini kullan
+                    if not admin_code:
+                        # Name'den kısa kod oluştur (örn: "Nordrhein-Westfalen" -> "NW")
+                        words = name.split()
+                        if len(words) >= 2:
+                            admin_code = (words[0][0] + words[1][0]).upper()
+                        else:
+                            admin_code = name[:2].upper()
+                        print(f"[GeoNames] Place {name}: Generated admin_code={admin_code} from name")
+                    
+                    # Benzersiz kod kontrolü
+                    code_key = f"{country_iso2}_{admin_code}"
+                    if code_key not in seen_codes:
+                        formatted_states.append({"iso2": admin_code, "name": name})
+                        seen_codes.add(code_key)
+                        if len(formatted_states) <= 5:
+                            print(f"[GeoNames] Formatted state {len(formatted_states)}: iso2={admin_code}, name={name}")
+                
+                print(f"[GeoNames] API'den {len(formatted_states)} state formatlandı (country={country_iso2})")
+                if len(formatted_states) > 0:
+                    print(f"[GeoNames] First formatted state: {formatted_states[0]}")
+                
+                # Eğer yeterli veri yoksa fallback kullan
+                if len(formatted_states) < 3:
+                    print(f"[GeoNames] API yeterli veri döndürmedi ({len(formatted_states)} state), fallback kullanılıyor")
+                    return get_fallback_states(country_iso2)
+                print(f"[GeoNames] Returning {len(formatted_states)} states for {country_iso2}")
+                return formatted_states
+            except Exception as e:
+                print(f"[GeoNames] API veri formatlama hatası: {e}, fallback kullanılıyor")
+                import traceback
+                traceback.print_exc()
+                return get_fallback_states(country_iso2)
         else:
             # Fallback: Statik veriler
             if app.debug:
                 try:
-                    print(f"CSC states non-200: {response.status_code} body={response.text[:200]}")
+                    print(f"GeoNames states non-200: {response.status_code} body={response.text[:200]}")
                 except Exception:
                     pass
             return get_fallback_states(country_iso2)
     except Exception as e:
         if app.debug:
-            print(f"API hatası (eyaletler): {e}")
+            print(f"GeoNames API hatası (eyaletler): {e}")
         # Fallback: Statik veriler
         return get_fallback_states(country_iso2)
 
 def get_cities(country_iso2, state_iso2=None):
-    """Belirli bir ülke/eyaletin şehirlerini getir"""
-    try:
-        headers = _csc_headers()
-        if state_iso2:
-            url = f"{CSC_API_BASE}/countries/{country_iso2}/states/{state_iso2}/cities"
-        else:
-            url = f"{CSC_API_BASE}/countries/{country_iso2}/cities"
-        
-        response = requests.get(url, headers=headers, timeout=10)
+    """Belirli bir ülke/eyaletin şehirlerini getir - GeoNames API kullanır, seçilen dile göre"""
+    if not GEONAMES_USERNAME or not GEONAMES_USERNAME.strip():
         if app.debug:
-            print(f"CSC GET {url} -> {response.status_code}")
+            print(f"GeoNames username yok, fallback kullanılıyor (ilçeler için)")
+        return get_fallback_cities(country_iso2, state_iso2)
+    
+    # Session'dan dil bilgisini al
+    lang = 'tr'  # Varsayılan
+    try:
+        from flask import session
+        if session and session.get('language'):
+            lang = session.get('language', 'tr')[:2]  # İlk 2 karakteri al (tr, en, fr, de)
+    except:
+        pass
+    
+    try:
+        # GeoNames'ta ilçeler için searchJSON kullanılır
+        # featureClass=P: Populated places (şehirler/ilçeler)
+        # Türkiye için daha iyi sonuç verir
+        url = f"{GEONAMES_API_BASE}/searchJSON"
+        params = {
+            "country": country_iso2,
+            "featureClass": "P",  # Populated places (şehirler/ilçeler)
+            "maxRows": 1000,
+            "username": GEONAMES_USERNAME,
+            "lang": lang  # GeoNames dil parametresi
+        }
+        
+        # Eğer state_iso2 (il/eyalet kodu) varsa, adminCode1 parametresi ekle
+        actual_admin_code1 = state_iso2  # Varsayılan olarak state_iso2'yi kullan
+        if state_iso2:
+            # Türkiye için: state_iso2 direkt adminCode1 (örn: "34" = İstanbul)
+            # Diğer ülkeler için: state_iso2 ISO3166_2 kodu olabilir (örn: "22" = Polonya için Pomeranian)
+            # Önce state_iso2'yi adminCode1'e çevirmek için eyaletleri kontrol et
+            if country_iso2 != "TR":
+                # Diğer ülkeler için: ISO3166_2 kodunu adminCode1'e çevir
+                try:
+                    # Önce eyaletleri getir ve ISO3166_2 ile eşleşen adminCode1'i bul
+                    states_url = f"{GEONAMES_API_BASE}/searchJSON"
+                    states_params = {
+                        "country": country_iso2,
+                        "featureClass": "A",
+                        "featureCode": "ADM1",
+                        "maxRows": 100,
+                        "username": GEONAMES_USERNAME,
+                        "lang": lang
+                    }
+                    states_response = requests.get(states_url, params=states_params, timeout=5)
+                    if states_response.status_code == 200:
+                        states_data = states_response.json()
+                        states_places = states_data.get("geonames", [])
+                        for state_place in states_places:
+                            state_admin_codes = state_place.get("adminCodes1", {})
+                            if isinstance(state_admin_codes, dict):
+                                state_iso3166_2 = state_admin_codes.get("ISO3166_2", "")
+                                if state_iso3166_2 == state_iso2:
+                                    actual_admin_code1 = state_place.get("adminCode1", state_iso2)
+                                    print(f"[GeoNames] State ISO3166_2={state_iso2} -> adminCode1={actual_admin_code1} (country={country_iso2})")
+                                    break
+                except Exception as e:
+                    print(f"[GeoNames] State lookup hatası: {e}, state_iso2 direkt kullanılıyor")
+            
+            params["adminCode1"] = actual_admin_code1
+            
+            # Türkiye için featureCode ekle (P.PPLA = başkent, P.PPL = şehir, P.PPLA2 = ilçe)
+            # Ancak PPLA2 bazı iller için yeterli olmayabilir, bu yüzden önce PPLA2 dene, sonra tüm P'leri al
+            if country_iso2 == "TR":
+                # Önce PPLA2 ile dene (ilçe merkezleri)
+                params["featureCode"] = "PPLA2"
+                # maxRows ücretsiz serviste maksimum 1000
+                params["maxRows"] = 1000
+        
+        response = requests.get(url, params=params, timeout=10)
+        print(f"[GeoNames] GET {url} -> {response.status_code}")
+        print(f"[GeoNames] Params: {params}")
         if response.status_code == 200:
-            cities = response.json()
-            return [{"name": city["name"]} for city in cities]
+            data = response.json()
+            places = data.get("geonames", [])
+            # Debug: API yanıtını logla
+            print(f"[GeoNames] API yanıtı (status 200): {len(places) if places else 0} place bulundu (country={country_iso2}, state={state_iso2})")
+            if not places or len(places) == 0:
+                print(f"[GeoNames] API boş array döndürdü (ilçeler), response body: {response.text[:500]}")
+            # Eğer API boş array döndürüyorsa, Türkiye için featureCode olmadan tekrar dene
+            if not places or len(places) == 0:
+                if country_iso2 == "TR" and state_iso2 and params.get("featureCode") == "PPLA2":
+                    print(f"[GeoNames] PPLA2 ile sonuç yok, featureCode olmadan tekrar deneniyor (country={country_iso2}, state={state_iso2})")
+                    # featureCode'u kaldır ve tekrar dene
+                    params_no_fcode = params.copy()
+                    params_no_fcode.pop("featureCode", None)
+                    response2 = requests.get(url, params=params_no_fcode, timeout=10)
+                    if response2.status_code == 200:
+                        data2 = response2.json()
+                        places = data2.get("geonames", [])
+                        print(f"[GeoNames] featureCode olmadan {len(places) if places else 0} place bulundu")
+                
+                if not places or len(places) == 0:
+                    print(f"[GeoNames] API boş array döndürdü (ilçeler), fallback kullanılıyor (country={country_iso2}, state={state_iso2})")
+                    return get_fallback_cities(country_iso2, state_iso2)
+            # GeoNames formatını bizim formatımıza çevir
+            try:
+                formatted_cities = []
+                seen_names = set()
+                for place in places:
+                    name = place.get("name", "")
+                    if not name:
+                        continue
+                    
+                    # Eğer state_iso2 (il/eyalet kodu) varsa, adminCode1 kontrolü yap
+                    if state_iso2:
+                        # Belirli bir il/eyalet için şehirleri/ilçeleri getir
+                        place_admin_code1 = place.get("adminCode1", "")
+                        
+                        # Türkiye için adminCode1 string olarak karşılaştır (örn: "34")
+                        # Diğer ülkeler için ISO3166_2 kodunu kullan
+                        if country_iso2 == "TR":
+                            # Türkiye: adminCode1 string olarak karşılaştır
+                            if place_admin_code1 == state_iso2:
+                                if name not in seen_names:
+                                    formatted_cities.append({"name": name})
+                                    seen_names.add(name)
+                                    if len(formatted_cities) <= 5:
+                                        print(f"[GeoNames] City {len(formatted_cities)}: {name} (adminCode1={place_admin_code1}, state={state_iso2})")
+                        else:
+                            # Diğer ülkeler: adminCode1 ile karşılaştır (zaten actual_admin_code1'e çevrildi)
+                            # API'den gelen place'ler zaten adminCode1 ile filtrelenmiş olmalı
+                            # Ama yine de kontrol et
+                            if place_admin_code1 == actual_admin_code1:
+                                if name not in seen_names:
+                                    formatted_cities.append({"name": name})
+                                    seen_names.add(name)
+                                    if len(formatted_cities) <= 5:
+                                        print(f"[GeoNames] City {len(formatted_cities)}: {name} (adminCode1={place_admin_code1}, actual_admin_code1={actual_admin_code1})")
+                    else:
+                        # Tüm şehirleri/ilçeleri getir (state_iso2 yoksa)
+                        if name not in seen_names:
+                            formatted_cities.append({"name": name})
+                            seen_names.add(name)
+                
+                print(f"[GeoNames] API'den {len(formatted_cities)} city formatlandı (country={country_iso2}, state={state_iso2})")
+                if len(formatted_cities) > 0:
+                    print(f"[GeoNames] First formatted city: {formatted_cities[0]}")
+                
+                # Eğer yeterli veri yoksa fallback kullan
+                if len(formatted_cities) < 3:
+                    print(f"[GeoNames] API yeterli veri döndürmedi ({len(formatted_cities)} city), fallback kullanılıyor")
+                    return get_fallback_cities(country_iso2, state_iso2)
+                
+                print(f"[GeoNames] Returning {len(formatted_cities)} cities for {country_iso2}/{state_iso2}")
+                return formatted_cities
+            except Exception as e:
+                print(f"[GeoNames] API veri formatlama hatası (ilçeler): {e}")
+                import traceback
+                traceback.print_exc()
+                return get_fallback_cities(country_iso2, state_iso2)
         else:
             # Fallback: Statik veriler
-            if app.debug:
-                try:
-                    print(f"CSC cities non-200: {response.status_code} body={response.text[:200]}")
-                except Exception:
-                    pass
+            print(f"[GeoNames] Cities non-200: {response.status_code}")
+            try:
+                print(f"[GeoNames] Response body: {response.text[:200]}")
+            except Exception:
+                pass
             return get_fallback_cities(country_iso2, state_iso2)
     except Exception as e:
-        if app.debug:
-            print(f"API hatası (şehirler): {e}")
+        print(f"[GeoNames] API hatası (şehirler): {e}")
+        import traceback
+        traceback.print_exc()
         # Fallback: Statik veriler
         return get_fallback_cities(country_iso2, state_iso2)
 
@@ -2235,106 +2719,7 @@ def get_fallback_cities(country_iso2, state_iso2=None):
     else:
         return []
 
-# Dakikada bir calisan basit hatirlatma is parcacigi
-def reminder_worker():
-    with app.app_context():
-        while True:
-            try:
-                now = datetime.now()
-                
-                # Sadece gelecekteki randevular için hatırlatma kontrol et (24 saat içinde)
-                future_limit = now + timedelta(hours=24)
-                
-                # Gonderilmemis ve epostasi olan hatirlatmalari getir
-                # Sadece gelecekteki randevular için kontrol et
-                pending = db.session.query(RandevuHatirlatma).join(Randevu).filter(
-                    RandevuHatirlatma.Gonderildi == False,
-                    RandevuHatirlatma.RecipientEmail != None,
-                    RandevuHatirlatma.RecipientEmail != '',
-                    Randevu.RandevuTarihi >= now,  # Gelecekteki randevular
-                    Randevu.RandevuTarihi <= future_limit  # 24 saat içindeki randevular
-                ).all()
 
-                # SMS hatirlatmalarini da kontrol et
-                pending_sms = db.session.query(RandevuSMSHatirlatma).join(Randevu).filter(
-                    RandevuSMSHatirlatma.Gonderildi == False,
-                    RandevuSMSHatirlatma.RecipientPhone != None,
-                    RandevuSMSHatirlatma.RecipientPhone != '',
-                    Randevu.RandevuTarihi >= now,
-                    Randevu.RandevuTarihi <= future_limit
-                ).all()
-
-                # Eğer gönderilecek hiçbir hatırlatma yoksa, bekle
-                if not pending and not pending_sms:
-                    import time
-                    time.sleep(60)
-                    continue
-
-                for h in pending:
-                    r = h.randevu
-                    if not r:
-                        continue
-                    # Ne zaman gonderilmeli?
-                    target_send_time = r.RandevuTarihi - timedelta(minutes=h.MinutesBefore)
-                    # UTC varsayimi: RandevuTarihi zaten naive ise karşılaştırma naive-naive
-                    if target_send_time <= now and not h.Gonderildi:
-                        subject = f"Randevu Hatırlatma - {r.RandevuTarihi.strftime('%d.%m.%Y %H:%M')}"
-                        body = (
-                            f"Merhaba,\n\n"
-                            f"{r.RandevuTarihi.strftime('%d.%m.%Y %H:%M')} tarihinde bir randevunuz bulunmaktadır.\n"
-                            f"Referans: {r.RandevuBaslik}\n"
-                            f"Süre: {r.RandevuSuresi or 60} dk\n\n"
-                            f"Bu bir otomatik bilgilendirmedir."
-                        )
-                        # Önce firma ayarlarını kullan, yoksa genel ayarları kullan
-                        ok = send_email_with_firma_settings(r.FirmaID, h.RecipientEmail, subject, body)
-                        if not ok:
-                            # Firma ayarları başarısız olursa genel ayarları dene
-                            ok = send_email_simple(h.RecipientEmail, subject, body)
-                        if ok:
-                            h.Gonderildi = True
-                            h.GonderimTarihi = datetime.now()
-                            db.session.commit()
-
-                # SMS hatirlatmalarini isleme
-                for s in pending_sms:
-                    r = s.randevu
-                    if not r:
-                        continue
-                    target_send_time = r.RandevuTarihi - timedelta(minutes=s.MinutesBefore)
-                    if target_send_time <= now and not s.Gonderildi:
-                        # Firma SMS ayar metnini kullan
-                        sms_ayar = FirmaSMSAyar.query.filter_by(FirmaID=s.FirmaID, Aktif=True).first()
-                        sms_text = (sms_ayar.VarsayilanSMSMetni if sms_ayar and sms_ayar.VarsayilanSMSMetni else
-                                    "Merhaba {MUSTERI_ADI}, {RANDEVU_TARIH} tarihindeki randevunuzu hatırlatırız.")
-                        try:
-                            defter_adi = r.defter.DefterAdi if r.defter else ''
-                        except Exception:
-                            defter_adi = ''
-                        # Ad + Soyad birlestir
-                        try:
-                            if r.musteri and r.musteri.MusteriSoyadi:
-                                full_name = f"{r.musteri.MusteriAdi} {r.musteri.MusteriSoyadi}".strip()
-                            else:
-                                full_name = (r.MusteriAdi or '').strip()
-                        except Exception:
-                            full_name = (r.MusteriAdi or '').strip()
-
-                        sms_text = sms_text.replace('{MUSTERI_ADI}', full_name or '-')\
-                                           .replace('{RANDEVU_TARIH}', r.RandevuTarihi.strftime('%d.%m.%Y %H:%M'))\
-                                           .replace('{DEFTER_ADI}', defter_adi)
-
-                        ok = send_sms_with_firma_settings(s.FirmaID, s.RecipientPhone, sms_text)
-                        if ok:
-                            s.Gonderildi = True
-                            s.GonderimTarihi = datetime.now()
-                            db.session.commit()
-            except Exception as e:
-                print(f"Hatirlatma isci hatasi: {e}")
-            finally:
-                # 60 saniye bekle
-                import time
-                time.sleep(60)
 
 # API: Ülke/Şehir/İlçe verileri
 @app.route('/api/countries')
@@ -2351,9 +2736,14 @@ def api_countries():
 def api_states(country_iso2):
     """Belirli bir ülkenin eyaletlerini/şehirlerini getir"""
     try:
+        print(f"[API] /api/states/{country_iso2} çağrıldı")
         states = get_states(country_iso2)
+        print(f"[API] /api/states/{country_iso2} döndü: {len(states) if states else 0} state")
         return jsonify(states)
     except Exception as e:
+        print(f"[API] /api/states/{country_iso2} hatası: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/cities/<country_iso2>')
@@ -2361,9 +2751,14 @@ def api_states(country_iso2):
 def api_cities(country_iso2, state_iso2=None):
     """Belirli bir ülke/eyaletin şehirlerini getir"""
     try:
+        print(f"[API] /api/cities/{country_iso2}/{state_iso2} çağrıldı")
         cities = get_cities(country_iso2, state_iso2)
+        print(f"[API] /api/cities/{country_iso2}/{state_iso2} döndü: {len(cities) if cities else 0} city")
         return jsonify(cities)
     except Exception as e:
+        print(f"[API] /api/cities/{country_iso2}/{state_iso2} hatası: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 # API: Bildirimler
@@ -2564,11 +2959,111 @@ def login():
             flash('Kullanıcı adı ve şifre gereklidir!', 'error')
             return render_template('login.html')
         
-        # Kullanici kontrolu
-        user = Kullanici.query.filter_by(KullaniciAdi=username, Aktif=True).first()
+        # Kullanici kontrolu - önce ORM ile dene
+        user = None
+        try:
+            user = Kullanici.query.filter_by(KullaniciAdi=username, Aktif=True).first()
+            if user:
+                print(f"[DEBUG] Kullanici ORM ile bulundu: {username}")
+        except Exception as orm_err:
+            print(f"[DEBUG] ORM sorgusu basarisiz: {orm_err}")
+            import traceback
+            traceback.print_exc()
+        
+        # ORM başarısız olursa direkt SQL ile dene (tablo ismi küçük harf olabilir)
+        if not user:
+            try:
+                # Dialect kontrolü - sadece MySQL/MSSQL için SQL fallback
+                dialect_name = db.engine.dialect.name if hasattr(db.engine, 'dialect') else None
+                if dialect_name in ('mysql', 'mssql'):
+                    with db.engine.connect() as conn:
+                        # Veritabanı bilgilerini göster (sadece MySQL için)
+                        if dialect_name == 'mysql':
+                            try:
+                                current_db = conn.execute(text("SELECT DATABASE()")).scalar()
+                                print(f"[DEBUG] Aktif veritabani: {current_db}")
+                            except:
+                                pass
+                        
+                        # Tablo ismini bul (küçük/büyük harf farkı olabilir)
+                        from sqlalchemy import inspect
+                        inspector = inspect(db.engine)
+                        tables = inspector.get_table_names()
+                        print(f"[DEBUG] Veritabanindaki tablolar ({len(tables)} adet): {sorted(tables)[:10]}...")
+                        
+                        kullanicilar_table = None
+                        for table in tables:
+                            if table.lower() == 'kullanicilar':
+                                kullanicilar_table = table
+                                break
+                        
+                        print(f"[DEBUG] Kullanicilar tablosu bulundu: {kullanicilar_table}")
+                        
+                        if kullanicilar_table:
+                            # Önce kayıt sayısını kontrol et
+                            count = conn.execute(text(f"SELECT COUNT(*) FROM `{kullanicilar_table}`")).scalar()
+                            print(f"[DEBUG] Kullanicilar tablosundaki toplam kayit sayisi: {count}")
+                            
+                            result = conn.execute(text(f"""
+                                SELECT KullaniciID, KullaniciAdi, Sifre, Ad, Soyad, Email, FirmaID, Admin, Aktif,
+                                       COALESCE(RaporlarModulu, 1) as RaporlarModulu,
+                                       COALESCE(AyarlarModulu, 0) as AyarlarModulu,
+                                       COALESCE(LogModulu, 0) as LogModulu
+                                FROM `{kullanicilar_table}`
+                                WHERE KullaniciAdi = :username AND Aktif = 1
+                            """), {"username": username})
+                            user_data = result.fetchone()
+                            
+                            if user_data:
+                                print(f"[DEBUG] Kullanici SQL ile bulundu: {username}")
+                                # SQLAlchemy Row objesini Kullanici modeline benzer bir objeye dönüştür
+                                class UserProxy:
+                                    def __init__(self, row_data):
+                                        self.KullaniciID = row_data[0]
+                                        self.KullaniciAdi = row_data[1]
+                                        self.Sifre = row_data[2]
+                                        self.Ad = row_data[3]
+                                        self.Soyad = row_data[4]
+                                        self.Email = row_data[5]
+                                        self.FirmaID = row_data[6]
+                                        self.Admin = bool(row_data[7])
+                                        self.Aktif = bool(row_data[8])
+                                        self.RaporlarModulu = bool(row_data[9]) if len(row_data) > 9 else True
+                                        self.AyarlarModulu = bool(row_data[10]) if len(row_data) > 10 else False
+                                        self.LogModulu = bool(row_data[11]) if len(row_data) > 11 else False
+                                
+                                user = UserProxy(user_data)
+                            else:
+                                print(f"[DEBUG] Kullanici SQL ile bulunamadi: {username}")
+                                # Tüm kullanıcıları listele (Aktif filtresi olmadan)
+                                all_users = conn.execute(text(f"SELECT KullaniciAdi, Aktif FROM `{kullanicilar_table}`")).fetchall()
+                                print(f"[DEBUG] Veritabanindaki tum kullanicilar (Aktif filtresi olmadan): {[u[0] for u in all_users]}")
+                                
+                                # Aktif olmayan kullanıcıları da kontrol et
+                                inactive_user = conn.execute(text(f"""
+                                    SELECT KullaniciAdi, Aktif FROM `{kullanicilar_table}` 
+                                    WHERE KullaniciAdi = :username
+                                """), {"username": username}).fetchone()
+                                if inactive_user:
+                                    print(f"[DEBUG] Kullanici bulundu ama Aktif={inactive_user[1]}: {username}")
+                        else:
+                            print(f"[DEBUG] Kullanicilar tablosu bulunamadi!")
+                else:
+                    print(f"[DEBUG] SQL fallback atlandi - dialect: {dialect_name} (sadece MySQL/MSSQL destekleniyor)")
+            except Exception as sql_err:
+                print(f"[DEBUG] SQL sorgusu basarisiz: {sql_err}")
+                import traceback
+                traceback.print_exc()
+        
+        # Kullanıcı bulunamadıysa hata ver
+        if not user:
+            print(f"[DEBUG] Kullanici bulunamadi: {username}")
+            flash('Kullanıcı adı veya şifre hatalı!', 'error')
+            return render_template('login.html')
         
         # Şifre kontrolü - hash'lenmiş şifreyi kontrol et
-        if user and user.Sifre and check_password_hash(user.Sifre, password):
+        if user.Sifre and check_password_hash(user.Sifre, password):
+            print(f"[DEBUG] Sifre kontrolu basarili - giris onaylandi")
             # Eski oturumları temizle (24 saatten eski)
             eski_oturumlar = AktifOturum.query.filter(
                 AktifOturum.SonGorulmeZamani < datetime.now() - timedelta(hours=24)
@@ -2589,6 +3084,15 @@ def login():
                 session['pending_raporlar_modulu'] = user.RaporlarModulu
                 session['pending_ayarlar_modulu'] = user.AyarlarModulu
                 session['pending_log_modulu'] = user.LogModulu
+                # Admin kullanıcılar için otomatik WhatsApp ve Instagram yetkisi
+                if user.Admin:
+                    session['pending_whatsapp_modulu'] = True
+                    session['pending_instagram_modulu'] = True
+                else:
+                    whatsapp_modulu_value = getattr(user, 'WhatsAppModulu', False)
+                    session['pending_whatsapp_modulu'] = bool(whatsapp_modulu_value) if whatsapp_modulu_value is not None else False
+                    instagram_modulu_value = getattr(user, 'InstagramModulu', False)
+                    session['pending_instagram_modulu'] = bool(instagram_modulu_value) if instagram_modulu_value is not None else False
                 
                 # Firma bilgisini al
                 firma = Firma.query.filter_by(FirmaID=user.FirmaID).first()
@@ -2612,6 +3116,19 @@ def login():
             session['raporlar_modulu'] = user.RaporlarModulu
             session['ayarlar_modulu'] = user.AyarlarModulu
             session['log_modulu'] = user.LogModulu
+            # WhatsAppModulu kontrolü - Admin ise otomatik True
+            whatsapp_modulu_value = getattr(user, 'WhatsAppModulu', False)
+            # Admin kullanıcılar için otomatik WhatsApp yetkisi
+            if user.Admin:
+                session['whatsapp_modulu'] = True
+            else:
+                session['whatsapp_modulu'] = bool(whatsapp_modulu_value) if whatsapp_modulu_value is not None else False
+            # InstagramModulu kontrolü - Admin ise otomatik True
+            instagram_modulu_value = getattr(user, 'InstagramModulu', False)
+            if user.Admin:
+                session['instagram_modulu'] = True
+            else:
+                session['instagram_modulu'] = bool(instagram_modulu_value) if instagram_modulu_value is not None else False
 
             # Oturum kaydı oluştur - önce mevcut kaydı kontrol et
             token = secrets.token_hex(16)
@@ -2685,6 +3202,14 @@ def force_logout():
     pending_raporlar_modulu = request.form.get('pending_raporlar_modulu') or session.get('pending_raporlar_modulu')
     pending_ayarlar_modulu = request.form.get('pending_ayarlar_modulu') or session.get('pending_ayarlar_modulu')
     pending_log_modulu = request.form.get('pending_log_modulu') or session.get('pending_log_modulu')
+    pending_whatsapp_modulu = request.form.get('pending_whatsapp_modulu') or session.get('pending_whatsapp_modulu')
+    pending_instagram_modulu = request.form.get('pending_instagram_modulu') or session.get('pending_instagram_modulu')
+    
+    # Admin kontrolü - Admin ise otomatik True
+    pending_is_admin_bool = pending_is_admin in [True, 'True', 'true', '1', 1]
+    if pending_is_admin_bool:
+        pending_whatsapp_modulu = True
+        pending_instagram_modulu = True
     
     # Session'ı tamamen temizle
     session.clear()
@@ -2695,10 +3220,12 @@ def force_logout():
     session['user_name'] = pending_user_name
     session['firma_id'] = pending_firma_id
     session['firma_adi'] = pending_firma_adi
-    session['is_admin'] = pending_is_admin
+    session['is_admin'] = pending_is_admin_bool
     session['raporlar_modulu'] = pending_raporlar_modulu
     session['ayarlar_modulu'] = pending_ayarlar_modulu
     session['log_modulu'] = pending_log_modulu
+    session['whatsapp_modulu'] = pending_whatsapp_modulu if pending_whatsapp_modulu is not None else False
+    session['instagram_modulu'] = pending_instagram_modulu if pending_instagram_modulu is not None else False
     
     # Oturum kaydı oluştur - önce mevcut kaydı kontrol et
     token = secrets.token_hex(16)
@@ -3040,11 +3567,13 @@ def ayarlar_kullanicilar():
             raporlar_modulu = 'raporlar_modulu' in request.form
             ayarlar_modulu = 'ayarlar_modulu' in request.form
             log_modulu = 'log_modulu' in request.form
+            whatsapp_modulu = 'whatsapp_modulu' in request.form
             
             # Varsayılan şifre 123 ve ilk girişte değişim zorunlu olacak
             u = Kullanici(KullaniciAdi=kullanici_adi, Email=email, FirmaID=firma_id,
                           Sifre=sifre or '123', Ad=ad, Soyad=soyad, Aktif=True,
-                          RaporlarModulu=raporlar_modulu, AyarlarModulu=ayarlar_modulu, LogModulu=log_modulu)
+                          RaporlarModulu=raporlar_modulu, AyarlarModulu=ayarlar_modulu,
+                          LogModulu=log_modulu, WhatsAppModulu=whatsapp_modulu)
             db.session.add(u)
             db.session.commit()
 
@@ -3060,8 +3589,13 @@ def ayarlar_kullanicilar():
                     import io
                     img = Image.open(io.BytesIO(raw)).convert('RGB')
                     os.makedirs(os.path.join('static', 'uploads', 'users'), exist_ok=True)
-                    out_path = os.path.join('static', 'uploads', 'users', f'user_{u.KullaniciID}.jpg')
+                    # Dosya yolunu relative path olarak kaydet (static/ ile başlamadan)
+                    relative_path = f'uploads/users/user_{u.KullaniciID}.jpg'
+                    out_path = os.path.join('static', relative_path)
                     img.save(out_path, format='JPEG', quality=85, optimize=True)
+                    # Dosya yolunu veritabanına kaydet
+                    u.ProfilFotografi = relative_path
+                    db.session.commit()
                 else:
                     foto = request.files.get('foto')
                     if foto and foto.filename:
@@ -3082,8 +3616,13 @@ def ayarlar_kullanicilar():
                             img.thumbnail((256, 256))
                             # Kaydet
                             os.makedirs(os.path.join('static', 'uploads', 'users'), exist_ok=True)
-                            out_path = os.path.join('static', 'uploads', 'users', f'user_{u.KullaniciID}.jpg')
+                            # Dosya yolunu relative path olarak kaydet (static/ ile başlamadan)
+                            relative_path = f'uploads/users/user_{u.KullaniciID}.jpg'
+                            out_path = os.path.join('static', relative_path)
                             img.save(out_path, format='JPEG', quality=85, optimize=True)
+                            # Dosya yolunu veritabanına kaydet
+                            u.ProfilFotografi = relative_path
+                            db.session.commit()
                         else:
                             flash('Fotoğraf 512KB üzeri olduğu için yüklenmedi.', 'warning')
             except Exception:
@@ -3124,6 +3663,7 @@ def ayarlar_kullanici_duzenle(kullanici_id):
         raporlar_modulu = 'raporlar_modulu' in request.form
         ayarlar_modulu = 'ayarlar_modulu' in request.form
         log_modulu = 'log_modulu' in request.form
+        whatsapp_modulu = 'whatsapp_modulu' in request.form
         
         # Admin değilse firma değiştiremez
         if not session.get('is_admin', False):
@@ -3151,6 +3691,7 @@ def ayarlar_kullanici_duzenle(kullanici_id):
                 kullanici.RaporlarModulu = raporlar_modulu
                 kullanici.AyarlarModulu = ayarlar_modulu
                 kullanici.LogModulu = log_modulu
+                kullanici.WhatsAppModulu = whatsapp_modulu
                 
                 # Şifre güncelleme (sadece girilmişse) + doğrulama ve karmaşıklık
                 if sifre or sifre2:
@@ -3175,8 +3716,13 @@ def ayarlar_kullanici_duzenle(kullanici_id):
                         import io
                         img = Image.open(io.BytesIO(raw)).convert('RGB')
                         os.makedirs(os.path.join('static', 'uploads', 'users'), exist_ok=True)
-                        out_path = os.path.join('static', 'uploads', 'users', f'user_{kullanici.KullaniciID}.jpg')
+                        # Dosya yolunu relative path olarak kaydet (static/ ile başlamadan)
+                        relative_path = f'uploads/users/user_{kullanici.KullaniciID}.jpg'
+                        out_path = os.path.join('static', relative_path)
                         img.save(out_path, format='JPEG', quality=85, optimize=True)
+                        # Dosya yolunu veritabanına kaydet
+                        kullanici.ProfilFotografi = relative_path
+                        db.session.commit()
                     else:
                         foto = request.files.get('foto')
                         if foto and foto.filename:
@@ -3194,8 +3740,13 @@ def ayarlar_kullanici_duzenle(kullanici_id):
                                 img = img.crop((left, top, left + side, top + side))
                                 img.thumbnail((256, 256))
                                 os.makedirs(os.path.join('static', 'uploads', 'users'), exist_ok=True)
-                                out_path = os.path.join('static', 'uploads', 'users', f'user_{kullanici.KullaniciID}.jpg')
+                                # Dosya yolunu relative path olarak kaydet (static/ ile başlamadan)
+                                relative_path = f'uploads/users/user_{kullanici.KullaniciID}.jpg'
+                                out_path = os.path.join('static', relative_path)
                                 img.save(out_path, format='JPEG', quality=85, optimize=True)
+                                # Dosya yolunu veritabanına kaydet
+                                kullanici.ProfilFotografi = relative_path
+                                db.session.commit()
                             else:
                                 flash('Fotoğraf 512KB üzeri olduğu için yüklenmedi.', 'warning')
                 except Exception:
@@ -3327,8 +3878,9 @@ def ayarlar_defter():
     
     # Mevcut firmanın kategorilerini getir
     kategoriler = MusteriKategori.query.filter_by(
-        FirmaID=session['firma_id']
-    ).filter(MusteriKategori.Aktif == 1).order_by(MusteriKategori.KategoriID.asc()).all()
+        FirmaID=session['firma_id'],
+        Aktif=True
+    ).order_by(MusteriKategori.KategoriID.asc()).all()
     
     return render_template('ayarlar/defter.html', firmalar=firmalar, ayarlar_list=ayarlar_list, kategoriler=kategoriler, bloklar=bloklar)
 
@@ -4008,6 +4560,7 @@ def ayarlar_whatsapp_ekle():
             PhoneNumberID=request.form.get('phone_number_id'),
             BusinessAccountID=request.form.get('business_account_id'),
             WebhookVerifyToken=request.form.get('webhook_verify_token'),
+            TestNumarasi=request.form.get('test_numarasi'),
             RandevuOlusturmaMesaji=request.form.get('randevu_olusturma_mesaji'),
             RandevuHatirlatmaMesaji=request.form.get('randevu_hatirlatma_mesaji'),
             RandevuIptalMesaji=request.form.get('randevu_iptal_mesaji'),
@@ -4047,6 +4600,7 @@ def ayarlar_whatsapp_guncelle(ayar_id):
         whatsapp_ayar.PhoneNumberID = request.form.get('phone_number_id')
         whatsapp_ayar.BusinessAccountID = request.form.get('business_account_id')
         whatsapp_ayar.WebhookVerifyToken = request.form.get('webhook_verify_token')
+        whatsapp_ayar.TestNumarasi = request.form.get('test_numarasi')
         whatsapp_ayar.RandevuOlusturmaMesaji = request.form.get('randevu_olusturma_mesaji')
         whatsapp_ayar.RandevuHatirlatmaMesaji = request.form.get('randevu_hatirlatma_mesaji')
         whatsapp_ayar.RandevuIptalMesaji = request.form.get('randevu_iptal_mesaji')
@@ -4092,6 +4646,248 @@ def ayarlar_whatsapp_sil(ayar_id):
         if hedef_firma_id:
             return redirect(url_for('ayarlar_whatsapp', firma_id=hedef_firma_id))
     return redirect(url_for('ayarlar_whatsapp'))
+
+# WhatsApp Bağlantı Test API
+@app.route('/api/whatsapp/test', methods=['POST'])
+@login_required
+def whatsapp_test_connection():
+    """WhatsApp bağlantısını test et"""
+    try:
+        data = request.get_json()
+        access_token = data.get('access_token')
+        phone_number_id = data.get('phone_number_id')
+        
+        if not access_token or not phone_number_id:
+            return jsonify({'success': False, 'error': 'Access Token ve Phone Number ID gerekli'}), 400
+        
+        import requests
+        
+        # Phone Number ID'yi doğrula
+        url = f"https://graph.facebook.com/v24.0/{phone_number_id}"
+        headers = {
+            "Authorization": f"Bearer {access_token}"
+        }
+        
+        print(f"[WhatsApp Test] API isteği gönderiliyor: {url}")
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        print(f"[WhatsApp Test] API yanıt kodu: {response.status_code}")
+        print(f"[WhatsApp Test] API yanıt: {response.text}")
+        
+        if response.status_code == 200:
+            response_data = response.json()
+            verified_name = response_data.get('verified_name', 'Bilinmiyor')
+            display_phone_number = response_data.get('display_phone_number', 'Bilinmiyor')
+            code_verification_status = response_data.get('code_verification_status', 'Bilinmiyor')
+            quality_rating = response_data.get('quality_rating', 'Bilinmiyor')
+            
+            message = f'<div class="alert alert-success mb-0">'
+            message += f'<h6><i class="fas fa-check-circle"></i> Bağlantı Başarılı!</h6>'
+            message += f'<hr class="my-2">'
+            message += f'<strong>Doğrulanmış İsim:</strong> {verified_name}<br>'
+            message += f'<strong>Telefon Numarası:</strong> {display_phone_number}<br>'
+            message += f'<strong>Kod Doğrulama Durumu:</strong> {code_verification_status}'
+            
+            if code_verification_status == 'NOT_VERIFIED':
+                message += '<hr class="my-2">'
+                message += '<div class="alert alert-warning mb-0 mt-2">'
+                message += '<small><i class="fas fa-info-circle"></i> <strong>Test Numarası:</strong> Bu bir test numarasıdır. Test numaraları ile mesaj göndermek için alıcı numarasının önce size mesaj göndermesi gerekir (24 saat kuralı) veya alıcı numarasının WhatsApp Business hesabınıza kayıtlı olması gerekir.</small>'
+                message += '</div>'
+            
+            message += '</div>'
+            
+            return jsonify({
+                'success': True,
+                'message': message
+            })
+        else:
+            try:
+                error_data = response.json()
+                error_message = error_data.get('error', {}).get('message', 'Bilinmeyen hata')
+                error_code = error_data.get('error', {}).get('code', 'Bilinmeyen kod')
+                
+                # Türkçe hata mesajları
+                if error_code == 190:
+                    error_message = "Access Token geçersiz veya süresi dolmuş. Lütfen yeni bir Access Token oluşturun."
+                elif error_code == 133010:
+                    error_message = "Phone Number ID kayıtlı değil veya Access Token bu Phone Number ID ile eşleşmiyor. Lütfen Meta Business Suite'te kontrol edin."
+                elif error_code == 100:
+                    error_message = f"Geçersiz parametreler: {error_message}"
+                
+                return jsonify({
+                    'success': False,
+                    'error': f'Hata (Kod: {error_code}): {error_message}'
+                }), 400
+            except:
+                return jsonify({
+                    'success': False,
+                    'error': f'API hatası: {response.text}'
+                }), 400
+                
+    except Exception as e:
+        print(f"[WhatsApp Test] Hata: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Instagram Ayarları
+@app.route('/ayarlar/instagram')
+@login_required
+def ayarlar_instagram():
+    # Instagram modülü yetki kontrolü
+    if not session.get('is_admin', False) and not session.get('instagram_modulu', False):
+        flash('Instagram ayarlarına erişim yetkiniz yok!', 'error')
+        return redirect(url_for('ayarlar'))
+    
+    # Admin ise firma seçimi yapabilir
+    if session.get('is_admin', False):
+        selected_firma_id = request.args.get('firma_id', type=int)
+        if selected_firma_id:
+            firma = Firma.query.get(selected_firma_id)
+            if not firma:
+                flash('Seçilen firma bulunamadı!', 'error')
+                return redirect(url_for('ayarlar'))
+        else:
+            # İlk firma varsayılan olarak seçili
+            firma = Firma.query.first()
+            if not firma:
+                flash('Hiç firma bulunamadı!', 'error')
+                return redirect(url_for('ayarlar'))
+            selected_firma_id = firma.FirmaID
+        
+        instagram_ayar = FirmaInstagramAyar.query.filter_by(FirmaID=selected_firma_id).first()
+        firmalar = Firma.query.filter_by(Aktif=True).all()
+        return render_template('ayarlar/instagram.html', 
+                             instagram_ayar=instagram_ayar, 
+                             firma=firma,
+                             firmalar=firmalar,
+                             is_admin=True)
+    else:
+        # Normal kullanıcı sadece kendi firmasını görebilir
+        firma = Firma.query.get(session['firma_id'])
+        if not firma:
+            flash('Firma bilgisi bulunamadı!', 'error')
+            return redirect(url_for('ayarlar'))
+        
+        instagram_ayar = FirmaInstagramAyar.query.filter_by(FirmaID=session['firma_id']).first()
+        return render_template('ayarlar/instagram.html', 
+                             instagram_ayar=instagram_ayar, 
+                             firma=firma,
+                             is_admin=False)
+
+@app.route('/ayarlar/instagram/ekle', methods=['POST'])
+@login_required
+def ayarlar_instagram_ekle():
+    # Instagram modülü yetki kontrolü
+    if not session.get('is_admin', False) and not session.get('instagram_modulu', False):
+        flash('Instagram ayarlarına erişim yetkiniz yok!', 'error')
+        return redirect(url_for('ayarlar'))
+    
+    try:
+        # Admin ise formdan gelen firma_id'yi kullan
+        hedef_firma_id = session['firma_id']
+        try:
+            if session.get('is_admin', False) and request.form.get('firma_id'):
+                hedef_firma_id = int(request.form.get('firma_id'))
+        except (ValueError, TypeError):
+            pass
+        
+        # Mevcut ayar var mı kontrol et
+        mevcut_ayar = FirmaInstagramAyar.query.filter_by(FirmaID=hedef_firma_id).first()
+        if mevcut_ayar:
+            flash('Bu firma için Instagram ayarı zaten mevcut!', 'error')
+            return redirect(url_for('ayarlar_instagram'))
+        
+        # Yeni Instagram ayarı oluştur
+        instagram_ayar = FirmaInstagramAyar(
+            FirmaID=hedef_firma_id,
+            FacebookPageID=request.form.get('facebook_page_id'),
+            InstagramBusinessAccountID=request.form.get('instagram_account_id'),
+            AccessToken=request.form.get('access_token'),
+            WebhookSecret=request.form.get('webhook_secret'),
+            Aktif=bool(request.form.get('aktif'))
+        )
+        
+        db.session.add(instagram_ayar)
+        db.session.commit()
+        
+        flash('Instagram ayarları başarıyla eklendi!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Instagram ayarları eklenirken hata oluştu: {str(e)}', 'error')
+    
+    # Admin ise seçilen firmaya yönlendir
+    if session.get('is_admin', False) and request.form.get('firma_id'):
+        return redirect(url_for('ayarlar_instagram', firma_id=request.form.get('firma_id')))
+    return redirect(url_for('ayarlar_instagram'))
+
+@app.route('/ayarlar/instagram/guncelle/<int:ayar_id>', methods=['POST'])
+@login_required
+def ayarlar_instagram_guncelle(ayar_id):
+    # Instagram modülü yetki kontrolü
+    if not session.get('is_admin', False) and not session.get('instagram_modulu', False):
+        flash('Instagram ayarlarına erişim yetkiniz yok!', 'error')
+        return redirect(url_for('ayarlar'))
+    
+    try:
+        instagram_ayar = FirmaInstagramAyar.query.get_or_404(ayar_id)
+        
+        # Kullanıcı yetkisi kontrolü
+        if not session.get('is_admin', False) and instagram_ayar.FirmaID != session['firma_id']:
+            flash('Bu ayarı düzenleme yetkiniz yok!', 'error')
+            return redirect(url_for('ayarlar_instagram'))
+        
+        # Ayarları güncelle
+        instagram_ayar.FacebookPageID = request.form.get('facebook_page_id')
+        instagram_ayar.InstagramBusinessAccountID = request.form.get('instagram_account_id')
+        instagram_ayar.AccessToken = request.form.get('access_token')
+        instagram_ayar.WebhookSecret = request.form.get('webhook_secret')
+        instagram_ayar.Aktif = bool(request.form.get('aktif'))
+        instagram_ayar.GuncellemeTarihi = datetime.now()
+        
+        db.session.commit()
+        flash('Instagram ayarları başarıyla güncellendi!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Instagram ayarları güncellenirken hata oluştu: {str(e)}', 'error')
+    
+    # Admin ise seçilen firmaya yönlendir
+    if session.get('is_admin', False) and request.form.get('firma_id'):
+        return redirect(url_for('ayarlar_instagram', firma_id=request.form.get('firma_id')))
+    return redirect(url_for('ayarlar_instagram'))
+
+@app.route('/ayarlar/instagram/sil/<int:ayar_id>', methods=['POST', 'GET'])
+@login_required
+def ayarlar_instagram_sil(ayar_id):
+    # Instagram modülü yetki kontrolü
+    if not session.get('is_admin', False) and not session.get('instagram_modulu', False):
+        flash('Instagram ayarlarına erişim yetkiniz yok!', 'error')
+        return redirect(url_for('ayarlar'))
+    
+    try:
+        instagram_ayar = FirmaInstagramAyar.query.get_or_404(ayar_id)
+        
+        # Kullanıcı yetkisi kontrolü
+        if not session.get('is_admin', False) and instagram_ayar.FirmaID != session['firma_id']:
+            flash('Bu ayarı silme yetkiniz yok!', 'error')
+            return redirect(url_for('ayarlar_instagram'))
+        
+        db.session.delete(instagram_ayar)
+        db.session.commit()
+        flash('Instagram ayarları başarıyla silindi!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Instagram ayarları silinirken hata oluştu: {str(e)}', 'error')
+    
+    # Admin ise seçilen firmaya yönlendir
+    if session.get('is_admin', False):
+        hedef_firma_id = request.args.get('firma_id')
+        if hedef_firma_id:
+            return redirect(url_for('ayarlar_instagram', firma_id=hedef_firma_id))
+    return redirect(url_for('ayarlar_instagram'))
 
 # Görev Durumları Ayarları
 @app.route('/ayarlar/gorev-durumlar')
@@ -4591,6 +5387,10 @@ def api_gorev_durumlar_list():
 @login_required
 def whatsapp_chat():
     """WhatsApp Business API entegrasyonu ile sohbet ekranı"""
+    # Kullanıcı modül yetkisi kontrolü
+    if not session.get('whatsapp_modulu', False):
+        flash('Bu sayfaya erişim yetkiniz yok', 'error')
+        return redirect(url_for('dashboard'))
     # Firma WhatsApp ayarlarını kontrol et
     whatsapp_ayar = FirmaWhatsAppAyar.query.filter_by(FirmaID=session['firma_id'], Aktif=True).first()
     
@@ -4598,41 +5398,163 @@ def whatsapp_chat():
         flash('WhatsApp ayarları bulunamadı. Lütfen önce WhatsApp ayarlarını yapılandırın.', 'warning')
         return redirect(url_for('ayarlar_whatsapp'))
     
-    # Müşteri listesini getir (mesaj gönderme için)
-    from app import Musteri
-    musteriler = Musteri.query.filter_by(FirmaID=session['firma_id']).all()
+    # Müşteri listesini getir (telefon numarası olanlar, aktif müşteriler)
+    musteriler = Musteri.query.filter(
+        Musteri.FirmaID == session['firma_id'],
+        Musteri.Telefon.isnot(None),
+        Musteri.Telefon != ''
+    ).order_by(Musteri.MusteriAdi, Musteri.MusteriSoyadi).all()
+    
+    # Randevu defterlerini getir
+    defterler = RandevuDefterAyar.query.filter_by(
+        FirmaID=session['firma_id'], 
+        Aktif=True
+    ).order_by(RandevuDefterAyar.DefterAdi).all()
     
     return render_template('whatsapp/chat.html', 
                          whatsapp_ayar=whatsapp_ayar,
-                         musteriler=musteriler)
+                         musteriler=musteriler,
+                         defterler=defterler)
+
+# WhatsApp Mesajları API
+@app.route('/api/whatsapp/messages/<int:musteri_id>')
+@login_required
+def whatsapp_get_messages(musteri_id):
+    """Müşteriye ait WhatsApp mesajlarını getir"""
+    # Kullanıcı modül yetkisi kontrolü
+    if not session.get('whatsapp_modulu', False):
+        print(f"[WhatsApp Messages] WhatsApp yetkisi yok, kullanıcı: {session.get('user_id')}")
+        return jsonify({'success': False, 'error': 'Bu işlem için WhatsApp yetkiniz yok'}), 403
+    
+    try:
+        firma_id = session.get('firma_id')
+        print(f"[WhatsApp Messages] Müşteri ID: {musteri_id}, Firma ID: {firma_id}")
+        
+        # Müşteriyi kontrol et
+        musteri = Musteri.query.filter_by(MusteriID=musteri_id, FirmaID=firma_id).first()
+        if not musteri:
+            print(f"[WhatsApp Messages] Müşteri bulunamadı: {musteri_id}")
+            return jsonify({'success': False, 'error': 'Müşteri bulunamadı'}), 404
+        
+        print(f"[WhatsApp Messages] Müşteri bulundu: {musteri.MusteriAdi} {musteri.MusteriSoyadi}, Telefon: {musteri.Telefon}")
+        
+        # WhatsApp mesajlarını getir
+        # Önce MusteriID'ye göre filtrele
+        mesajlar = WhatsAppMesaj.query.filter_by(
+            FirmaID=firma_id,
+            MusteriID=musteri_id
+        ).order_by(WhatsAppMesaj.Tarih.asc()).all()
+        
+        print(f"[WhatsApp Messages] MusteriID ile bulunan mesaj sayısı: {len(mesajlar)}")
+        
+        # Eğer MusteriID ile mesaj bulunamazsa, telefon numarasına göre dene
+        if not mesajlar and musteri.Telefon:
+            # Telefon numarasını temizle (sadece rakamlar)
+            telefon_clean = ''.join(filter(str.isdigit, musteri.Telefon))
+            print(f"[WhatsApp Messages] Telefon numarası temizlendi: {telefon_clean}")
+            
+            # Eğer 0 ile başlıyorsa, 90 ekle
+            if telefon_clean.startswith('0'):
+                telefon_clean = '90' + telefon_clean[1:]
+            # Eğer 5 ile başlıyorsa ve 10 haneli ise, 90 ekle
+            elif telefon_clean.startswith('5') and len(telefon_clean) == 10:
+                telefon_clean = '90' + telefon_clean
+            
+            print(f"[WhatsApp Messages] Formatlanmış telefon: {telefon_clean}")
+            
+            # Telefon numarasına göre mesajları getir
+            mesajlar = WhatsAppMesaj.query.filter_by(
+                FirmaID=firma_id
+            ).filter(
+                or_(
+                    WhatsAppMesaj.GonderenTelefon == telefon_clean,
+                    WhatsAppMesaj.AliciTelefon == telefon_clean
+                )
+            ).order_by(WhatsAppMesaj.Tarih.asc()).all()
+            
+            print(f"[WhatsApp Messages] Telefon numarası ile bulunan mesaj sayısı: {len(mesajlar)}")
+        
+        # Toplam mesaj sayısını kontrol et
+        toplam_mesaj = WhatsAppMesaj.query.filter_by(FirmaID=firma_id).count()
+        print(f"[WhatsApp Messages] Firma için toplam mesaj sayısı: {toplam_mesaj}")
+        
+        # Mesajları formatla
+        formatted_messages = []
+        for mesaj in mesajlar:
+            formatted_messages.append({
+                'yonelim': 'gelen' if mesaj.Yyon == 'GELEN' else 'giden',
+                'icerik': mesaj.MesajMetni or '',
+                'tarih': mesaj.Tarih.strftime('%d.%m.%Y %H:%M') if mesaj.Tarih else ''
+            })
+        
+        print(f"[WhatsApp Messages] Formatlanmış mesaj sayısı: {len(formatted_messages)}")
+        
+        return jsonify({
+            'success': True,
+            'messages': formatted_messages
+        })
+        
+    except Exception as e:
+        print(f"[WhatsApp Messages] Hata: {e}")
+        import traceback
+        traceback.print_exc()
+        error_message = str(e)
+        # Hata mesajını daha anlaşılır hale getir
+        if "WhatsAppMesaj" in error_message or "does not exist" in error_message.lower():
+            error_message = "WhatsApp mesajları tablosu bulunamadı. Veritabanında WhatsAppMesajlar tablosu oluşturulmamış olabilir."
+        return jsonify({
+            'success': False, 
+            'error': error_message,
+            'details': str(e) if app.debug else None
+        }), 500
 
 # WhatsApp Mesaj Gönderme API
 @app.route('/api/whatsapp/send', methods=['POST'])
 @login_required
 def whatsapp_send_message():
     """WhatsApp mesajı gönder"""
+    # Kullanıcı modül yetkisi kontrolü
+    if not session.get('whatsapp_modulu', False):
+        print(f"[WhatsApp] WhatsApp yetkisi yok, kullanıcı: {session.get('user_id')}")
+        return jsonify({'success': False, 'error': 'Bu işlem için WhatsApp yetkiniz yok'}), 403
     try:
         data = request.get_json()
-        phone_number = data.get('phone_number')
-        message = data.get('message')
+        print(f"[WhatsApp] Gelen istek: {data}")
+        
+        # Frontend 'telefon' ve 'mesaj' gönderiyor, backend 'phone_number' ve 'message' bekliyordu.
+        # Her ikisini de destekleyelim.
+        phone_number = data.get('phone_number') or data.get('telefon')
+        message = data.get('message') or data.get('mesaj')
+        
+        print(f"[WhatsApp] phone_number: {phone_number}, message: {message[:50] if message else None}...")
         
         if not phone_number or not message:
+            print(f"[WhatsApp] Eksik parametreler: phone_number={phone_number}, message={bool(message)}")
             return jsonify({'success': False, 'error': 'Telefon numarası ve mesaj gerekli'}), 400
         
-        # Telefon numarasını temizle
+        # Telefon numarasını temizle (sadece rakamlar)
         phone_clean = ''.join(filter(str.isdigit, phone_number))
-        if not phone_clean or len(phone_clean) < 10:
-            return jsonify({'success': False, 'error': 'Geçersiz telefon numarası'}), 400
+        print(f"[WhatsApp] Temizlenmiş telefon: {phone_clean}, uzunluk: {len(phone_clean)}")
         
-        # WhatsApp mesajını gönder
+        if not phone_clean or len(phone_clean) < 7:
+            print(f"[WhatsApp] Geçersiz telefon numarası: {phone_clean}")
+            return jsonify({'success': False, 'error': 'Geçersiz telefon numarası (minimum 7 hane gerekli)'}), 400
+        
+        # WhatsApp mesajını gönder (formatlama send_whatsapp_message içinde yapılacak)
+        print(f"[WhatsApp] Mesaj gönderiliyor: {phone_clean}, firma_id: {session['firma_id']}")
         success, result = send_whatsapp_message(phone_clean, message, session['firma_id'])
         
         if success:
+            print(f"[WhatsApp] Mesaj başarıyla gönderildi")
             return jsonify({'success': True, 'message': 'Mesaj başarıyla gönderildi'})
         else:
-            return jsonify({'success': False, 'error': result}), 500
+            print(f"[WhatsApp] Mesaj gönderilemedi: {result}")
+            return jsonify({'success': False, 'error': result}), 400
             
     except Exception as e:
+        print(f"[WhatsApp] Hata: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # WhatsApp mesaj gönderme fonksiyonu
@@ -4643,30 +5565,216 @@ def send_whatsapp_message(phone_number, message, firma_id):
         if not whatsapp_ayar or not whatsapp_ayar.AccessToken or not whatsapp_ayar.PhoneNumberID:
             return False, "WhatsApp ayarları bulunamadı"
         
+        print(f"[WhatsApp] Ayarlar kontrol ediliyor:")
+        print(f"[WhatsApp]   - Phone Number ID: {whatsapp_ayar.PhoneNumberID}")
+        print(f"[WhatsApp]   - Access Token (ilk 20 karakter): {whatsapp_ayar.AccessToken[:20] if whatsapp_ayar.AccessToken else 'YOK'}...")
+        print(f"[WhatsApp]   - Business Account ID: {whatsapp_ayar.BusinessAccountID}")
+        
         import requests
         
-        url = f"https://graph.facebook.com/v18.0/{whatsapp_ayar.PhoneNumberID}/messages"
+        # Telefon numarasını temizle ve formatla
+        # WhatsApp API + işareti olmadan bekliyor, sadece rakamlar
+        # phone_number zaten sadece rakamlardan oluşuyor (whatsapp_send_message route'unda temizlendi)
+        phone_clean = phone_number
+        
+        print(f"[WhatsApp] Gelen telefon numarası: {phone_clean}, uzunluk: {len(phone_clean)}")
+        
+        # Telefon numarası formatını düzelt
+        # Eğer 0 ile başlıyorsa (0536...), 0'ı kaldır ve 90 ekle
+        if phone_clean.startswith('0'):
+            phone_clean = '90' + phone_clean[1:]
+            print(f"[WhatsApp] 0 ile başlayan numara düzeltildi: {phone_clean}")
+        # Eğer 5 ile başlıyorsa ve 10 haneli ise (Türkiye cep telefonu: 5XXXXXXXXX), 90 ekle
+        elif phone_clean.startswith('5') and len(phone_clean) == 10:
+            phone_clean = '90' + phone_clean
+            print(f"[WhatsApp] 10 haneli cep telefonu düzeltildi: {phone_clean}")
+        # Eğer 90 ile başlamıyorsa ve 10 haneli ise, 90 ekle
+        elif not phone_clean.startswith('90') and len(phone_clean) == 10:
+            phone_clean = '90' + phone_clean
+            print(f"[WhatsApp] 10 haneli numara düzeltildi: {phone_clean}")
+        # Eğer zaten 90 ile başlıyorsa, olduğu gibi kullan
+        elif phone_clean.startswith('90'):
+            print(f"[WhatsApp] Numara zaten 90 ile başlıyor: {phone_clean}")
+        
+        # WhatsApp API telefon numarası validasyonu: 7-15 hane arası olmalı
+        if len(phone_clean) < 7 or len(phone_clean) > 15:
+            return False, f"Telefon numarası geçersiz: {len(phone_clean)} hane (7-15 hane arası olmalı). Formatlanmış numara: {phone_clean}"
+        
+        # Mesaj içeriği kontrolü
+        if not message or not message.strip():
+            return False, "Mesaj içeriği boş olamaz"
+        
+        # Mesaj uzunluğu kontrolü (WhatsApp API maksimum 4096 karakter)
+        if len(message) > 4096:
+            return False, f"Mesaj çok uzun: {len(message)} karakter (maksimum 4096 karakter)"
+        
+        print(f"[WhatsApp] Formatlanmış telefon numarası: {phone_clean}, uzunluk: {len(phone_clean)}")
+        print(f"[WhatsApp] Mesaj içeriği: {message[:100]}... (uzunluk: {len(message)})")
+        
+        # API versiyonu: v18.0 deprecated, v24.0 kullanılıyor
+        url = f"https://graph.facebook.com/v24.0/{whatsapp_ayar.PhoneNumberID}/messages"
         headers = {
             "Authorization": f"Bearer {whatsapp_ayar.AccessToken}",
             "Content-Type": "application/json"
         }
         
+        # Test numarası kontrolü - Test numaraları için özel format gerekebilir
+        # WhatsApp Business API'de test numaraları genellikle sadece kayıtlı test numaralarına mesaj gönderebilir
+        # veya alıcı numarasının WhatsApp Business hesabına kayıtlı olması gerekebilir
+        
+        # Test numarası kontrolü - Test numaraları için özel işlem
+        # Test numaraları genellikle sadece belirli test numaralarına mesaj gönderebilir
+        # veya alıcı numarasının WhatsApp Business hesabına kayıtlı olması gerekir
+        
+        # Önce Phone Number ID'nin test numarası olup olmadığını kontrol et
+        test_number_info = None
+        try:
+            test_url = f"https://graph.facebook.com/v24.0/{whatsapp_ayar.PhoneNumberID}"
+            test_headers = {"Authorization": f"Bearer {whatsapp_ayar.AccessToken}"}
+            test_response = requests.get(test_url, headers=test_headers, timeout=10)
+            if test_response.status_code == 200:
+                test_number_info = test_response.json()
+                print(f"[WhatsApp] Phone Number bilgisi: {test_number_info}")
+        except:
+            pass
+        
         data = {
             "messaging_product": "whatsapp",
-            "to": phone_number,
+            "to": phone_clean,
             "type": "text",
-            "text": {"body": message}
+            "text": {"body": message.strip()}
         }
         
-        response = requests.post(url, headers=headers, json=data)
+        # Test numarası ise ve code_verification_status NOT_VERIFIED ise
+        # Bu durumda alıcı numarasının WhatsApp Business hesabına kayıtlı olması gerekebilir
+        # veya sadece belirli test numaralarına mesaj gönderebilir
+        if test_number_info and test_number_info.get('code_verification_status') == 'NOT_VERIFIED':
+            print(f"[WhatsApp] Test numarası tespit edildi (NOT_VERIFIED)")
+            print(f"[WhatsApp] Test numaraları genellikle sadece belirli test numaralarına mesaj gönderebilir")
+            print(f"[WhatsApp] Veya alıcı numarasının WhatsApp Business hesabına kayıtlı olması gerekir")
+        
+        print(f"[WhatsApp] Mesaj gönderme data: {json.dumps(data, indent=2)}")
+        
+        print(f"[WhatsApp] API isteği gönderiliyor: {url}")
+        print(f"[WhatsApp] Request headers: {headers}")
+        print(f"[WhatsApp] Request data: {data}")
+        print(f"[WhatsApp] Request data (JSON): {json.dumps(data, indent=2)}")
+        
+        try:
+            response = requests.post(url, headers=headers, json=data, timeout=30)
+        except requests.exceptions.RequestException as e:
+            print(f"[WhatsApp] Request exception: {e}")
+            return False, f"API isteği gönderilemedi: {str(e)}"
+        
+        print(f"[WhatsApp] API yanıt kodu: {response.status_code}")
+        print(f"[WhatsApp] API yanıt headers: {dict(response.headers)}")
+        print(f"[WhatsApp] API yanıt: {response.text}")
+        
+        # Response'u JSON olarak parse etmeyi dene
+        try:
+            response_json = response.json()
+            print(f"[WhatsApp] API yanıt (JSON): {json.dumps(response_json, indent=2)}")
+        except:
+            print(f"[WhatsApp] API yanıt JSON parse edilemedi")
         
         if response.status_code == 200:
             return True, "Mesaj başarıyla gönderildi"
         else:
-            return False, f"Mesaj gönderilemedi: {response.text}"
+            # Hata mesajını parse et
+            try:
+                error_data = response.json()
+                error_message = error_data.get('error', {}).get('message', 'Bilinmeyen hata')
+                error_code = error_data.get('error', {}).get('code', 'Bilinmeyen kod')
+                error_type = error_data.get('error', {}).get('type', 'Bilinmeyen tip')
+                
+                # Orijinal hata mesajını al
+                original_error_message = error_data.get('error', {}).get('message', 'Bilinmeyen hata')
+                error_subcode = error_data.get('error', {}).get('error_subcode', None)
+                
+                # Türkçe hata mesajları
+                if error_code == 190:
+                    error_message = "Access Token geçersiz veya süresi dolmuş. Lütfen WhatsApp ayarlarından Access Token'ı yenileyin. Token'lar genellikle 60 gün sonra süresi doluyor."
+                elif error_code == 133010:
+                    # Test numarası kontrolü
+                    is_test_number = test_number_info and test_number_info.get('code_verification_status') == 'NOT_VERIFIED'
+                    if is_test_number:
+                        error_message = "Test numarası ile mesaj gönderilemiyor. Test numaraları genellikle sadece belirli test numaralarına mesaj gönderebilir veya alıcı numarasının WhatsApp Business hesabına kayıtlı olması gerekir. Çözüm: 1) Alıcı numarasının WhatsApp Business hesabınıza kayıtlı olduğundan emin olun, 2) Veya gerçek bir WhatsApp Business numarası kullanın (test numarası değil), 3) Meta Business Suite'te hesabınızı doğrulayın ve gerçek numaraya geçin."
+                    else:
+                        error_message = "WhatsApp Business hesabı kayıtlı değil veya Access Token bu Phone Number ID ile eşleşmiyor. Lütfen şunları kontrol edin: 1) Access Token'ın bu Phone Number ID için geçerli olduğundan emin olun, 2) Meta Business Suite'te WhatsApp Business hesabınızın API'ye bağlı olduğunu kontrol edin, 3) Access Token ve Phone Number ID'nin aynı hesaba ait olduğundan emin olun. Gerekirse yeni bir Access Token oluşturun."
+                elif error_code == 463:
+                    error_message = "WhatsApp Business hesabınız henüz onaylanmamış. Sadece onaylanmış mesaj şablonları gönderebilirsiniz. Lütfen WhatsApp Business hesabınızı onaylatın veya mesaj şablonu kullanın."
+                elif error_code == 131047:
+                    error_message = "Alıcı numarası WhatsApp'a kayıtlı değil veya numara geçersiz."
+                elif error_code == 131026:
+                    error_message = "Mesaj gönderilemedi: Alıcı numarası WhatsApp'a kayıtlı değil."
+                elif error_code == 100:
+                    # 100 hatası için daha detaylı mesaj
+                    print(f"[WhatsApp] Hata detayları - Code: {error_code}, Subcode: {error_subcode}, Type: {error_type}, Message: {original_error_message}")
+                    
+                    if "Invalid parameter" in original_error_message or "invalid" in original_error_message.lower():
+                        if "phone number" in original_error_message.lower() or "to" in original_error_message.lower() or "recipient" in original_error_message.lower():
+                            error_message = f"Geçersiz telefon numarası formatı. WhatsApp API telefon numarasını uluslararası formatta bekliyor (örn: 905362438446, + işareti olmadan). Gönderilen numara: {phone_clean}. Hata: {original_error_message}"
+                        elif "message" in original_error_message.lower() or "body" in original_error_message.lower() or "text" in original_error_message.lower():
+                            error_message = f"Geçersiz mesaj içeriği. Mesaj boş olmamalı ve maksimum 4096 karakter olmalı. Hata: {original_error_message}"
+                        elif "type" in original_error_message.lower():
+                            error_message = f"Geçersiz mesaj tipi. WhatsApp Business API sadece onaylanmış mesaj şablonları veya serbest metin mesajları (hesap onaylandıysa) destekler. Hata: {original_error_message}"
+                        else:
+                            error_message = f"Geçersiz parametreler. Hata: {original_error_message}. Gönderilen telefon: {phone_clean}, Mesaj uzunluğu: {len(message) if message else 0}"
+                    else:
+                        error_message = f"Geçersiz parametreler: {original_error_message}. Gönderilen telefon: {phone_clean}, Mesaj uzunluğu: {len(message) if message else 0}"
+                else:
+                    error_message = f"{original_error_message} (Kod: {error_code})"
+                
+                return False, f"Mesaj gönderilemedi (Kod: {error_code}): {error_message}"
+            except:
+                return False, f"Mesaj gönderilemedi: {response.text}"
             
     except Exception as e:
+        print(f"[WhatsApp] Exception: {e}")
+        import traceback
+        traceback.print_exc()
         return False, f"Hata: {str(e)}"
+
+# Mesaj Sayacı API (Sidebar Badge için)
+@app.route('/api/mesaj-sayaci')
+@login_required
+def api_mesaj_sayaci():
+    """WhatsApp ve Instagram okunmamış mesaj sayılarını döndür"""
+    try:
+        firma_id = session.get('firma_id')
+        
+        # WhatsApp okunmamış mesaj sayısı
+        whatsapp_count = 0
+        if session.get('whatsapp_modulu', False):
+            try:
+                whatsapp_count = WhatsAppMesaj.query.filter_by(
+                    FirmaID=firma_id, 
+                    Yyon='GELEN',
+                    Okundu=False
+                ).count()
+            except Exception:
+                whatsapp_count = 0
+        
+        # Instagram okunmamış mesaj sayısı
+        instagram_count = 0
+        if session.get('instagram_modulu', False):
+            try:
+                instagram_count = InstagramMesaj.query.filter_by(
+                    FirmaID=firma_id, 
+                    Yyon='GELEN',
+                    Okundu=False
+                ).count()
+            except Exception:
+                instagram_count = 0
+        
+        return jsonify({
+            'success': True,
+            'whatsapp': whatsapp_count,
+            'instagram': instagram_count
+        })
+        
+    except Exception as e:
+        return jsonify({'success': True, 'whatsapp': 0, 'instagram': 0})
 
 @app.route('/randevular')
 @login_required
@@ -4771,1152 +5879,6 @@ def randevular():
                          selected_bitis=bitis_str,
                          today_str=today_str)
 
-@app.route('/api/musteri-arama')
-@login_required
-def musteri_arama():
-    """Müşteri arama API'si"""
-    firma_id = session.get('firma_id')
-    if not firma_id:
-        return jsonify([])
-    
-    query = request.args.get('q', '').strip()
-    if len(query) < 2:
-        return jsonify([])
-    
-    # Müşteri arama sorgusu
-    musteriler = Musteri.query.filter(
-        Musteri.FirmaID == firma_id,
-        Musteri.Aktif == True,
-        or_(
-            Musteri.MusteriAdi.ilike(f'%{query}%'),
-            Musteri.MusteriSoyadi.ilike(f'%{query}%'),
-            Musteri.Telefon.ilike(f'%{query}%'),
-            Musteri.Email.ilike(f'%{query}%'),
-            # Tam isim araması (Ad + Soyad)
-            db.func.concat(Musteri.MusteriAdi, ' ', Musteri.MusteriSoyadi).ilike(f'%{query}%')
-        )
-    ).limit(10).all()
-    
-    # Eğer sonuç bulunamadıysa, kelime bazlı arama yap
-    if not musteriler and ' ' in query:
-        words = query.split()
-        if len(words) >= 2:
-            # İlk kelime ad, ikinci kelime soyad başlangıcı
-            first_word = words[0]
-            second_word = words[1]
-            
-            musteriler = Musteri.query.filter(
-                Musteri.FirmaID == firma_id,
-                Musteri.Aktif == True,
-                and_(
-                    Musteri.MusteriAdi.ilike(f'%{first_word}%'),
-                    Musteri.MusteriSoyadi.ilike(f'%{second_word}%')
-                )
-            ).limit(10).all()
-    
-    # Plaka kodlarını şehir isimlerine dönüştür
-    plaka_to_sehir = {
-        '01': 'Adana', '02': 'Adıyaman', '03': 'Afyonkarahisar', '04': 'Ağrı', '05': 'Amasya',
-        '06': 'Ankara', '07': 'Antalya', '08': 'Artvin', '09': 'Aydın', '10': 'Balıkesir',
-        '11': 'Bilecik', '12': 'Bingöl', '13': 'Bitlis', '14': 'Bolu', '15': 'Burdur',
-        '16': 'Bursa', '17': 'Çanakkale', '18': 'Çankırı', '19': 'Çorum', '20': 'Denizli',
-        '21': 'Diyarbakır', '22': 'Edirne', '23': 'Elazığ', '24': 'Erzincan', '25': 'Erzurum',
-        '26': 'Eskişehir', '27': 'Gaziantep', '28': 'Giresun', '29': 'Gümüşhane', '30': 'Hakkari',
-        '31': 'Hatay', '32': 'Isparta', '33': 'Mersin', '34': 'İstanbul', '35': 'İzmir',
-        '36': 'Kars', '37': 'Kastamonu', '38': 'Kayseri', '39': 'Kırklareli', '40': 'Kırşehir',
-        '41': 'Kocaeli', '42': 'Konya', '43': 'Kütahya', '44': 'Malatya', '45': 'Manisa',
-        '46': 'Kahramanmaraş', '47': 'Mardin', '48': 'Muğla', '49': 'Muş', '50': 'Nevşehir',
-        '51': 'Niğde', '52': 'Ordu', '53': 'Rize', '54': 'Sakarya', '55': 'Samsun',
-        '56': 'Siirt', '57': 'Sinop', '58': 'Sivas', '59': 'Tekirdağ', '60': 'Tokat',
-        '61': 'Trabzon', '62': 'Tunceli', '63': 'Şanlıurfa', '64': 'Uşak', '65': 'Van',
-        '66': 'Yozgat', '67': 'Zonguldak', '68': 'Aksaray', '69': 'Bayburt', '70': 'Karaman',
-        '71': 'Kırıkkale', '72': 'Batman', '73': 'Şırnak', '74': 'Bartın', '75': 'Ardahan',
-        '76': 'Iğdır', '77': 'Yalova', '78': 'Karabük', '79': 'Kilis', '80': 'Osmaniye', '81': 'Düzce'
-    }
-    
-    results = []
-    for m in musteriler:
-        sehir_adi = plaka_to_sehir.get(m.Sehir, m.Sehir) if m.Sehir else None
-        results.append({
-            'id': m.MusteriID,
-            'ad': m.MusteriAdi,
-            'soyad': m.MusteriSoyadi,
-            'telefon': m.Telefon,
-            'email': m.Email,
-            'sehir': sehir_adi
-        })
-    
-    return jsonify(results)
-
-@app.route('/rapor/musteri-detay/<int:musteri_id>')
-@login_required
-def musteri_detay_raporu(musteri_id):
-    """Müşteri detay raporu"""
-    firma_id = session.get('firma_id')
-    if not firma_id:
-        return redirect(url_for('login'))
-    
-    # Müşteri bilgilerini getir
-    musteri = Musteri.query.filter_by(MusteriID=musteri_id, FirmaID=firma_id).first()
-    if not musteri:
-        flash('Müşteri bulunamadı.', 'error')
-        return redirect(url_for('rapor_musteriler'))
-    
-    # Plaka kodlarını şehir isimlerine dönüştür
-    plaka_to_sehir = {
-        '01': 'Adana', '02': 'Adıyaman', '03': 'Afyonkarahisar', '04': 'Ağrı', '05': 'Amasya',
-        '06': 'Ankara', '07': 'Antalya', '08': 'Artvin', '09': 'Aydın', '10': 'Balıkesir',
-        '11': 'Bilecik', '12': 'Bingöl', '13': 'Bitlis', '14': 'Bolu', '15': 'Burdur',
-        '16': 'Bursa', '17': 'Çanakkale', '18': 'Çankırı', '19': 'Çorum', '20': 'Denizli',
-        '21': 'Diyarbakır', '22': 'Edirne', '23': 'Elazığ', '24': 'Erzincan', '25': 'Erzurum',
-        '26': 'Eskişehir', '27': 'Gaziantep', '28': 'Giresun', '29': 'Gümüşhane', '30': 'Hakkari',
-        '31': 'Hatay', '32': 'Isparta', '33': 'Mersin', '34': 'İstanbul', '35': 'İzmir',
-        '36': 'Kars', '37': 'Kastamonu', '38': 'Kayseri', '39': 'Kırklareli', '40': 'Kırşehir',
-        '41': 'Kocaeli', '42': 'Konya', '43': 'Kütahya', '44': 'Malatya', '45': 'Manisa',
-        '46': 'Kahramanmaraş', '47': 'Mardin', '48': 'Muğla', '49': 'Muş', '50': 'Nevşehir',
-        '51': 'Niğde', '52': 'Ordu', '53': 'Rize', '54': 'Sakarya', '55': 'Samsun',
-        '56': 'Siirt', '57': 'Sinop', '58': 'Sivas', '59': 'Tekirdağ', '60': 'Tokat',
-        '61': 'Trabzon', '62': 'Tunceli', '63': 'Şanlıurfa', '64': 'Uşak', '65': 'Van',
-        '66': 'Yozgat', '67': 'Zonguldak', '68': 'Aksaray', '69': 'Bayburt', '70': 'Karaman',
-        '71': 'Kırıkkale', '72': 'Batman', '73': 'Şırnak', '74': 'Bartın', '75': 'Ardahan',
-        '76': 'Iğdır', '77': 'Yalova', '78': 'Karabük', '79': 'Kilis', '80': 'Osmaniye', '81': 'Düzce'
-    }
-    
-    # Müşteri randevularını getir
-    randevular = Randevu.query.filter_by(
-        MusteriID=musteri_id,
-        FirmaID=firma_id
-    ).order_by(Randevu.RandevuTarihi.desc()).all()
-    
-    # Randevu istatistikleri
-    toplam_randevu = len(randevular)
-    tamamlanan_randevu = len([r for r in randevular if r.Durum == 'Tamamlandı'])
-    iptal_randevu = len([r for r in randevular if r.Durum == 'İptal'])
-    bekleyen_randevu = len([r for r in randevular if r.Durum == 'Beklemede'])
-    
-    # Son randevu tarihi
-    son_randevu = randevular[0] if randevular else None
-    
-    # Aylık randevu dağılımı (son 12 ay)
-    from collections import defaultdict
-    
-    aylik_randevu = defaultdict(int)
-    for r in randevular:
-        if r.RandevuTarihi:
-            ay_key = r.RandevuTarihi.strftime('%Y-%m')
-            aylik_randevu[ay_key] += 1
-    
-    # Randevu defteri dağılımı
-    defter_dagilimi = defaultdict(int)
-    for r in randevular:
-        if r.DefterID:
-            # DefterID'den defter adını al
-            defter = RandevuDefterAyar.query.filter_by(AyarID=r.DefterID).first()
-            if defter:
-                defter_dagilimi[defter.DefterAdi] += 1
-            else:
-                defter_dagilimi['Bilinmeyen Defter'] += 1
-    
-    # Şehir bilgisini dönüştür
-    sehir_adi = plaka_to_sehir.get(musteri.Sehir, musteri.Sehir) if musteri.Sehir else 'Belirtilmemiş'
-    
-    return render_template('musteri_detay_raporu.html',
-                         musteri=musteri,
-                         randevular=randevular,
-                         toplam_randevu=toplam_randevu,
-                         tamamlanan_randevu=tamamlanan_randevu,
-                         iptal_randevu=iptal_randevu,
-                         bekleyen_randevu=bekleyen_randevu,
-                         son_randevu=son_randevu,
-                         aylik_randevu=dict(aylik_randevu),
-                         defter_dagilimi=dict(defter_dagilimi),
-                         sehir_adi=sehir_adi)
-
-@app.route('/rapor/musteri-detay-modal/<int:musteri_id>')
-@login_required
-def musteri_detay_modal(musteri_id):
-    """Müşteri detay raporu modal içeriği"""
-    firma_id = session.get('firma_id')
-    if not firma_id:
-        return redirect(url_for('login'))
-    
-    # Müşteri bilgilerini getir
-    musteri = Musteri.query.filter_by(MusteriID=musteri_id, FirmaID=firma_id).first()
-    if not musteri:
-        return '<div class="alert alert-danger">Müşteri bulunamadı.</div>'
-    
-    print(f"DEBUG: Müşteri detay modal - Müşteri ID: {musteri_id}, Firma ID: {firma_id}")
-    print(f"DEBUG: Müşteri adı: {musteri.MusteriAdi} {musteri.MusteriSoyadi}")
-    
-    # Plaka kodlarını şehir isimlerine dönüştür
-    plaka_to_sehir = {
-        '01': 'Adana', '02': 'Adıyaman', '03': 'Afyonkarahisar', '04': 'Ağrı', '05': 'Amasya',
-        '06': 'Ankara', '07': 'Antalya', '08': 'Artvin', '09': 'Aydın', '10': 'Balıkesir',
-        '11': 'Bilecik', '12': 'Bingöl', '13': 'Bitlis', '14': 'Bolu', '15': 'Burdur',
-        '16': 'Bursa', '17': 'Çanakkale', '18': 'Çankırı', '19': 'Çorum', '20': 'Denizli',
-        '21': 'Diyarbakır', '22': 'Edirne', '23': 'Elazığ', '24': 'Erzincan', '25': 'Erzurum',
-        '26': 'Eskişehir', '27': 'Gaziantep', '28': 'Giresun', '29': 'Gümüşhane', '30': 'Hakkari',
-        '31': 'Hatay', '32': 'Isparta', '33': 'Mersin', '34': 'İstanbul', '35': 'İzmir',
-        '36': 'Kars', '37': 'Kastamonu', '38': 'Kayseri', '39': 'Kırklareli', '40': 'Kırşehir',
-        '41': 'Kocaeli', '42': 'Konya', '43': 'Kütahya', '44': 'Malatya', '45': 'Manisa',
-        '46': 'Kahramanmaraş', '47': 'Mardin', '48': 'Muğla', '49': 'Muş', '50': 'Nevşehir',
-        '51': 'Niğde', '52': 'Ordu', '53': 'Rize', '54': 'Sakarya', '55': 'Samsun',
-        '56': 'Siirt', '57': 'Sinop', '58': 'Sivas', '59': 'Tekirdağ', '60': 'Tokat',
-        '61': 'Trabzon', '62': 'Tunceli', '63': 'Şanlıurfa', '64': 'Uşak', '65': 'Van',
-        '66': 'Yozgat', '67': 'Zonguldak', '68': 'Aksaray', '69': 'Bayburt', '70': 'Karaman',
-        '71': 'Kırıkkale', '72': 'Batman', '73': 'Şırnak', '74': 'Bartın', '75': 'Ardahan',
-        '76': 'Iğdır', '77': 'Yalova', '78': 'Karabük', '79': 'Kilis', '80': 'Osmaniye', '81': 'Düzce'
-    }
-    
-    # Müşteri randevularını getir
-    randevular = Randevu.query.filter_by(
-        MusteriID=musteri_id,
-        FirmaID=firma_id
-    ).order_by(Randevu.RandevuTarihi.desc()).all()
-    
-    print(f"DEBUG: Bulunan randevu sayısı: {len(randevular)}")
-    for r in randevular:
-        print(f"DEBUG: Randevu - ID: {r.RandevuID}, Tarih: {r.RandevuTarihi}, Durum: {r.Durum}")
-    
-    # Randevu istatistikleri
-    toplam_randevu = len(randevular)
-    tamamlanan_randevu = len([r for r in randevular if r.Durum == 'Tamamlandı'])
-    iptal_randevu = len([r for r in randevular if r.Durum == 'İptal'])
-    bekleyen_randevu = len([r for r in randevular if r.Durum == 'Beklemede'])
-    
-    # Aylık randevu dağılımı
-    aylik_randevu = defaultdict(int)
-    for randevu in randevular:
-        if randevu.RandevuTarihi:
-            ay_key = randevu.RandevuTarihi.strftime('%Y-%m')
-            aylik_randevu[ay_key] += 1
-            print(f"DEBUG: Aylık dağılım - {ay_key}: {aylik_randevu[ay_key]}")
-    
-    print(f"DEBUG: Aylık randevu dağılımı: {dict(aylik_randevu)}")
-    
-    # Defter dağılımı
-    defter_dagilimi = defaultdict(int)
-    for randevu in randevular:
-        if randevu.DefterID:
-            defter = RandevuDefterAyar.query.filter_by(AyarID=randevu.DefterID).first()
-            if defter:
-                defter_dagilimi[defter.DefterAdi] += 1
-                print(f"DEBUG: Defter dağılımı - {defter.DefterAdi}: {defter_dagilimi[defter.DefterAdi]}")
-    
-    print(f"DEBUG: Defter dağılımı: {dict(defter_dagilimi)}")
-    
-    # Şehir bilgisini dönüştür
-    sehir_adi = plaka_to_sehir.get(musteri.Sehir, musteri.Sehir) if musteri.Sehir else 'Belirtilmemiş'
-    
-    return render_template('musteri_detay_modal.html',
-                         musteri=musteri,
-                         randevular=randevular,
-                         toplam_randevu=toplam_randevu,
-                         tamamlanan_randevu=tamamlanan_randevu,
-                         iptal_randevu=iptal_randevu,
-                         bekleyen_randevu=bekleyen_randevu,
-                         aylik_randevu=dict(aylik_randevu),
-                         defter_dagilimi=dict(defter_dagilimi),
-                         sehir_adi=sehir_adi)
-
-@app.route('/rapor/musteri-detay/<int:musteri_id>/pdf')
-@login_required
-def musteri_detay_pdf(musteri_id):
-    """Müşteri detay raporu PDF"""
-    firma_id = session.get('firma_id')
-    if not firma_id:
-        return redirect(url_for('login'))
-    
-    # Müşteri bilgilerini getir
-    musteri = Musteri.query.filter_by(MusteriID=musteri_id, FirmaID=firma_id).first()
-    if not musteri:
-        flash('Müşteri bulunamadı.', 'error')
-        return redirect(url_for('rapor_musteriler'))
-    
-    # Plaka kodlarını şehir isimlerine dönüştür
-    plaka_to_sehir = {
-        '01': 'Adana', '02': 'Adıyaman', '03': 'Afyonkarahisar', '04': 'Ağrı', '05': 'Amasya',
-        '06': 'Ankara', '07': 'Antalya', '08': 'Artvin', '09': 'Aydın', '10': 'Balıkesir',
-        '11': 'Bilecik', '12': 'Bingöl', '13': 'Bitlis', '14': 'Bolu', '15': 'Burdur',
-        '16': 'Bursa', '17': 'Çanakkale', '18': 'Çankırı', '19': 'Çorum', '20': 'Denizli',
-        '21': 'Diyarbakır', '22': 'Edirne', '23': 'Elazığ', '24': 'Erzincan', '25': 'Erzurum',
-        '26': 'Eskişehir', '27': 'Gaziantep', '28': 'Giresun', '29': 'Gümüşhane', '30': 'Hakkari',
-        '31': 'Hatay', '32': 'Isparta', '33': 'Mersin', '34': 'İstanbul', '35': 'İzmir',
-        '36': 'Kars', '37': 'Kastamonu', '38': 'Kayseri', '39': 'Kırklareli', '40': 'Kırşehir',
-        '41': 'Kocaeli', '42': 'Konya', '43': 'Kütahya', '44': 'Malatya', '45': 'Manisa',
-        '46': 'Kahramanmaraş', '47': 'Mardin', '48': 'Muğla', '49': 'Muş', '50': 'Nevşehir',
-        '51': 'Niğde', '52': 'Ordu', '53': 'Rize', '54': 'Sakarya', '55': 'Samsun',
-        '56': 'Siirt', '57': 'Sinop', '58': 'Sivas', '59': 'Tekirdağ', '60': 'Tokat',
-        '61': 'Trabzon', '62': 'Tunceli', '63': 'Şanlıurfa', '64': 'Uşak', '65': 'Van',
-        '66': 'Yozgat', '67': 'Zonguldak', '68': 'Aksaray', '69': 'Bayburt', '70': 'Karaman',
-        '71': 'Kırıkkale', '72': 'Batman', '73': 'Şırnak', '74': 'Bartın', '75': 'Ardahan',
-        '76': 'Iğdır', '77': 'Yalova', '78': 'Karabük', '79': 'Kilis', '80': 'Osmaniye', '81': 'Düzce'
-    }
-    
-    # Müşteri randevularını getir
-    randevular = Randevu.query.filter_by(
-        MusteriID=musteri_id,
-        FirmaID=firma_id
-    ).order_by(Randevu.RandevuTarihi.desc()).all()
-    
-    # Randevu istatistikleri
-    toplam_randevu = len(randevular)
-    tamamlanan_randevu = len([r for r in randevular if r.Durum == 'Tamamlandı'])
-    iptal_randevu = len([r for r in randevular if r.Durum == 'İptal'])
-    bekleyen_randevu = len([r for r in randevular if r.Durum == 'Beklemede'])
-    
-    # Şehir bilgisini dönüştür
-    sehir_adi = plaka_to_sehir.get(musteri.Sehir, musteri.Sehir) if musteri.Sehir else 'Belirtilmemiş'
-    
-    # PDF oluştur
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
-    
-    # Türkçe font desteği için DejaVu Sans fontunu kaydet
-    try:
-        # Windows sistem fontları
-        pdfmetrics.registerFont(TTFont('DejaVuSans', 'C:/Windows/Fonts/dejavu-sans.ttf'))
-        pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'C:/Windows/Fonts/dejavu-sans-bold.ttf'))
-        turkish_font = 'DejaVuSans'
-        turkish_font_bold = 'DejaVuSans-Bold'
-    except:
-        try:
-            # Alternatif font yolları
-            pdfmetrics.registerFont(TTFont('DejaVuSans', 'C:/Windows/Fonts/arial.ttf'))
-            pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'C:/Windows/Fonts/arialbd.ttf'))
-            turkish_font = 'DejaVuSans'
-            turkish_font_bold = 'DejaVuSans-Bold'
-        except:
-            # Varsayılan font
-            turkish_font = 'Helvetica'
-            turkish_font_bold = 'Helvetica-Bold'
-    
-    # Stil tanımları
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=18, spaceAfter=30, alignment=TA_CENTER, fontName=turkish_font_bold)
-    heading_style = ParagraphStyle('CustomHeading', parent=styles['Heading2'], fontSize=14, spaceAfter=12, fontName=turkish_font_bold)
-    normal_style = ParagraphStyle('CustomNormal', parent=styles['Normal'], fontName=turkish_font)
-    
-    # İçerik oluştur
-    story = []
-    
-    # Başlık
-    story.append(Paragraph("Müşteri Detay Raporu", title_style))
-    story.append(Spacer(1, 12))
-    
-    # Müşteri bilgileri
-    story.append(Paragraph("Müşteri Bilgileri", heading_style))
-    
-    musteri_data = [
-        ['Ad Soyad:', f"{musteri.MusteriAdi} {musteri.MusteriSoyadi}"],
-        ['Telefon:', musteri.Telefon or 'Belirtilmemiş'],
-        ['E-posta:', musteri.Email or 'Belirtilmemiş'],
-        ['Yaş:', str(musteri.Yas) if musteri.Yas else 'Belirtilmemiş'],
-        ['Cinsiyet:', musteri.Cinsiyet or 'Belirtilmemiş'],
-        ['Şehir:', sehir_adi],
-        ['İlçe:', musteri.Ilce or 'Belirtilmemiş'],
-        ['Doğum Tarihi:', musteri.DogumTarihi.strftime('%d.%m.%Y') if musteri.DogumTarihi else 'Belirtilmemiş']
-    ]
-    
-    if musteri.Adres:
-        musteri_data.append(['Adres:', musteri.Adres])
-    if musteri.Notlar:
-        musteri_data.append(['Notlar:', musteri.Notlar])
-    
-    musteri_table = Table(musteri_data, colWidths=[2*inch, 4*inch])
-    musteri_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, -1), turkish_font),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-        ('BACKGROUND', (1, 0), (1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-    ]))
-    
-    story.append(musteri_table)
-    story.append(Spacer(1, 20))
-    
-    # Randevu istatistikleri
-    story.append(Paragraph("Randevu İstatistikleri", heading_style))
-    
-    stats_data = [
-        ['Toplam Randevu:', str(toplam_randevu)],
-        ['Tamamlanan:', str(tamamlanan_randevu)],
-        ['Beklemede:', str(bekleyen_randevu)],
-        ['İptal:', str(iptal_randevu)]
-    ]
-    
-    stats_table = Table(stats_data, colWidths=[2*inch, 1*inch])
-    stats_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (0, -1), colors.lightblue),
-        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, -1), turkish_font),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-        ('BACKGROUND', (1, 0), (1, -1), colors.lightgrey),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-    ]))
-    
-    story.append(stats_table)
-    story.append(Spacer(1, 20))
-    
-    # Randevu geçmişi
-    if randevular:
-        story.append(Paragraph("Randevu Geçmişi", heading_style))
-        
-        randevu_data = [['Tarih', 'Saat', 'Defter', 'Durum', 'Notlar']]
-        
-        for randevu in randevular:
-            defter_adi = 'Bilinmeyen'
-            if randevu.DefterID:
-                defter = RandevuDefterAyar.query.filter_by(AyarID=randevu.DefterID).first()
-                if defter:
-                    defter_adi = defter.DefterAdi
-            
-            randevu_data.append([
-                randevu.RandevuTarihi.strftime('%d.%m.%Y') if randevu.RandevuTarihi else '-',
-                randevu.RandevuTarihi.strftime('%H:%M') if randevu.RandevuTarihi else '-',
-                defter_adi,
-                randevu.Durum,
-                randevu.RandevuAciklamasi or '-'
-            ])
-        
-        randevu_table = Table(randevu_data, colWidths=[1*inch, 0.8*inch, 1.2*inch, 1*inch, 2*inch])
-        randevu_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), turkish_font_bold),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('FONTNAME', (0, 1), (-1, -1), turkish_font),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]))
-        
-        story.append(randevu_table)
-    else:
-        story.append(Paragraph("Bu müşteri için randevu bulunamadı.", normal_style))
-    
-    # PDF'i oluştur
-    doc.build(story)
-    buffer.seek(0)
-    
-    # Dosya adı
-    filename = f"musteri_detay_{musteri.MusteriAdi}_{musteri.MusteriSoyadi}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-    
-    # Çıktı alma (PDF) logla
-    try:
-        log_user_action('VIEW', 'Rapor', musteri_id, detail=f"Müşteri detay PDF indirildi: {musteri.MusteriAdi} {musteri.MusteriSoyadi}")
-    except Exception:
-        pass
-    return send_file(buffer, mimetype='application/pdf', as_attachment=True, download_name=filename)
-
-@app.route('/rapor/musteri-detay/<int:musteri_id>/excel')
-@login_required
-def musteri_detay_excel(musteri_id):
-    """Müşteri detay raporu Excel"""
-    firma_id = session.get('firma_id')
-    if not firma_id:
-        return redirect(url_for('login'))
-    
-    # Müşteri bilgilerini getir
-    musteri = Musteri.query.filter_by(MusteriID=musteri_id, FirmaID=firma_id).first()
-    if not musteri:
-        flash('Müşteri bulunamadı.', 'error')
-        return redirect(url_for('rapor_musteriler'))
-    
-    # Plaka kodlarını şehir isimlerine dönüştür
-    plaka_to_sehir = {
-        '01': 'Adana', '02': 'Adıyaman', '03': 'Afyonkarahisar', '04': 'Ağrı', '05': 'Amasya',
-        '06': 'Ankara', '07': 'Antalya', '08': 'Artvin', '09': 'Aydın', '10': 'Balıkesir',
-        '11': 'Bilecik', '12': 'Bingöl', '13': 'Bitlis', '14': 'Bolu', '15': 'Burdur',
-        '16': 'Bursa', '17': 'Çanakkale', '18': 'Çankırı', '19': 'Çorum', '20': 'Denizli',
-        '21': 'Diyarbakır', '22': 'Edirne', '23': 'Elazığ', '24': 'Erzincan', '25': 'Erzurum',
-        '26': 'Eskişehir', '27': 'Gaziantep', '28': 'Giresun', '29': 'Gümüşhane', '30': 'Hakkari',
-        '31': 'Hatay', '32': 'Isparta', '33': 'Mersin', '34': 'İstanbul', '35': 'İzmir',
-        '36': 'Kars', '37': 'Kastamonu', '38': 'Kayseri', '39': 'Kırklareli', '40': 'Kırşehir',
-        '41': 'Kocaeli', '42': 'Konya', '43': 'Kütahya', '44': 'Malatya', '45': 'Manisa',
-        '46': 'Kahramanmaraş', '47': 'Mardin', '48': 'Muğla', '49': 'Muş', '50': 'Nevşehir',
-        '51': 'Niğde', '52': 'Ordu', '53': 'Rize', '54': 'Sakarya', '55': 'Samsun',
-        '56': 'Siirt', '57': 'Sinop', '58': 'Sivas', '59': 'Tekirdağ', '60': 'Tokat',
-        '61': 'Trabzon', '62': 'Tunceli', '63': 'Şanlıurfa', '64': 'Uşak', '65': 'Van',
-        '66': 'Yozgat', '67': 'Zonguldak', '68': 'Aksaray', '69': 'Bayburt', '70': 'Karaman',
-        '71': 'Kırıkkale', '72': 'Batman', '73': 'Şırnak', '74': 'Bartın', '75': 'Ardahan',
-        '76': 'Iğdır', '77': 'Yalova', '78': 'Karabük', '79': 'Kilis', '80': 'Osmaniye', '81': 'Düzce'
-    }
-    
-    # Müşteri randevularını getir
-    randevular = Randevu.query.filter_by(
-        MusteriID=musteri_id,
-        FirmaID=firma_id
-    ).order_by(Randevu.RandevuTarihi.desc()).all()
-    
-    # Excel dosyası oluştur
-    wb = Workbook()
-    
-    # Müşteri bilgileri sayfası
-    ws1 = wb.active
-    ws1.title = "Müşteri Bilgileri"
-    
-    # Başlık
-    ws1['A1'] = "Müşteri Detay Raporu"
-    ws1['A1'].font = Font(size=16, bold=True)
-    ws1.merge_cells('A1:D1')
-    
-    # Müşteri bilgileri
-    row = 3
-    ws1[f'A{row}'] = "Ad Soyad:"
-    ws1[f'B{row}'] = f"{musteri.MusteriAdi} {musteri.MusteriSoyadi}"
-    row += 1
-    
-    ws1[f'A{row}'] = "Telefon:"
-    telefon_cell = ws1[f'B{row}']
-    telefon_cell.value = musteri.Telefon or 'Belirtilmemiş'
-    telefon_cell.number_format = '@'  # Metin formatı
-    row += 1
-    
-    ws1[f'A{row}'] = "E-posta:"
-    ws1[f'B{row}'] = musteri.Email or 'Belirtilmemiş'
-    row += 1
-    
-    ws1[f'A{row}'] = "Yaş:"
-    ws1[f'B{row}'] = musteri.Yas or 'Belirtilmemiş'
-    row += 1
-    
-    ws1[f'A{row}'] = "Cinsiyet:"
-    ws1[f'B{row}'] = musteri.Cinsiyet or 'Belirtilmemiş'
-    row += 1
-    
-    sehir_adi = plaka_to_sehir.get(musteri.Sehir, musteri.Sehir) if musteri.Sehir else 'Belirtilmemiş'
-    ws1[f'A{row}'] = "Şehir:"
-    ws1[f'B{row}'] = sehir_adi
-    row += 1
-    
-    ws1[f'A{row}'] = "İlçe:"
-    ws1[f'B{row}'] = musteri.Ilce or 'Belirtilmemiş'
-    row += 1
-    
-    ws1[f'A{row}'] = "Doğum Tarihi:"
-    ws1[f'B{row}'] = musteri.DogumTarihi.strftime('%d.%m.%Y') if musteri.DogumTarihi else 'Belirtilmemiş'
-    row += 1
-    
-    if musteri.Adres:
-        ws1[f'A{row}'] = "Adres:"
-        ws1[f'B{row}'] = musteri.Adres
-        row += 1
-    
-    if musteri.Notlar:
-        ws1[f'A{row}'] = "Notlar:"
-        ws1[f'B{row}'] = musteri.Notlar
-        row += 1
-    
-    # Randevu istatistikleri
-    row += 2
-    ws1[f'A{row}'] = "Randevu İstatistikleri"
-    ws1[f'A{row}'].font = Font(size=14, bold=True)
-    row += 1
-    
-    toplam_randevu = len(randevular)
-    tamamlanan_randevu = len([r for r in randevular if r.Durum == 'Tamamlandı'])
-    iptal_randevu = len([r for r in randevular if r.Durum == 'İptal'])
-    bekleyen_randevu = len([r for r in randevular if r.Durum == 'Beklemede'])
-    
-    ws1[f'A{row}'] = "Toplam Randevu:"
-    ws1[f'B{row}'] = toplam_randevu
-    row += 1
-    
-    ws1[f'A{row}'] = "Tamamlanan:"
-    ws1[f'B{row}'] = tamamlanan_randevu
-    row += 1
-    
-    ws1[f'A{row}'] = "Beklemede:"
-    ws1[f'B{row}'] = bekleyen_randevu
-    row += 1
-    
-    ws1[f'A{row}'] = "İptal:"
-    ws1[f'B{row}'] = iptal_randevu
-    
-    # Randevu geçmişi sayfası
-    ws2 = wb.create_sheet("Randevu Geçmişi")
-    
-    # Başlıklar
-    headers = ['Tarih', 'Saat', 'Defter', 'Durum', 'Notlar']
-    for col, header in enumerate(headers, 1):
-        cell = ws2.cell(row=1, column=col, value=header)
-        cell.font = Font(bold=True)
-        cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
-    
-    # Randevu verileri
-    for row_idx, randevu in enumerate(randevular, 2):
-        defter_adi = 'Bilinmeyen'
-        if randevu.DefterID:
-            defter = RandevuDefterAyar.query.filter_by(AyarID=randevu.DefterID).first()
-            if defter:
-                defter_adi = defter.DefterAdi
-        
-        ws2.cell(row=row_idx, column=1, value=randevu.RandevuTarihi.strftime('%d.%m.%Y') if randevu.RandevuTarihi else '-')
-        ws2.cell(row=row_idx, column=2, value=randevu.RandevuTarihi.strftime('%H:%M') if randevu.RandevuTarihi else '-')
-        ws2.cell(row=row_idx, column=3, value=defter_adi)
-        ws2.cell(row=row_idx, column=4, value=randevu.Durum)
-        ws2.cell(row=row_idx, column=5, value=randevu.RandevuAciklamasi or '-')
-    
-    # Sütun genişliklerini ayarla
-    for ws in [ws1, ws2]:
-        for column in ws.columns:
-            max_length = 0
-            column_letter = get_column_letter(column[0].column)
-            for cell in column:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            adjusted_width = min(max_length + 2, 50)
-            ws.column_dimensions[column_letter].width = adjusted_width
-    
-    # Excel dosyasını kaydet
-    buffer = BytesIO()
-    wb.save(buffer)
-    buffer.seek(0)
-    
-    # Dosya adı
-    filename = f"musteri_detay_{musteri.MusteriAdi}_{musteri.MusteriSoyadi}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    
-    # Çıktı alma (Excel) logla
-    try:
-        log_user_action('VIEW', 'Rapor', musteri_id, detail=f"Müşteri detay Excel indirildi: {musteri.MusteriAdi} {musteri.MusteriSoyadi}")
-    except Exception:
-        pass
-    return send_file(buffer, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
-                    as_attachment=True, download_name=filename)
-
-@app.route('/rapor/musteriler')
-@login_required
-def rapor_musteriler():
-    # Modül izin kontrolü
-    if not session.get('raporlar_modulu', False):
-        flash('Bu sayfaya erişim yetkiniz yok', 'error')
-        return redirect(url_for('dashboard'))
-    """Müşteri raporu: filtreler, KPI'lar, tablo ve CSV dışa aktarım"""
-    firma_id = session['firma_id']
-
-    # Filtreler
-    kategori_id = request.args.get('kategori_id', type=int)
-    sadece_aktif = request.args.get('aktif', default='1')  # '1' aktif, '' hepsi
-    iletisim_var = request.args.get('iletisim_var')  # 'telefon', 'email', 'herikisi'
-    
-    # Yeni filtreler
-    yas_min = request.args.get('yas_min', type=int)
-    yas_max = request.args.get('yas_max', type=int)
-    cinsiyet = request.args.get('cinsiyet')
-    dogum_tarihi = request.args.get('dogum_tarihi')
-    sehir = request.args.get('sehir')
-    ilce = request.args.get('ilce')
-    
-    format_tip = request.args.get('format')  # 'csv' ise CSV döndür
-
-    # Plaka kodları - şehir isimleri dönüşüm tablosu
-    plaka_to_sehir = {
-        '01': 'Adana', '02': 'Adıyaman', '03': 'Afyonkarahisar', '04': 'Ağrı', '05': 'Amasya',
-        '06': 'Ankara', '07': 'Antalya', '08': 'Artvin', '09': 'Aydın', '10': 'Balıkesir',
-        '11': 'Bilecik', '12': 'Bingöl', '13': 'Bitlis', '14': 'Bolu', '15': 'Burdur',
-        '16': 'Bursa', '17': 'Çanakkale', '18': 'Çankırı', '19': 'Çorum', '20': 'Denizli',
-        '21': 'Diyarbakır', '22': 'Edirne', '23': 'Elazığ', '24': 'Erzincan', '25': 'Erzurum',
-        '26': 'Eskişehir', '27': 'Gaziantep', '28': 'Giresun', '29': 'Gümüşhane', '30': 'Hakkari',
-        '31': 'Hatay', '32': 'Isparta', '33': 'Mersin', '34': 'İstanbul', '35': 'İzmir',
-        '36': 'Kars', '37': 'Kastamonu', '38': 'Kayseri', '39': 'Kırklareli', '40': 'Kırşehir',
-        '41': 'Kocaeli', '42': 'Konya', '43': 'Kütahya', '44': 'Malatya', '45': 'Manisa',
-        '46': 'Kahramanmaraş', '47': 'Mardin', '48': 'Muğla', '49': 'Muş', '50': 'Nevşehir',
-        '51': 'Niğde', '52': 'Ordu', '53': 'Rize', '54': 'Sakarya', '55': 'Samsun',
-        '56': 'Siirt', '57': 'Sinop', '58': 'Sivas', '59': 'Tekirdağ', '60': 'Tokat',
-        '61': 'Trabzon', '62': 'Tunceli', '63': 'Şanlıurfa', '64': 'Uşak', '65': 'Van',
-        '66': 'Yozgat', '67': 'Zonguldak', '68': 'Aksaray', '69': 'Bayburt', '70': 'Karaman',
-        '71': 'Kırıkkale', '72': 'Batman', '73': 'Şırnak', '74': 'Bartın', '75': 'Ardahan',
-        '76': 'Iğdır', '77': 'Yalova', '78': 'Karabük', '79': 'Kilis', '80': 'Osmaniye', '81': 'Düzce'
-    }
-
-    # Müşteri temel sorgusu
-    musteri_query = Musteri.query.filter_by(FirmaID=firma_id)
-    if sadece_aktif == '1':
-        musteri_query = musteri_query.filter(Musteri.Aktif == True)
-    elif sadece_aktif == '0':
-        musteri_query = musteri_query.filter(Musteri.Aktif == False)
-    if kategori_id:
-        musteri_query = musteri_query.filter(Musteri.KategoriID == kategori_id)
-    if iletisim_var == 'telefon':
-        musteri_query = musteri_query.filter(Musteri.Telefon.isnot(None), Musteri.Telefon != '')
-    elif iletisim_var == 'email':
-        musteri_query = musteri_query.filter(Musteri.Email.isnot(None), Musteri.Email != '')
-    elif iletisim_var == 'herikisi':
-        musteri_query = musteri_query.filter(
-            Musteri.Telefon.isnot(None), Musteri.Telefon != '',
-            Musteri.Email.isnot(None), Musteri.Email != ''
-        )
-    
-    # Yeni filtreler
-    if yas_min is not None:
-        musteri_query = musteri_query.filter(Musteri.Yas >= yas_min)
-    if yas_max is not None:
-        musteri_query = musteri_query.filter(Musteri.Yas <= yas_max)
-    if cinsiyet:
-        musteri_query = musteri_query.filter(Musteri.Cinsiyet == cinsiyet)
-    if dogum_tarihi:
-        try:
-            dogum_tarihi_obj = datetime.strptime(dogum_tarihi, '%Y-%m-%d').date()
-            musteri_query = musteri_query.filter(Musteri.DogumTarihi == dogum_tarihi_obj)
-        except:
-            pass
-    if sehir:
-        # Seçilen şehir ismini plaka koduna dönüştür
-        sehir_to_plaka = {v: k for k, v in plaka_to_sehir.items()}
-        plaka_kodu = sehir_to_plaka.get(sehir, sehir)  # Eğer şehir ismi plaka kodunda yoksa orijinal değeri kullan
-        musteri_query = musteri_query.filter(Musteri.Sehir == plaka_kodu)
-    if ilce:
-        musteri_query = musteri_query.filter(Musteri.Ilce == ilce)
-
-    musteriler = musteri_query.order_by(Musteri.MusteriAdi, Musteri.MusteriSoyadi).all()
-
-    # KPI'lar
-    toplam_musteri = Musteri.query.filter_by(FirmaID=firma_id).count()
-    aktif_musteri = Musteri.query.filter_by(FirmaID=firma_id, Aktif=True).count()
-    yeni_musteri = 0
-
-    # Randevu istatistikleri (müşteri başına randevu sayısı)
-    randevu_q = db.session.query(Randevu.MusteriID, db.func.count(Randevu.RandevuID).label('adet')) 
-    randevu_q = randevu_q.filter(Randevu.FirmaID == firma_id, Randevu.MusteriID.isnot(None))
-    randevu_q = randevu_q.group_by(Randevu.MusteriID)
-    musteri_id_to_randevu_adet = {mid: adet for mid, adet in randevu_q.all()}
-
-    # Top N müşteriler (randevu sayısına göre) - SQL Server için alt sorgu ile
-    randevu_count_sq = (
-        db.session.query(
-            Randevu.MusteriID.label('mid'),
-            db.func.count(Randevu.RandevuID).label('adet')
-        )
-        .filter(Randevu.FirmaID == firma_id, Randevu.MusteriID.isnot(None))
-    )
-    randevu_count_sq = randevu_count_sq.group_by(Randevu.MusteriID).subquery()
-
-    top_q = (
-        db.session.query(Musteri, randevu_count_sq.c.adet)
-        .join(randevu_count_sq, randevu_count_sq.c.mid == Musteri.MusteriID)
-        .filter(Musteri.FirmaID == firma_id)
-    )
-    if sadece_aktif == '1':
-        top_q = top_q.filter(Musteri.Aktif == True)
-    if kategori_id:
-        top_q = top_q.filter(Musteri.KategoriID == kategori_id)
-    # Müşterileri birleştir (ad+soyad+telefon)
-    def _norm_name(v):
-        return (v or '').strip().lower()
-    def _norm_phone(v):
-        v = ''.join(ch for ch in (v or '') if ch.isdigit())
-        return v[-10:] if len(v) >= 10 else v
-
-    merged = {}
-    for m in musteriler:
-        k = (_norm_name(m.MusteriAdi), _norm_name(m.MusteriSoyadi), _norm_phone(m.Telefon))
-        if k not in merged:
-            merged[k] = {
-                'id': m.MusteriID,
-                'ad': m.MusteriAdi,
-                'soyad': m.MusteriSoyadi,
-                'telefon': m.Telefon or '',
-                'email': m.Email or '',
-                'aktif': bool(m.Aktif),
-                'kategori': m.kategori.KategoriAdi if m.kategori else None,
-                'olusturma': m.OlusturmaTarihi,
-                'randevu_sayisi': musteri_id_to_randevu_adet.get(m.MusteriID, 0)
-            }
-        else:
-            it = merged[k]
-            it['randevu_sayisi'] += musteri_id_to_randevu_adet.get(m.MusteriID, 0)
-            if not it['email'] and m.Email:
-                it['email'] = m.Email
-            if not it['kategori'] and m.kategori:
-                it['kategori'] = m.kategori.KategoriAdi
-            it['aktif'] = it['aktif'] or bool(m.Aktif)
-            if it['olusturma'] is None or (m.OlusturmaTarihi and m.OlusturmaTarihi < it['olusturma']):
-                it['olusturma'] = m.OlusturmaTarihi
-
-    merged_rows = list(merged.values())
-
-    # En çok randevusu olan 10 müşteri (birleştirilmiş verilerden)
-    top_musteriler = sorted(merged_rows, key=lambda x: x['randevu_sayisi'], reverse=True)[:10]
-
-    # Export işlemleri
-    if format_tip in ['csv', 'excel', 'pdf']:
-        # Çıktı alma logla
-        try:
-            log_user_action('VIEW', 'Rapor', detail=f"Müşteri raporu {format_tip.upper()} indirildi")
-        except Exception:
-            pass
-        
-        if format_tip == 'csv':
-            # CSV Export
-            output = StringIO()
-            writer = csv.writer(output, delimiter=';')
-            writer.writerow(['MusteriID', 'Ad', 'Soyad', 'Telefon', 'Email', 'Aktif', 'Kategori', 'OlusturmaTarihi', 'RandevuSayisi'])
-            for r in merged_rows:
-                # Telefon numarasını Excel'de metin olarak tanıması için +90'dan sonra boşluk ekle
-                telefon = r['telefon'] or ''
-                if telefon and telefon.startswith('+90'):
-                    telefon = telefon.replace('+90', '+90 ')  # +90'dan sonra boşluk ekle
-                writer.writerow([
-                    r['id'], r['ad'], r['soyad'], telefon, r['email'], 'Evet' if r['aktif'] else 'Hayır', r['kategori'] or '', (r['olusturma'].strftime('%Y-%m-%d %H:%M') if r['olusturma'] else ''), r['randevu_sayisi']
-                ])
-            output.seek(0)
-            filename = f"musteri_raporu_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
-            data = output.getvalue().encode('utf-8-sig')
-            return send_file(BytesIO(data), mimetype='text/csv; charset=utf-8', as_attachment=True, download_name=filename)
-        
-        elif format_tip == 'excel':
-            # Excel Export
-            wb = Workbook()
-            ws = wb.active
-            ws.title = "Müşteri Raporu"
-            
-            # Başlık satırı
-            headers = ['Müşteri ID', 'Ad', 'Soyad', 'Telefon', 'Email', 'Aktif', 'Kategori', 'Oluşturma Tarihi', 'Randevu Sayısı']
-            for col, header in enumerate(headers, 1):
-                cell = ws.cell(row=1, column=col, value=header)
-                cell.font = Font(bold=True)
-                cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
-            
-            # Veri satırları
-            for row, r in enumerate(merged_rows, 2):
-                telefon = r['telefon'] or ''
-                if telefon and telefon.startswith('+90'):
-                    telefon = telefon.replace('+90', '+90 ')
-                
-                ws.cell(row=row, column=1, value=r['id'])
-                ws.cell(row=row, column=2, value=r['ad'])
-                ws.cell(row=row, column=3, value=r['soyad'])
-                ws.cell(row=row, column=4, value=telefon)
-                ws.cell(row=row, column=5, value=r['email'])
-                ws.cell(row=row, column=6, value='Evet' if r['aktif'] else 'Hayır')
-                ws.cell(row=row, column=7, value=r['kategori'] or '')
-                ws.cell(row=row, column=8, value=r['olusturma'].strftime('%Y-%m-%d %H:%M') if r['olusturma'] else '')
-                ws.cell(row=row, column=9, value=r['randevu_sayisi'])
-            
-            # Sütun genişliklerini ayarla
-            for column in ws.columns:
-                max_length = 0
-                column_letter = get_column_letter(column[0].column)
-                for cell in column:
-                    try:
-                        if len(str(cell.value)) > max_length:
-                            max_length = len(str(cell.value))
-                    except:
-                        pass
-                adjusted_width = min(max_length + 2, 50)
-                ws.column_dimensions[column_letter].width = adjusted_width
-            
-            # Excel dosyasını kaydet
-            buffer = BytesIO()
-            wb.save(buffer)
-            buffer.seek(0)
-            
-            filename = f"musteri_raporu_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
-            return send_file(
-                buffer,
-                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                as_attachment=True,
-                download_name=filename
-            )
-        
-        elif format_tip == 'pdf':
-            # PDF Export
-            buffer = BytesIO()
-            doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
-            
-            # Türkçe font desteği
-            try:
-                pdfmetrics.registerFont(TTFont('DejaVuSans', 'C:/Windows/Fonts/dejavu-sans.ttf'))
-                pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'C:/Windows/Fonts/dejavu-sans-bold.ttf'))
-                turkish_font = 'DejaVuSans'
-                turkish_font_bold = 'DejaVuSans-Bold'
-            except:
-                try:
-                    pdfmetrics.registerFont(TTFont('DejaVuSans', 'C:/Windows/Fonts/arial.ttf'))
-                    pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'C:/Windows/Fonts/arialbd.ttf'))
-                    turkish_font = 'DejaVuSans'
-                    turkish_font_bold = 'DejaVuSans-Bold'
-                except:
-                    turkish_font = 'Helvetica'
-                    turkish_font_bold = 'Helvetica-Bold'
-            
-            # Stil tanımları
-            styles = getSampleStyleSheet()
-            title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=18, spaceAfter=30, alignment=TA_CENTER, fontName=turkish_font_bold)
-            
-            # Başlık
-            title = Paragraph("Müşteri Raporu", title_style)
-            
-            # Özet bilgiler
-            summary_data = [
-                ['Toplam Müşteri', str(toplam_musteri)],
-                ['Aktif Müşteri', str(aktif_musteri)],
-                ['Yeni Müşteri', str(yeni_musteri)]
-            ]
-            
-            summary_table = Table(summary_data)
-            summary_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, -1), colors.lightgrey),
-                ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('FONTNAME', (0, 0), (-1, -1), turkish_font),
-                ('FONTSIZE', (0, 0), (-1, -1), 10),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black)
-            ]))
-            
-            # Tablo verileri
-            table_data = [['Müşteri ID', 'Ad', 'Soyad', 'Telefon', 'Email', 'Aktif', 'Kategori', 'Randevu Sayısı']]
-            
-            for r in merged_rows[:50]:  # İlk 50 kayıt
-                telefon = r['telefon'] or ''
-                if telefon and telefon.startswith('+90'):
-                    telefon = telefon.replace('+90', '+90 ')
-                
-                table_data.append([
-                    str(r['id']),
-                    r['ad'],
-                    r['soyad'],
-                    telefon,
-                    r['email'],
-                    'Evet' if r['aktif'] else 'Hayır',
-                    r['kategori'] or '',
-                    str(r['randevu_sayisi'])
-                ])
-            
-            # Tablo oluştur
-            table = Table(table_data, repeatRows=1)
-            table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('FONTNAME', (0, 0), (-1, 0), turkish_font_bold),
-                ('FONTSIZE', (0, 0), (-1, 0), 8),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('FONTNAME', (0, 1), (-1, -1), turkish_font),
-                ('FONTSIZE', (0, 1), (-1, -1), 7),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black)
-            ]))
-            
-            # PDF oluştur
-            elements = [title, Spacer(1, 12), summary_table, Spacer(1, 12), table]
-            doc.build(elements)
-            buffer.seek(0)
-            
-            filename = f"musteri_raporu_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
-            return send_file(
-                buffer,
-                mimetype='application/pdf',
-                as_attachment=True,
-                download_name=filename
-            )
-
-    # Kategoriler dropdown için
-    kategoriler = MusteriKategori.query.filter_by(FirmaID=firma_id).order_by(MusteriKategori.KategoriAdi).all()
-    
-    # Şehir ve ilçe seçenekleri
-    sehirler = db.session.query(Musteri.Sehir).filter(
-        Musteri.FirmaID == firma_id,
-        Musteri.Sehir.isnot(None),
-        Musteri.Sehir != ''
-    ).distinct().order_by(Musteri.Sehir).all()
-    
-    
-    # Plaka kodlarını şehir isimlerine dönüştür ve benzersiz hale getir
-    sehir_listesi = []
-    for s in sehirler:
-        plaka = s[0]
-        sehir_adi = plaka_to_sehir.get(plaka, plaka)  # Eğer plaka kodunda yoksa orijinal değeri kullan
-        if sehir_adi not in sehir_listesi:
-            sehir_listesi.append(sehir_adi)
-    
-    sehir_listesi.sort()  # Alfabetik sırala
-    
-    ilceler = db.session.query(Musteri.Ilce).filter(
-        Musteri.FirmaID == firma_id,
-        Musteri.Ilce.isnot(None),
-        Musteri.Ilce != ''
-    ).distinct().order_by(Musteri.Ilce).all()
-    ilce_listesi = [i[0] for i in ilceler]
-    
-    # Grafik verileri
-    # Cinsiyet dağılımı
-    gender_stats = db.session.query(Musteri.Cinsiyet, db.func.count(Musteri.MusteriID)).filter(
-        Musteri.FirmaID == firma_id
-    ).group_by(Musteri.Cinsiyet).all()
-    gender_data = {gender: count for gender, count in gender_stats if gender}
-    
-    # Yaş dağılımı (yaş grupları)
-    age_groups = {
-        '0-18': 0, '19-25': 0, '26-35': 0, '36-45': 0, '46-55': 0, '56-65': 0, '65+': 0
-    }
-    age_stats = db.session.query(Musteri.Yas).filter(
-        Musteri.FirmaID == firma_id, Musteri.Yas.isnot(None)
-    ).all()
-    for (yas,) in age_stats:
-        if yas <= 18:
-            age_groups['0-18'] += 1
-        elif yas <= 25:
-            age_groups['19-25'] += 1
-        elif yas <= 35:
-            age_groups['26-35'] += 1
-        elif yas <= 45:
-            age_groups['36-45'] += 1
-        elif yas <= 55:
-            age_groups['46-55'] += 1
-        elif yas <= 65:
-            age_groups['56-65'] += 1
-        else:
-            age_groups['65+'] += 1
-    
-    # Kategori dağılımı
-    category_stats = db.session.query(
-        MusteriKategori.KategoriAdi, db.func.count(Musteri.MusteriID)
-    ).join(Musteri, Musteri.KategoriID == MusteriKategori.KategoriID).filter(
-        Musteri.FirmaID == firma_id
-    ).group_by(MusteriKategori.KategoriAdi).all()
-    category_data = {kategori: count for kategori, count in category_stats}
-    
-    # Şehir dağılımı (top 10)
-    city_stats = db.session.query(
-        Musteri.Sehir, db.func.count(Musteri.MusteriID)
-    ).filter(
-        Musteri.FirmaID == firma_id, Musteri.Sehir.isnot(None), Musteri.Sehir != ''
-    ).group_by(Musteri.Sehir).order_by(db.func.count(Musteri.MusteriID).desc()).limit(10).all()
-    city_data = {sehir: count for sehir, count in city_stats}
-
-    # Görüntülenecek satırlar için zenginleştirme
-    rows = []
-    for r in merged_rows:
-        rows.append({
-            'id': r['id'],
-            'ad': r['ad'],
-            'soyad': r['soyad'],
-            'tam_ad': f"{r['ad']} {r['soyad']}".strip(),
-            'telefon': r['telefon'],
-            'email': r['email'],
-            'aktif': r['aktif'],
-            'kategori': r['kategori'],
-            'olusturma': r['olusturma'],
-            'randevu_sayisi': r['randevu_sayisi']
-        })
-
-    # Zaman serisi analizi - Aylık müşteri artışı
-    monthly_data = {}
-    for m in musteriler:
-        if m.OlusturmaTarihi:
-            month_key = m.OlusturmaTarihi.strftime('%Y-%m')
-            monthly_data[month_key] = monthly_data.get(month_key, 0) + 1
-    
-    # Zaman serisi analizi - Haftalık müşteri artışı (son 12 hafta)
-    weekly_data = {}
-    today = datetime.now().date()
-    
-    # Son 12 hafta için haftalık veriler
-    for i in range(12):
-        week_start = today - timedelta(weeks=i+1)
-        week_end = today - timedelta(weeks=i)
-        week_key = f"{week_start.strftime('%Y-%m-%d')} - {week_end.strftime('%Y-%m-%d')}"
-        weekly_data[week_key] = 0
-    
-    for m in musteriler:
-        if m.OlusturmaTarihi:
-            m_date = m.OlusturmaTarihi.date()
-            for i in range(12):
-                week_start = today - timedelta(weeks=i+1)
-                week_end = today - timedelta(weeks=i)
-                if week_start <= m_date < week_end:
-                    week_key = f"{week_start.strftime('%Y-%m-%d')} - {week_end.strftime('%Y-%m-%d')}"
-                    weekly_data[week_key] = weekly_data.get(week_key, 0) + 1
-                    break
-    
-    # Randevu trendleri - Müşteri başına randevu sayısı analizi
-    from collections import defaultdict
-    
-    # Müşteri başına randevu sayısı dağılımı
-    randevu_sayisi_dagilimi = defaultdict(int)
-    for m in musteriler:
-        randevu_sayisi = musteri_id_to_randevu_adet.get(m.MusteriID, 0)
-        randevu_sayisi_dagilimi[randevu_sayisi] += 1
-    
-    # En çok randevu alan müşteriler (top 10)
-    en_cok_randevu_alan = []
-    for m in musteriler:
-        randevu_sayisi = musteri_id_to_randevu_adet.get(m.MusteriID, 0)
-        if randevu_sayisi > 0:
-            en_cok_randevu_alan.append({
-                'musteri_adi': f"{m.MusteriAdi} {m.MusteriSoyadi}",
-                'randevu_sayisi': randevu_sayisi
-            })
-    
-    # Randevu sayısına göre sırala (azalan)
-    en_cok_randevu_alan.sort(key=lambda x: x['randevu_sayisi'], reverse=True)
-    en_cok_randevu_alan = en_cok_randevu_alan[:10]
-    
-    # Randevu sıklığı analizi (0, 1, 2-5, 6-10, 10+ randevu)
-    randevu_siklik_dagilimi = {
-        '0 Randevu': 0,
-        '1 Randevu': 0,
-        '2-5 Randevu': 0,
-        '6-10 Randevu': 0,
-        '10+ Randevu': 0
-    }
-    
-    for m in musteriler:
-        randevu_sayisi = musteri_id_to_randevu_adet.get(m.MusteriID, 0)
-        if randevu_sayisi == 0:
-            randevu_siklik_dagilimi['0 Randevu'] += 1
-        elif randevu_sayisi == 1:
-            randevu_siklik_dagilimi['1 Randevu'] += 1
-        elif 2 <= randevu_sayisi <= 5:
-            randevu_siklik_dagilimi['2-5 Randevu'] += 1
-        elif 6 <= randevu_sayisi <= 10:
-            randevu_siklik_dagilimi['6-10 Randevu'] += 1
-        else:
-            randevu_siklik_dagilimi['10+ Randevu'] += 1
-    
-    return render_template(
-        'rapor_musteriler.html',
-        rows=rows,
-        toplam_musteri=toplam_musteri,
-        aktif_musteri=aktif_musteri,
-        yeni_musteri=yeni_musteri,
-        top_musteriler=top_musteriler,
-        kategoriler=kategoriler,
-        sehir_listesi=sehir_listesi,
-        ilce_listesi=ilce_listesi,
-        gender_data=gender_data,
-        age_groups=age_groups,
-        category_data=category_data,
-        city_data=city_data,
-        monthly_data=monthly_data,
-        weekly_data=weekly_data,
-        randevu_sayisi_dagilimi=dict(randevu_sayisi_dagilimi),
-        en_cok_randevu_alan=en_cok_randevu_alan,
-        randevu_siklik_dagilimi=randevu_siklik_dagilimi,
-        filtreler={
-            'kategori_id': kategori_id or '',
-            'aktif': sadece_aktif,
-            'iletisim_var': iletisim_var or '',
-            'yas_min': yas_min or '',
-            'yas_max': yas_max or '',
-            'cinsiyet': cinsiyet or '',
-            'dogum_tarihi': dogum_tarihi or '',
-            'sehir': sehir or '',
-            'ilce': ilce or ''
-        }
-    )
 
 @app.route('/randevu/<int:randevu_id>/duzenle', methods=['GET', 'POST'])
 @login_required
@@ -6136,23 +6098,48 @@ def randevu_duzenle(randevu_id):
 @app.route('/randevu/ekle', methods=['GET', 'POST'])
 @login_required
 def randevu_ekle():
+    # Debug: AJAX isteği kontrolü
+    x_requested_with = request.headers.get('X-Requested-With', '')
+    is_ajax = request.is_json or x_requested_with == 'XMLHttpRequest'
+    print(f"[randevu_ekle] Method: {request.method}, is_json: {request.is_json}, X-Requested-With: '{x_requested_with}', is_ajax: {is_ajax}")
+    print(f"[randevu_ekle] All headers: {dict(request.headers)}")
+    
     if request.method == 'POST':
         # JSON veya form verilerini al
-        if request.is_json:
-            data = request.get_json()
-            tarih_gun = data.get('tarih_gun')
-            saat = data.get('selected_saat')
-            defter_id = data.get('defter_id', type=int)
-            referans_id = data.get('referans_id', type=int)
-            islem_id = data.get('islem_id', type=int)
-            gorev_id = data.get('gorev_id', type=int)
-            musteri_adi = data.get('musteri_adi', '')
-            musteri_soyadi = data.get('musteri_soyadi', '')
-            telefon = data.get('telefon', '')
-            email = data.get('email', '')
-            aciklama = data.get('aciklama', '')
-            randevu_suresi = data.get('sure', 60)
+        if request.is_json or (request.headers.get('Content-Type', '').startswith('application/json')):
+            try:
+                data = request.get_json() if request.is_json else request.get_json(force=True)
+                print(f"[randevu_ekle] JSON data alındı: {data}")
+                tarih_gun = data.get('tarih_gun')
+                saat = data.get('saat') or data.get('selected_saat')
+                defter_id = data.get('defter_id')
+                if isinstance(defter_id, str):
+                    defter_id = int(defter_id) if defter_id else None
+                referans_id = data.get('referans_id')
+                if isinstance(referans_id, str):
+                    referans_id = int(referans_id) if referans_id else None
+                islem_id = data.get('islem_id')
+                if isinstance(islem_id, str):
+                    islem_id = int(islem_id) if islem_id else None
+                gorev_id = data.get('gorev_id')
+                if isinstance(gorev_id, str):
+                    gorev_id = int(gorev_id) if gorev_id else None
+                musteri_adi = data.get('musteri_adi', '')
+                musteri_soyadi = data.get('musteri_soyadi', '')
+                telefon = data.get('telefon', '')
+                email = data.get('email', '')
+                aciklama = data.get('aciklama', '') or data.get('randevu_aciklamasi', '')
+                randevu_suresi = int(data.get('sure', 60))
+                randevu_baslik = data.get('randevu_baslik', '')
+                secilen_musteri_id = data.get('secilen_musteri_id')
+            except Exception as e:
+                print(f"[randevu_ekle] JSON parse hatası: {e}")
+                # JSON parse hatası durumunda form verilerini dene
+                data = None
         else:
+            data = None
+        
+        if not data:
             # Form alanlarini guvenle al
             tarih_gun = request.form.get('tarih_gun')
             saat = request.form.get('saat')
@@ -6164,22 +6151,33 @@ def randevu_ekle():
             musteri_soyadi = request.form.get('musteri_soyadi', '')
             telefon = request.form.get('telefon', '')
             email = request.form.get('email', '')
-            aciklama = request.form.get('aciklama', '')
+            aciklama = request.form.get('aciklama', '') or request.form.get('randevu_aciklamasi', '')
             randevu_suresi = int(request.form.get('sure', 60))
+            randevu_baslik = request.form.get('randevu_baslik', '')
+            secilen_musteri_id = request.form.get('secilen_musteri_id')
         if not tarih_gun or not saat or not defter_id:
-            flash('Lütfen tarih, saat ve randevu defteri seçin', 'error')
+            error_msg = 'Lütfen tarih, saat ve randevu defteri seçin'
+            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': error_msg}), 400
+            flash(error_msg, 'error')
             return redirect(url_for('randevu_ekle'))
         # Referans istege bagli; yok ise "Yok" kullan
         try:
             randevu_dt = datetime.strptime(f"{tarih_gun} {saat}", '%Y-%m-%d %H:%M')
         except ValueError:
-            flash('Tarih/saat formatı geçersiz', 'error')
+            error_msg = 'Tarih/saat formatı geçersiz'
+            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': error_msg}), 400
+            flash(error_msg, 'error')
             return redirect(url_for('randevu_ekle'))
 
         # Geçmiş tarih/saat için koruma
         now_local = datetime.now()
         if randevu_dt < now_local:
-            flash('Geçmiş tarihe veya saate randevu verilemez', 'error')
+            error_msg = 'Geçmiş tarihe veya saate randevu verilemez'
+            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': error_msg}), 400
+            flash(error_msg, 'error')
             return redirect(url_for('randevu_ekle'))
 
         # Seçilen defteri kontrol et
@@ -6189,12 +6187,18 @@ def randevu_ekle():
             Aktif=True
         ).first()
         if not defter_ayar:
-            flash('Seçilen randevu defteri bulunamadı', 'error')
+            error_msg = 'Seçilen randevu defteri bulunamadı'
+            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': error_msg}), 400
+            flash(error_msg, 'error')
             return redirect(url_for('randevu_ekle'))
         
         # Süre validation - slot dakikasının katı olmalı
         if randevu_suresi % defter_ayar.SlotDakika != 0:
-            flash(f'Randevu süresi {defter_ayar.SlotDakika} dakikanın katları olmalı', 'error')
+            error_msg = f'Randevu süresi {defter_ayar.SlotDakika} dakikanın katları olmalı'
+            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': error_msg}), 400
+            flash(error_msg, 'error')
             return redirect(url_for('randevu_ekle'))
 
         # Çakışan randevu ve blok kontrolü - Optimistic Locking ile güçlendirilmiş
@@ -6219,7 +6223,10 @@ def randevu_ekle():
             r_dur = r.RandevuSuresi or 60
             r_end = r_start + timedelta(minutes=int(r_dur))
             if r_start < randevu_bit and randevu_bas < r_end:
-                flash('Seçilen saat aralığında mevcut randevu var', 'error')
+                error_msg = 'Seçilen saat aralığında mevcut randevu var'
+                if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({'success': False, 'message': error_msg}), 400
+                flash(error_msg, 'error')
                 return redirect(url_for('randevu_ekle'))
 
         # 2) Bloklarla çakışma
@@ -6250,7 +6257,10 @@ def randevu_ekle():
             return False
 
         if is_blocked_interval(randevu_bas, randevu_bit):
-            flash('Seçilen saat aralığı kapalı (bloklandı)', 'error')
+            error_msg = 'Seçilen saat aralığı kapalı (bloklandı)'
+            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': error_msg}), 400
+            flash(error_msg, 'error')
             return redirect(url_for('randevu_ekle'))
 
         # Referans basligini cek (varsa)
@@ -6267,8 +6277,17 @@ def randevu_ekle():
             musteri_id = int(secilen_musteri_id)
             musteri = Musteri.query.filter_by(MusteriID=musteri_id, FirmaID=session['firma_id']).first()
             if not musteri:
-                flash('Seçilen müşteri bulunamadı', 'error')
+                error_msg = 'Seçilen müşteri bulunamadı'
+                if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({'success': False, 'message': error_msg}), 400
+                flash(error_msg, 'error')
                 return redirect(url_for('randevu_ekle'))
+            
+            # Müşteri bilgilerini veritabanından al (form'dan gelenler varsa onları kullan)
+            musteri_adi = request.form.get('musteri_adi', '') or musteri.MusteriAdi
+            musteri_soyadi = request.form.get('musteri_soyadi', '') or musteri.MusteriSoyadi
+            telefon = request.form.get('telefon', '') or musteri.Telefon or ''
+            email = request.form.get('email', '') or musteri.Email or ''
             
             # Müşteri bilgilerini güncelle
             musteri.Sehir = request.form.get('musteri_sehir', '') or musteri.Sehir
@@ -6360,8 +6379,18 @@ def randevu_ekle():
                 gorev_baslik = gorev.Baslik
                 gorev_aciklama = gorev.Aciklama or ''
         
+        # Randevu başlığını belirle: önce form'dan gelen, sonra referans, sonra görev, son olarak varsayılan
+        if randevu_baslik:
+            randevu_baslik_final = randevu_baslik
+        elif ref:
+            randevu_baslik_final = ref.Ad
+        elif gorev_baslik and gorev_baslik != 'Yok':
+            randevu_baslik_final = gorev_baslik
+        else:
+            randevu_baslik_final = f"{musteri_adi} {musteri_soyadi} Randevusu" if musteri_adi else "Yok"
+        
         randevu = Randevu(
-            RandevuBaslik=(ref.Ad if ref else gorev_baslik),
+            RandevuBaslik=randevu_baslik_final,
             RandevuAciklamasi=aciklama or gorev_aciklama,
             RandevuTarihi=randevu_dt,
             RandevuSuresi=randevu_suresi,
@@ -6381,7 +6410,10 @@ def randevu_ekle():
             db.session.commit()
         except Exception as e:
             db.session.rollback()
-            if request.is_json:
+            print(f"Randevu oluşturma hatası: {e}")
+            import traceback
+            traceback.print_exc()
+            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return jsonify({'success': False, 'message': 'Randevu oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.'})
             flash('Randevu oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.', 'error')
             return redirect(url_for('randevu_ekle'))
@@ -6576,8 +6608,12 @@ def randevu_ekle():
         log_user_action('CREATE', 'Randevu', randevu.RandevuID, 
                        detail=f"Randevu oluşturuldu: {randevu.RandevuTarihi.strftime('%d.%m.%Y %H:%M')} - {randevu.MusteriAdi}")
         
-        if request.is_json:
+        # AJAX isteği kontrolü
+        print(f"[randevu_ekle] POST sonu - is_json: {request.is_json}, X-Requested-With: {request.headers.get('X-Requested-With')}, is_ajax: {is_ajax}")
+        if is_ajax:
+            print("[randevu_ekle] JSON response döndürülüyor")
             return jsonify({'success': True, 'message': 'Randevu başarıyla oluşturuldu!'})
+        print("[randevu_ekle] Redirect yapılıyor")
         flash('Randevu başarıyla oluşturuldu!', 'success')
         return redirect(url_for('randevular'))
     # GET isteği
@@ -6586,10 +6622,41 @@ def randevu_ekle():
     # Müşterileri al
     musteriler = Musteri.query.filter_by(FirmaID=session['firma_id'], Aktif=True).order_by(Musteri.MusteriAdi, Musteri.MusteriSoyadi).all()
     
-    # Müşteri kategorilerini al
-    musteri_kategoriler = MusteriKategori.query.filter_by(
+    # Müşteri kategorilerini al - önce tüm kategorileri kontrol et
+    all_kategoriler = MusteriKategori.query.filter_by(
         FirmaID=session['firma_id']
-    ).filter(MusteriKategori.Aktif == 1).all()
+    ).all()
+    print(f"Firma {session['firma_id']} için toplam kategori sayısı (Aktif olmayanlar dahil): {len(all_kategoriler)}")
+    
+    # Aktif kategorileri al
+    musteri_kategoriler = MusteriKategori.query.filter_by(
+        FirmaID=session['firma_id'],
+        Aktif=True
+    ).order_by(MusteriKategori.KategoriAdi).all()
+    print(f"Firma {session['firma_id']} için aktif kategori sayısı: {len(musteri_kategoriler)}")
+    
+    # Eğer kategori yoksa varsayılan kategori oluştur
+    if not musteri_kategoriler:
+        print(f"Firma {session['firma_id']} için kategori bulunamadı, varsayılan kategori oluşturuluyor...")
+        varsayilan_kategori = MusteriKategori(
+            FirmaID=session['firma_id'],
+            KategoriAdi='Normal Müşteri',
+            Renk='#28a745',
+            Aciklama='Standart müşteri kategorisi',
+            Aktif=True
+        )
+        db.session.add(varsayilan_kategori)
+        try:
+            db.session.commit()
+            musteri_kategoriler = [varsayilan_kategori]
+            print(f"Varsayılan kategori başarıyla oluşturuldu: KategoriID={varsayilan_kategori.KategoriID}, Ad={varsayilan_kategori.KategoriAdi}")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Varsayılan kategori oluşturulurken hata: {e}")
+            import traceback
+            traceback.print_exc()
+    else:
+        print(f"Firma {session['firma_id']} için {len(musteri_kategoriler)} kategori bulundu: {[k.KategoriAdi for k in musteri_kategoriler]}")
     
     # Randevu defteri ayarlarını al (tüm aktif defterler)
     defter_ayarlar = RandevuDefterAyar.query.filter_by(
@@ -6628,6 +6695,16 @@ def randevu_ekle():
     
     # Ülkeleri getir
     countries = get_countries()
+    print(f"[randevu_ekle] get_countries() döndü: {len(countries) if countries else 0} ülke")
+    if countries and len(countries) > 0:
+        # countries bir dict listesi olmalı
+        if isinstance(countries[0], dict):
+            print(f"[randevu_ekle] İlk 5 ülke: {[c.get('name', 'N/A') for c in countries[:5]]}")
+            print(f"[randevu_ekle] Son 5 ülke: {[c.get('name', 'N/A') for c in countries[-5:]]}")
+        else:
+            print(f"[randevu_ekle] UYARI: countries dict listesi değil, tip: {type(countries[0])}")
+    else:
+        print(f"[randevu_ekle] UYARI: countries boş veya None!")
     
     return render_template('randevu_ekle.html', 
                          referanslar=referanslar,
@@ -6685,15 +6762,8 @@ def api_gorevler_calendar():
         priority_filter = request.args.get('priority', 'all')
         date_filter = request.args.get('date', '')
         
-        # Görevleri getir (sadece randevu bazlı görevler) ve tamamlananları gizle
+        # Görevleri getir (sadece randevu bazlı görevler)
         query = Todo.query.filter_by(KullaniciID=user_id, Tip='Randevu')
-        try:
-            # Tamamlananları hariç tut (durum adı üzerinden)
-            query = query.outerjoin(TodoDurum, Todo.DurumID == TodoDurum.DurumID) \
-                         .filter(or_(TodoDurum.DurumAdi != 'Tamamlandı', TodoDurum.DurumAdi.is_(None)))
-        except Exception:
-            # Herhangi bir hata olursa sadece DurumID None olmayan ve adı 'Tamamlandı' olmayanları approx filtrele
-            pass
         
         # Arama filtresi
         if search_term:
@@ -6718,8 +6788,8 @@ def api_gorevler_calendar():
                 filter_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
                 query = query.filter(
                     or_(
-                        func.date(Todo.BitisTarihi) == filter_date,
-                        func.date(Todo.HatirlatmaTarihi) == filter_date
+                        db.func.date(Todo.BitisTarihi) == filter_date,
+                        db.func.date(Todo.HatirlatmaTarihi) == filter_date
                     )
                 )
             except ValueError:
@@ -7940,277 +8010,7 @@ def api_defter_blok_sil(blok_id: int):
     db.session.commit()
     return jsonify({'success': True})
 
-# Raporlar Sayfasi
-@app.route('/raporlar')
-@login_required
-def raporlar():
-    # Modül izin kontrolü
-    if not session.get('raporlar_modulu', False):
-        flash('Bu sayfaya erişim yetkiniz yok', 'error')
-        return redirect(url_for('dashboard'))
-    # Varsayilan tarih araligi: son 30 gun
-    end_str = request.args.get('bitis')
-    start_str = request.args.get('baslangic')
-    today = datetime.now().date()
-    default_start = today - timedelta(days=30)
-    try:
-        start_date = datetime.strptime(start_str, '%Y-%m-%d').date() if start_str else default_start
-    except ValueError:
-        start_date = default_start
-    try:
-        end_date = datetime.strptime(end_str, '%Y-%m-%d').date() if end_str else today
-    except ValueError:
-        end_date = today
 
-    # Kapasite ve defter parametrelerini al
-    kapasite = request.args.get('kapasite', '')
-    defter_id = request.args.get('defter_id', '')
-    format_tip = request.args.get('format')  # Export format
-    print(f"Form parametreleri - defter_id: '{defter_id}', kapasite: '{kapasite}', format: '{format_tip}'")
-    
-    # Defter listesini al
-    defterler = RandevuDefterAyar.query.filter(
-        RandevuDefterAyar.FirmaID == session['firma_id'],
-        RandevuDefterAyar.Aktif == True
-    ).all()
-    print(f"Bulunan defter sayısı: {len(defterler)}")
-    for defter in defterler:
-        print(f"Defter: {defter.DefterAdi} (ID: {defter.AyarID})")
-    
-    # Eğer belirli bir defter seçilmişse ve kapasite boş/0 ise, defterden otomatik hesapla
-    auto_capacity = None
-    if defter_id and (not kapasite or kapasite == '0'):
-        try:
-            ayar = RandevuDefterAyar.query.filter_by(AyarID=defter_id, FirmaID=session['firma_id'], Aktif=True).first()
-            if ayar:
-                def parse_hhmm(s):
-                    try:
-                        h, m = (s or '09:00').split(':')
-                        return int(h), int(m)
-                    except:
-                        return 9, 0  # Varsayılan 09:00
-                
-                sh, sm = parse_hhmm(ayar.BaslangicSaati or '09:00')
-                eh, em = parse_hhmm(ayar.BitisSaati or '18:00')
-                total_minutes = max(0, (eh * 60 + em) - (sh * 60 + sm))
-                slot_min = max(1, ayar.SlotDakika or 30)  # En az 1 dakika
-                auto_capacity = max(1, total_minutes // slot_min)
-                print(f"Defter {ayar.DefterAdi} için otomatik kapasite hesaplandı: {auto_capacity} (Saat: {ayar.BaslangicSaati}-{ayar.BitisSaati}, Slot: {slot_min}dk)")
-        except Exception as e:
-            print(f"Kapasite hesaplama hatası: {e}")
-            auto_capacity = None
-
-    if not kapasite or kapasite == '0':
-        kapasite = str(auto_capacity or 8)
-
-    # Export işlemleri
-    if format_tip in ['csv', 'excel', 'pdf']:
-        # Randevu verilerini al
-        start_dt = datetime(start_date.year, start_date.month, start_date.day, 0, 0)
-        end_dt = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59)
-        
-        # Randevu sorgusu
-        if session.get('is_admin', False):
-            q = Randevu.query.filter(
-                Randevu.FirmaID == session['firma_id'],
-                Randevu.RandevuTarihi >= start_dt,
-                Randevu.RandevuTarihi <= end_dt
-            )
-        else:
-            q = db.session.query(Randevu).join(RandevuYetki).filter(
-                RandevuYetki.KullaniciID == session['user_id'],
-                RandevuYetki.GoruntulemeYetkisi == True,
-                Randevu.FirmaID == session['firma_id'],
-                Randevu.RandevuTarihi >= start_dt,
-                Randevu.RandevuTarihi <= end_dt
-            )
-        
-        # Defter filtresi
-        if defter_id:
-            q = q.filter(Randevu.DefterID == defter_id)
-        
-        randevular = q.order_by(Randevu.RandevuTarihi.desc()).all()
-        
-        # Çıktı alma logla
-        try:
-            log_user_action('VIEW', 'Rapor', detail=f"Randevu raporu {format_tip.upper()} indirildi")
-        except Exception:
-            pass
-        
-        if format_tip == 'csv':
-            # CSV Export
-            output = StringIO()
-            writer = csv.writer(output, delimiter=';')
-            writer.writerow(['Randevu ID', 'Tarih', 'Saat', 'Müşteri', 'Telefon', 'Email', 'Başlık', 'Durum', 'Süre', 'Defter'])
-            for r in randevular:
-                writer.writerow([
-                    r.RandevuID,
-                    r.RandevuTarihi.strftime('%d.%m.%Y'),
-                    r.RandevuTarihi.strftime('%H:%M'),
-                    f"{r.MusteriAdi} {r.MusteriSoyadi or ''}".strip(),
-                    r.MusteriTelefon or '',
-                    r.MusteriEmail or '',
-                    r.RandevuBaslik or '',
-                    r.Durum or '',
-                    f"{r.RandevuSuresi or 60} dk",
-                    r.defter.DefterAdi if r.defter else ''
-                ])
-            output.seek(0)
-            filename = f"randevu_raporu_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
-            data = output.getvalue().encode('utf-8-sig')
-            return send_file(BytesIO(data), mimetype='text/csv; charset=utf-8', as_attachment=True, download_name=filename)
-        
-        elif format_tip == 'excel':
-            # Excel Export
-            wb = Workbook()
-            ws = wb.active
-            ws.title = "Randevu Raporu"
-            
-            # Başlık satırı
-            headers = ['Randevu ID', 'Tarih', 'Saat', 'Müşteri', 'Telefon', 'Email', 'Başlık', 'Durum', 'Süre', 'Defter']
-            for col, header in enumerate(headers, 1):
-                cell = ws.cell(row=1, column=col, value=header)
-                cell.font = Font(bold=True)
-                cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
-            
-            # Veri satırları
-            for row, r in enumerate(randevular, 2):
-                ws.cell(row=row, column=1, value=r.RandevuID)
-                ws.cell(row=row, column=2, value=r.RandevuTarihi.strftime('%d.%m.%Y'))
-                ws.cell(row=row, column=3, value=r.RandevuTarihi.strftime('%H:%M'))
-                ws.cell(row=row, column=4, value=f"{r.MusteriAdi} {r.MusteriSoyadi or ''}".strip())
-                ws.cell(row=row, column=5, value=r.MusteriTelefon or '')
-                ws.cell(row=row, column=6, value=r.MusteriEmail or '')
-                ws.cell(row=row, column=7, value=r.RandevuBaslik or '')
-                ws.cell(row=row, column=8, value=r.Durum or '')
-                ws.cell(row=row, column=9, value=f"{r.RandevuSuresi or 60} dk")
-                ws.cell(row=row, column=10, value=r.defter.DefterAdi if r.defter else '')
-            
-            # Sütun genişliklerini ayarla
-            for column in ws.columns:
-                max_length = 0
-                column_letter = get_column_letter(column[0].column)
-                for cell in column:
-                    try:
-                        if len(str(cell.value)) > max_length:
-                            max_length = len(str(cell.value))
-                    except:
-                        pass
-                adjusted_width = min(max_length + 2, 50)
-                ws.column_dimensions[column_letter].width = adjusted_width
-            
-            # Excel dosyasını kaydet
-            buffer = BytesIO()
-            wb.save(buffer)
-            buffer.seek(0)
-            
-            filename = f"randevu_raporu_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
-            return send_file(
-                buffer,
-                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                as_attachment=True,
-                download_name=filename
-            )
-        
-        elif format_tip == 'pdf':
-            # PDF Export
-            buffer = BytesIO()
-            doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
-            
-            # Türkçe font desteği
-            try:
-                pdfmetrics.registerFont(TTFont('DejaVuSans', 'C:/Windows/Fonts/dejavu-sans.ttf'))
-                pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'C:/Windows/Fonts/dejavu-sans-bold.ttf'))
-                turkish_font = 'DejaVuSans'
-                turkish_font_bold = 'DejaVuSans-Bold'
-            except:
-                try:
-                    pdfmetrics.registerFont(TTFont('DejaVuSans', 'C:/Windows/Fonts/arial.ttf'))
-                    pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'C:/Windows/Fonts/arialbd.ttf'))
-                    turkish_font = 'DejaVuSans'
-                    turkish_font_bold = 'DejaVuSans-Bold'
-                except:
-                    turkish_font = 'Helvetica'
-                    turkish_font_bold = 'Helvetica-Bold'
-            
-            # Stil tanımları
-            styles = getSampleStyleSheet()
-            title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=18, spaceAfter=30, alignment=TA_CENTER, fontName=turkish_font_bold)
-            
-            # Başlık
-            title = Paragraph("Randevu Raporu", title_style)
-            
-            # Özet bilgiler
-            toplam_randevu = len(randevular)
-            tamamlanan = len([r for r in randevular if r.Durum == 'Tamamlandı'])
-            iptal = len([r for r in randevular if r.Durum == 'İptal'])
-            beklemede = len([r for r in randevular if r.Durum == 'Beklemede'])
-            
-            summary_data = [
-                ['Toplam Randevu', str(toplam_randevu)],
-                ['Tamamlanan', str(tamamlanan)],
-                ['İptal', str(iptal)],
-                ['Beklemede', str(beklemede)]
-            ]
-            
-            summary_table = Table(summary_data)
-            summary_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, -1), colors.lightgrey),
-                ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('FONTNAME', (0, 0), (-1, -1), turkish_font),
-                ('FONTSIZE', (0, 0), (-1, -1), 10),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black)
-            ]))
-            
-            # Tablo verileri
-            table_data = [['Tarih', 'Saat', 'Müşteri', 'Telefon', 'Başlık', 'Durum', 'Süre']]
-            
-            for r in randevular[:50]:  # İlk 50 kayıt
-                table_data.append([
-                    r.RandevuTarihi.strftime('%d.%m.%Y'),
-                    r.RandevuTarihi.strftime('%H:%M'),
-                    f"{r.MusteriAdi} {r.MusteriSoyadi or ''}".strip(),
-                    r.MusteriTelefon or '',
-                    r.RandevuBaslik or '',
-                    r.Durum or '',
-                    f"{r.RandevuSuresi or 60} dk"
-                ])
-            
-            # Tablo oluştur
-            table = Table(table_data, repeatRows=1)
-            table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('FONTNAME', (0, 0), (-1, 0), turkish_font_bold),
-                ('FONTSIZE', (0, 0), (-1, 0), 8),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('FONTNAME', (0, 1), (-1, -1), turkish_font),
-                ('FONTSIZE', (0, 1), (-1, -1), 7),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black)
-            ]))
-            
-            # PDF oluştur
-            elements = [title, Spacer(1, 12), summary_table, Spacer(1, 12), table]
-            doc.build(elements)
-            buffer.seek(0)
-            
-            filename = f"randevu_raporu_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
-            return send_file(
-                buffer,
-                mimetype='application/pdf',
-                as_attachment=True,
-                download_name=filename
-            )
-
-    return render_template('raporlar.html', 
-                         baslangic=start_date.strftime('%Y-%m-%d'), 
-                         bitis=end_date.strftime('%Y-%m-%d'),
-                         kapasite=kapasite,
-                         defter_id=defter_id,
-                         defterler=defterler)
 
 
 # Raporlar API - Ozet
@@ -8563,2056 +8363,9 @@ def api_raporlar_personel_performans():
 
 # Duplicate endpoint removed - using /api/musteri-ara instead
 
-# ==================== MÜŞTERİ DÜZENLEME API ====================
-
-@app.route('/api/musteri/<int:musteri_id>')
-def api_musteri_get(musteri_id):
-    """Müşteri bilgilerini getir"""
-    try:
-        # Manuel session kontrolü - daha esnek
-        # user_id kullan, kullanici_id değil
-        kullanici_id = session.get('user_id')
-        if not kullanici_id or not session.get('firma_id'):
-            return jsonify({'success': False, 'message': 'Oturum süresi dolmuş. Lütfen tekrar giriş yapın.', 'redirect': '/login'}), 401
-        
-        firma_id = session.get('firma_id')
-        
-        # Müşteriyi bul
-        musteri = Musteri.query.filter(
-            Musteri.MusteriID == musteri_id,
-            Musteri.FirmaID == firma_id,
-            Musteri.Aktif == True
-        ).first()
-        
-        if not musteri:
-            return jsonify({'success': False, 'message': 'Müşteri bulunamadı'}), 404
-        
-        # Müşteri bilgilerini döndür
-        return jsonify({
-            'success': True,
-            'musteri': {
-                'MusteriID': musteri.MusteriID,
-                'MusteriAdi': musteri.MusteriAdi,
-                'MusteriSoyadi': musteri.MusteriSoyadi,
-                'Telefon': musteri.Telefon,
-                'Email': musteri.Email,
-                'Yas': musteri.Yas,
-                'Cinsiyet': musteri.Cinsiyet,
-                'DogumTarihi': musteri.DogumTarihi.isoformat() if musteri.DogumTarihi else None,
-                'Sehir': musteri.Sehir,
-                'Ilce': musteri.Ilce,
-                'Adres': musteri.Adres,
-                'Notlar': musteri.Notlar
-            }
-        })
-        
-    except Exception as e:
-        print(f"Müşteri getirme hatası: {e}")
-        return jsonify({'success': False, 'message': 'Sunucu hatası'}), 500
-
-@app.route('/api/musteri/<int:musteri_id>/update', methods=['POST'])
-def api_musteri_update(musteri_id):
-    """Müşteri bilgilerini güncelle"""
-    try:
-        # Manuel session kontrolü - daha esnek
-        # user_id kullan, kullanici_id değil
-        kullanici_id = session.get('user_id')
-        if not kullanici_id or not session.get('firma_id'):
-            return jsonify({'success': False, 'message': 'Oturum süresi dolmuş. Lütfen tekrar giriş yapın.', 'redirect': '/login'}), 401
-        
-        firma_id = session.get('firma_id')
-        kullanici_id = session.get('user_id')
-        
-        # Müşteriyi bul
-        musteri = Musteri.query.filter(
-            Musteri.MusteriID == musteri_id,
-            Musteri.FirmaID == firma_id,
-            Musteri.Aktif == True
-        ).first()
-        
-        if not musteri:
-            return jsonify({'success': False, 'message': 'Müşteri bulunamadı'}), 404
-        
-        # Form verilerini al
-        data = request.get_json()
-        
-        # Eski verileri kaydet (log için)
-        old_data = {
-            'MusteriAdi': musteri.MusteriAdi,
-            'MusteriSoyadi': musteri.MusteriSoyadi,
-            'Telefon': musteri.Telefon,
-            'Email': musteri.Email,
-            'Yas': musteri.Yas,
-            'Cinsiyet': musteri.Cinsiyet,
-            'DogumTarihi': musteri.DogumTarihi.isoformat() if musteri.DogumTarihi else None,
-            'Sehir': musteri.Sehir,
-            'Ilce': musteri.Ilce,
-            'Adres': musteri.Adres,
-            'Notlar': musteri.Notlar
-        }
-        
-        # Validasyon
-        if not data.get('musteri_adi') or not data.get('musteri_soyadi'):
-            return jsonify({'success': False, 'message': 'Ad ve soyad zorunludur'}), 400
-        
-        # Telefon validasyonu
-        if data.get('telefon'):
-            phone = str(data['telefon']).strip()
-            if phone:
-                # Sıfırları temizle
-                if phone.startswith('0'):
-                    phone = phone[1:]
-                if len(phone) == 10 and phone.startswith('5'):
-                    data['telefon'] = phone
-                else:
-                    return jsonify({'success': False, 'message': 'Geçersiz telefon numarası formatı'}), 400
-        
-        # Müşteri bilgilerini güncelle
-        musteri.MusteriAdi = data.get('musteri_adi', '').strip()
-        musteri.MusteriSoyadi = data.get('musteri_soyadi', '').strip()
-        musteri.Telefon = data.get('telefon', '').strip() or None
-        musteri.Email = data.get('email', '').strip() or None
-        musteri.Yas = data.get('yas') or None
-        musteri.Cinsiyet = data.get('cinsiyet', '').strip() or None
-        musteri.Sehir = data.get('sehir', '').strip() or None
-        musteri.Ilce = data.get('ilce', '').strip() or None
-        musteri.Adres = data.get('adres', '').strip() or None
-        musteri.Notlar = data.get('notlar', '').strip() or None
-        
-        # Doğum tarihi
-        if data.get('dogum_tarihi'):
-            try:
-                musteri.DogumTarihi = datetime.strptime(data['dogum_tarihi'], '%Y-%m-%d').date()
-            except ValueError:
-                return jsonify({'success': False, 'message': 'Geçersiz doğum tarihi formatı'}), 400
-        else:
-            musteri.DogumTarihi = None
-        
-        # Veritabanına kaydet
-        db.session.commit()
-        
-        # Log kaydı
-        new_data = {
-            'MusteriAdi': musteri.MusteriAdi,
-            'MusteriSoyadi': musteri.MusteriSoyadi,
-            'Telefon': musteri.Telefon,
-            'Email': musteri.Email,
-            'Yas': musteri.Yas,
-            'Cinsiyet': musteri.Cinsiyet,
-            'DogumTarihi': musteri.DogumTarihi.isoformat() if musteri.DogumTarihi else None,
-            'Sehir': musteri.Sehir,
-            'Ilce': musteri.Ilce,
-            'Adres': musteri.Adres,
-            'Notlar': musteri.Notlar
-        }
-        
-        # Log kaydı oluştur
-        log_entry = KullaniciLog(
-            KullaniciID=session['user_id'],
-            IslemTipi='UPDATE',
-            TabloAdi='Musteri',
-            KayitID=musteri_id,
-            IPAdresi=request.remote_addr,
-            EskiVeri=json.dumps(old_data, ensure_ascii=False),
-            YeniVeri=json.dumps(new_data, ensure_ascii=False),
-            IslemDetayi=f'Müşteri güncellendi: {musteri.MusteriAdi} {musteri.MusteriSoyadi}',
-            OlusturmaTarihi=datetime.now()
-        )
-        db.session.add(log_entry)
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Müşteri başarıyla güncellendi'
-        })
-        
-    except Exception as e:
-        print(f"Müşteri güncelleme hatası: {e}")
-        db.session.rollback()
-        return jsonify({'success': False, 'message': 'Sunucu hatası'}), 500
-
-# ==================== EXCEL İMPORT SİSTEMİ ====================
-
-# Upload klasörü
-UPLOAD_FOLDER = 'uploads/excel_imports'
-ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def validate_phone(phone):
-    """Telefon numarası validasyonu"""
-    # Boş değer kontrolü
-    if phone is None or phone == '' or (isinstance(phone, float) and pd.isna(phone)):
-        return False, 'Telefon numarası boş olamaz'
-    
-    # String'e çevir ve boşlukları temizle
-    phone_str = str(phone).strip()
-    
-    # Boş string kontrolü (nan, None, empty string)
-    if not phone_str or phone_str.lower() in ['nan', 'none', '']:
-        return False, 'Telefon numarası boş olamaz'
-    
-    # Bilimsel notasyonu düzelt
-    if 'e' in phone_str.lower():
-        try:
-            phone_str = str(int(float(phone_str)))
-        except:
-            pass
-    
-    # Float formatındaysa (nokta varsa) int'e çevir
-    if '.' in phone_str:
-        try:
-            phone_str = str(int(float(phone_str)))
-        except:
-            pass
-    
-    # Sadece rakamları al
-    phone_clean = re.sub(r'\D', '', phone_str)
-    
-    # 10 haneli (5XXXXXXXXX) veya 11 haneli (05XXXXXXXXX) olmalı
-    if len(phone_clean) == 10 and phone_clean.startswith('5'):
-        # 10 haneli format kabul edilir, 0 eklenmez
-        pass
-    elif len(phone_clean) == 11 and phone_clean.startswith('05'):
-        # 11 haneli formatı 10 haneliye çevir (sıfırı kaldır)
-        phone_clean = phone_clean[1:]
-    else:
-        return False, f'Telefon 10 (5XXXXXXXXX) veya 11 (05XXXXXXXXX) haneli olmalıdır'
-    
-    return True, phone_clean
-
-def validate_email(email):
-    """Email validasyonu"""
-    if not email or pd.isna(email):
-        return True, None  # Email opsiyonel
-    
-    email = str(email).strip()
-    if not email:
-        return True, None
-    
-    # Basit email regex
-    email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    if not re.match(email_regex, email):
-        return False, 'Geçersiz email formatı'
-    
-    return True, email
-
-def validate_date(date_str):
-    """Tarih validasyonu"""
-    if not date_str or pd.isna(date_str):
-        return True, None  # Tarih opsiyonel
-    
-    date_str = str(date_str).strip()
-    if not date_str:
-        return True, None
-    
-    # Farklı tarih formatlarını dene (Türk formatı öncelikli)
-    date_formats = ['%d.%m.%Y', '%d/%m/%Y', '%Y-%m-%d', '%Y/%m/%d']
-    
-    for date_format in date_formats:
-        try:
-            parsed_date = datetime.strptime(date_str, date_format)
-            return True, parsed_date.strftime('%Y-%m-%d')
-        except ValueError:
-            continue
-    
-    return False, 'Geçersiz tarih formatı (GG.AA.YYYY veya GG/AA/YYYY kullanın, örn: 18.05.1974)'
-
-@app.route('/musteriler/import')
-@login_required
-def musteriler_import():
-    """Müşteri Excel import sayfası"""
-    return render_template('musteriler_import.html')
-
-@app.route('/api/musteri-import/template')
-@login_required
-def musteri_import_template():
-    """Excel template dosyasını kullanıcının diline göre oluştur ve indir"""
-    from flask_babel import get_locale
-    
-    # Kullanıcının dil seçimini al
-    locale = str(get_locale())
-    
-    # Dil bazlı çeviriler
-    translations = {
-        'tr': {
-            'columns': ['Ad', 'Soyad', 'Ülke Kodu', 'Telefon', 'Email', 'Cinsiyet', 'Doğum Tarihi', 'Adres'],
-            'sample_data': {
-                'Ad': ['Ahmet', 'Ayşe', 'Mehmet'],
-                'Soyad': ['Yılmaz', 'Demir', 'Kaya'],
-                'Ülke Kodu': ['90', '90', '90'],
-                'Telefon': ['5551234567', '5559876543', '5551112233'],
-                'Email': ['ahmet@mail.com', 'ayse@mail.com', 'mehmet@mail.com'],
-                'Cinsiyet': ['Erkek', 'Kadın', 'Erkek'],
-                'Doğum Tarihi': ['15.05.1990', '20.08.1985', '10.03.1995'],
-                'Adres': ['İstanbul, Kadıköy', 'Ankara, Çankaya', 'İzmir, Karşıyaka']
-            },
-            'guide_title': 'Müşteri İçe Aktarma - Kullanım Kılavuzu',
-            'guide_sheet': 'Kullanım Kılavuzu',
-            'customers_sheet': 'Müşteriler'
-        },
-        'en': {
-            'columns': ['Name', 'Surname', 'Country Code', 'Phone', 'Email', 'Gender', 'Birth Date', 'Address'],
-            'sample_data': {
-                'Name': ['John', 'Jane', 'Michael'],
-                'Surname': ['Smith', 'Doe', 'Johnson'],
-                'Country Code': ['90', '90', '90'],
-                'Phone': ['5551234567', '5559876543', '5551112233'],
-                'Email': ['john@mail.com', 'jane@mail.com', 'michael@mail.com'],
-                'Gender': ['Male', 'Female', 'Male'],
-                'Birth Date': ['15.05.1990', '20.08.1985', '10.03.1995'],
-                'Address': ['Istanbul, Kadikoy', 'Ankara, Cankaya', 'Izmir, Karsiyaka']
-            },
-            'guide_title': 'Customer Import - User Guide',
-            'guide_sheet': 'User Guide',
-            'customers_sheet': 'Customers'
-        },
-        'de': {
-            'columns': ['Vorname', 'Nachname', 'Ländercode', 'Telefon', 'E-Mail', 'Geschlecht', 'Geburtsdatum', 'Adresse'],
-            'sample_data': {
-                'Vorname': ['Hans', 'Anna', 'Michael'],
-                'Nachname': ['Schmidt', 'Müller', 'Weber'],
-                'Ländercode': ['90', '90', '90'],
-                'Telefon': ['5551234567', '5559876543', '5551112233'],
-                'E-Mail': ['hans@mail.com', 'anna@mail.com', 'michael@mail.com'],
-                'Geschlecht': ['Männlich', 'Weiblich', 'Männlich'],
-                'Geburtsdatum': ['15.05.1990', '20.08.1985', '10.03.1995'],
-                'Adresse': ['Istanbul, Kadikoy', 'Ankara, Cankaya', 'Izmir, Karsiyaka']
-            },
-            'guide_title': 'Kundenimport - Benutzerhandbuch',
-            'guide_sheet': 'Benutzerhandbuch',
-            'customers_sheet': 'Kunden'
-        },
-        'fr': {
-            'columns': ['Prénom', 'Nom', 'Code Pays', 'Téléphone', 'E-mail', 'Genre', 'Date de Naissance', 'Adresse'],
-            'sample_data': {
-                'Prénom': ['Pierre', 'Marie', 'Jean'],
-                'Nom': ['Martin', 'Dubois', 'Durand'],
-                'Code Pays': ['90', '90', '90'],
-                'Téléphone': ['5551234567', '5559876543', '5551112233'],
-                'E-mail': ['pierre@mail.com', 'marie@mail.com', 'jean@mail.com'],
-                'Genre': ['Homme', 'Femme', 'Homme'],
-                'Date de Naissance': ['15.05.1990', '20.08.1985', '10.03.1995'],
-                'Adresse': ['Istanbul, Kadikoy', 'Ankara, Cankaya', 'Izmir, Karsiyaka']
-            },
-            'guide_title': 'Importation de Clients - Guide d\'Utilisation',
-            'guide_sheet': 'Guide d\'Utilisation',
-            'customers_sheet': 'Clients'
-        }
-    }
-    
-    # Varsayılan olarak Türkçe
-    lang_data = translations.get(locale, translations['tr'])
-    
-    # DataFrame oluştur
-    df = pd.DataFrame(lang_data['sample_data'])
-    
-    # Geçici dosya oluştur
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx')
-    temp_path = temp_file.name
-    temp_file.close()
-    
-    # Excel'e yaz
-    df.to_excel(temp_path, index=False, sheet_name=lang_data['customers_sheet'])
-    
-    # Workbook'u yükle ve stil ekle
-    wb = load_workbook(temp_path)
-    ws = wb[lang_data['customers_sheet']]
-    
-    # Başlık stili
-    header_fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
-    header_font = Font(bold=True, color='FFFFFF', size=12)
-    header_alignment = Alignment(horizontal='center', vertical='center')
-    border = Border(
-        left=Side(style='thin'),
-        right=Side(style='thin'),
-        top=Side(style='thin'),
-        bottom=Side(style='thin')
-    )
-    
-    # Başlık satırına stil uygula
-    for col in range(1, len(df.columns) + 1):
-        cell = ws.cell(row=1, column=col)
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = header_alignment
-        cell.border = border
-    
-    # Kolon genişliklerini ayarla
-    for col in range(1, len(df.columns) + 1):
-        ws.column_dimensions[get_column_letter(col)].width = 20
-    
-    # Veri satırlarına border ekle ve telefon+ülke kodu kolonlarını TEXT formatına çevir
-    telefon_col_index = None
-    ulke_kodu_col_index = None
-    
-    for col_idx, col_name in enumerate(df.columns, start=1):
-        col_lower = str(col_name).lower()
-        if 'telefon' in col_lower or 'phone' in col_lower or 'téléphone' in col_lower:
-            if 'kod' not in col_lower and 'code' not in col_lower:  # "Ülke Kodu" değilse
-                telefon_col_index = col_idx
-        elif 'kod' in col_lower or 'code' in col_lower:
-            ulke_kodu_col_index = col_idx
-    
-    for row in range(2, len(df) + 2):
-        for col in range(1, len(df.columns) + 1):
-            cell = ws.cell(row=row, column=col)
-            cell.border = border
-            # Telefon ve ülke kodu kolonlarını TEXT olarak formatla
-            if col == telefon_col_index or col == ulke_kodu_col_index:
-                cell.number_format = '@'  # TEXT format
-    
-    # Kaydet
-    wb.save(temp_path)
-    
-    # Dosya adını dile göre ayarla
-    filename = f'customer_import_template_{locale}.xlsx'
-    
-    return send_file(temp_path, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
-@app.route('/api/musteri-import/upload', methods=['POST'])
-@login_required
-def musteri_import_upload():
-    """Excel dosyasını yükle ve parse et"""
-    try:
-        # Dosya kontrolü
-        if 'file' not in request.files:
-            return jsonify({'success': False, 'message': 'Dosya seçilmedi'}), 400
-        
-        file = request.files['file']
-        
-        if file.filename == '':
-            return jsonify({'success': False, 'message': 'Dosya seçilmedi'}), 400
-        
-        if not allowed_file(file.filename):
-            return jsonify({'success': False, 'message': 'Sadece .xlsx veya .xls dosyaları yüklenebilir'}), 400
-        
-        # Upload klasörünü oluştur
-        if not os.path.exists(UPLOAD_FOLDER):
-            os.makedirs(UPLOAD_FOLDER)
-        
-        # Güvenli dosya adı oluştur
-        filename = secure_filename(file.filename)
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        unique_filename = f"{session['user_id']}_{timestamp}_{filename}"
-        filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
-        
-        # Dosyayı kaydet
-        file.save(filepath)
-        
-        # Excel'i oku - telefon kolonunu string olarak oku
-        df = pd.read_excel(filepath, sheet_name=0, dtype=str, keep_default_na=False)
-        
-        # Boş satırları temizle
-        df = df.dropna(how='all')
-        
-        # Kolonları al
-        columns = df.columns.tolist()
-        
-        # İlk 5 satırı önizleme için al
-        preview_data = df.head(5).fillna('').to_dict('records')
-        
-        return jsonify({
-            'success': True,
-            'filename': unique_filename,
-            'filepath': filepath,
-            'columns': columns,
-            'preview': preview_data,
-            'total_rows': len(df),
-            'message': f'{len(df)} satır müşteri verisi yüklendi'
-        })
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Dosya yüklenirken hata: {str(e)}'}), 500
-
-@app.route('/api/musteri-import/preview', methods=['POST'])
-@login_required
-def musteri_import_preview():
-    """Kolon eşleştirmesi sonrası önizleme ve validasyon"""
-    try:
-        data = request.json
-        filepath = data.get('filepath')
-        column_mapping = data.get('column_mapping')  # {'excel_column': 'db_field'}
-        
-        if not filepath or not os.path.exists(filepath):
-            return jsonify({'success': False, 'message': 'Dosya bulunamadı'}), 400
-        
-        # Excel'i oku - tüm kolonları string olarak oku
-        df = pd.read_excel(filepath, sheet_name=0, dtype=str, keep_default_na=False)
-        df = df.dropna(how='all')
-        
-        # Validasyon sonuçları
-        validated_data = []
-        errors_count = 0
-        warnings_count = 0
-        
-        # Mevcut telefon numaralarını al (duplicate kontrolü için)
-        existing_phones = set()
-        mevcut_musteriler = Musteri.query.filter_by(
-            FirmaID=session['firma_id'],
-            Aktif=True
-        ).all()
-        for m in mevcut_musteriler:
-            if m.Telefon:
-                # Telefon numarasını normalize et (hem 10 hem 11 haneli formatları kabul et)
-                phone_normalized = m.Telefon.strip()
-                if phone_normalized.startswith('0') and len(phone_normalized) == 11:
-                    # 11 haneli: 0531714415 -> 531714415
-                    existing_phones.add(phone_normalized[1:])
-                    existing_phones.add(phone_normalized)  # Orijinal formatı da ekle
-                elif len(phone_normalized) == 10 and phone_normalized.startswith('5'):
-                    # 10 haneli: 531714415 -> 0531714415
-                    existing_phones.add(phone_normalized)
-                    existing_phones.add('0' + phone_normalized)  # 0 eklenmiş formatı da ekle
-                else:
-                    existing_phones.add(phone_normalized)
-        
-        # Dosyadaki telefon numaralarını takip et (dosya içi duplicate kontrolü)
-        file_phones = set()
-        
-        for idx, row in df.iterrows():
-            row_data = {
-                'row_number': idx + 2,  # Excel satır numarası (1=header)
-                'data': {},
-                'errors': [],
-                'warnings': [],
-                'status': 'valid'
-            }
-            
-            # Her kolon için veriyi al ve validate et
-            for excel_col, db_field in column_mapping.items():
-                if excel_col not in df.columns:
-                    continue
-                
-                value = row[excel_col]
-                
-                # Ad validasyonu
-                if db_field == 'MusteriAdi':
-                    if pd.isna(value) or str(value).strip() == '':
-                        row_data['errors'].append('Ad boş olamaz')
-                        row_data['status'] = 'error'
-                    else:
-                        row_data['data']['MusteriAdi'] = str(value).strip()
-                
-                # Soyad validasyonu
-                elif db_field == 'MusteriSoyadi':
-                    if pd.isna(value) or str(value).strip() == '':
-                        row_data['errors'].append('Soyad boş olamaz')
-                        row_data['status'] = 'error'
-                    else:
-                        row_data['data']['MusteriSoyadi'] = str(value).strip()
-                
-                # Telefon validasyonu
-                elif db_field == 'Telefon':
-                    valid, result = validate_phone(value)
-                    if not valid:
-                        row_data['errors'].append(result)
-                        row_data['status'] = 'error'
-                    else:
-                        row_data['data']['Telefon'] = result
-                        
-                        # Duplicate kontrolü - normalize edilmiş telefon ile kontrol et
-                        phone_for_check = result
-                        if len(result) == 10 and result.startswith('5'):
-                            # 10 haneli format için 11 haneli versiyonunu da kontrol et
-                            phone_11_digit = '0' + result
-                            if phone_for_check in existing_phones or phone_11_digit in existing_phones:
-                                row_data['warnings'].append('Bu telefon numarası sistemde zaten kayıtlı')
-                                if row_data['status'] != 'error':
-                                    row_data['status'] = 'duplicate'
-                        elif len(result) == 11 and result.startswith('05'):
-                            # 11 haneli format için 10 haneli versiyonunu da kontrol et
-                            phone_10_digit = result[1:]
-                            if phone_for_check in existing_phones or phone_10_digit in existing_phones:
-                                row_data['warnings'].append('Bu telefon numarası sistemde zaten kayıtlı')
-                                if row_data['status'] != 'error':
-                                    row_data['status'] = 'duplicate'
-                        elif result in existing_phones:
-                            row_data['warnings'].append('Bu telefon numarası sistemde zaten kayıtlı')
-                            if row_data['status'] != 'error':
-                                row_data['status'] = 'duplicate'
-                        elif result in file_phones:
-                            row_data['warnings'].append('Bu telefon numarası dosyada birden fazla kez var')
-                            if row_data['status'] != 'error':
-                                row_data['status'] = 'warning'
-                        else:
-                            file_phones.add(result)
-                
-                # Email validasyonu
-                elif db_field == 'Email':
-                    valid, result = validate_email(value)
-                    if not valid:
-                        row_data['errors'].append(result)
-                        row_data['status'] = 'error'
-                    else:
-                        row_data['data']['Email'] = result
-                
-                # Ülke Kodu (opsiyonel, sadece kaydet)
-                elif db_field == 'UlkeKodu':
-                    if not pd.isna(value) and str(value).strip():
-                        row_data['data']['UlkeKodu'] = str(value).strip()
-                
-                # Cinsiyet
-                elif db_field == 'Cinsiyet':
-                    if not pd.isna(value) and str(value).strip():
-                        cinsiyet = str(value).strip()
-                        cinsiyet_lower = cinsiyet.lower()
-                        
-                        # Erkek için tüm dillerdeki değerler
-                        erkek_values = [
-                            # Türkçe
-                            'erkek', 'e', 'e.',
-                            # İngilizce
-                            'male', 'm', 'm.', 'man', 'men',
-                            # Fransızca
-                            'homme', 'masculin', 'mâle',
-                            # Almanca
-                            'männlich', 'mann', 'm'
-                        ]
-                        
-                        # Kadın için tüm dillerdeki değerler
-                        kadin_values = [
-                            # Türkçe
-                            'kadın', 'kadýn', 'k', 'k.',
-                            # İngilizce
-                            'female', 'f', 'f.', 'woman', 'women',
-                            # Fransızca
-                            'femme', 'féminin', 'femelle',
-                            # Almanca
-                            'weiblich', 'frau', 'w'
-                        ]
-                        
-                        if cinsiyet_lower in erkek_values:
-                            row_data['data']['Cinsiyet'] = 'Erkek'
-                        elif cinsiyet_lower in kadin_values:
-                            row_data['data']['Cinsiyet'] = 'Kadın'
-                        else:
-                            row_data['warnings'].append(f'Bilinmeyen cinsiyet: {cinsiyet}')
-                            row_data['data']['Cinsiyet'] = None
-                
-                # Doğum tarihi
-                elif db_field == 'DogumTarihi':
-                    valid, result = validate_date(value)
-                    if not valid:
-                        row_data['errors'].append(result)
-                        if row_data['status'] != 'error':
-                            row_data['status'] = 'warning'
-                    else:
-                        row_data['data']['DogumTarihi'] = result
-                
-                # Diğer alanlar (Adres, Notlar)
-                else:
-                    if not pd.isna(value) and str(value).strip():
-                        row_data['data'][db_field] = str(value).strip()
-            
-            # İstatistikleri güncelle
-            if row_data['status'] == 'error':
-                errors_count += 1
-            elif row_data['status'] in ['duplicate', 'warning']:
-                warnings_count += 1
-            
-            validated_data.append(row_data)
-        
-        return jsonify({
-            'success': True,
-            'data': validated_data,
-            'stats': {
-                'total': len(validated_data),
-                'valid': len([d for d in validated_data if d['status'] == 'valid']),
-                'errors': errors_count,
-                'warnings': warnings_count,
-                'duplicates': len([d for d in validated_data if d['status'] == 'duplicate'])
-            }
-        })
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Önizleme hatası: {str(e)}'}), 500
-
-@app.route('/api/musteri-import/process', methods=['POST'])
-@login_required
-def musteri_import_process():
-    """Validasyondan geçen verileri işle ve kaydet"""
-    try:
-        data = request.json
-        validated_data = data.get('data', [])
-        import_options = data.get('options', {})
-        
-        # Import seçenekleri
-        skip_errors = import_options.get('skip_errors', True)
-        update_duplicates = import_options.get('update_duplicates', False)
-        skip_duplicates = import_options.get('skip_duplicates', True)
-        
-        # Sonuçlar
-        results = {
-            'success': 0,
-            'skipped': 0,
-            'updated': 0,
-            'errors': 0,
-            'details': []
-        }
-        
-        for row in validated_data:
-            row_number = row['row_number']
-            status = row['status']
-            row_data = row['data']
-            
-            try:
-                # Hatalı kayıtları atla
-                if status == 'error':
-                    if skip_errors:
-                        results['skipped'] += 1
-                        results['details'].append({
-                            'row': row_number,
-                            'status': 'skipped',
-                            'message': 'Validasyon hatası nedeniyle atlandı'
-                        })
-                        continue
-                    else:
-                        results['errors'] += 1
-                        results['details'].append({
-                            'row': row_number,
-                            'status': 'error',
-                            'message': ', '.join(row['errors'])
-                        })
-                        continue
-                
-                # Duplicate kontrolü
-                if status == 'duplicate':
-                    telefon = row_data.get('Telefon')
-                    existing = Musteri.query.filter_by(
-                        FirmaID=session['firma_id'],
-                        Telefon=telefon,
-                        Aktif=True
-                    ).first()
-                    
-                    if existing and update_duplicates:
-                        # Mevcut kaydı güncelle
-                        for key, value in row_data.items():
-                            if value is not None:
-                                setattr(existing, key, value)
-                        
-                        db.session.commit()
-                        
-                        # Güncellenen müşteri için log
-                        update_log = KullaniciLog(
-                            KullaniciID=session['user_id'],
-                            IslemTipi='musteri_excel_import_update',
-                            TabloAdi='Musteri',
-                            KayitID=existing.MusteriID,
-                            EskiVeri=json.dumps({
-                                'MusteriAdi': existing.MusteriAdi,
-                                'MusteriSoyadi': existing.MusteriSoyadi,
-                                'Telefon': existing.Telefon,
-                                'Email': existing.Email
-                            }, ensure_ascii=False),
-                            YeniVeri=json.dumps({
-                                'MusteriAdi': row_data.get('MusteriAdi'),
-                                'MusteriSoyadi': row_data.get('MusteriSoyadi'),
-                                'Telefon': row_data.get('Telefon'),
-                                'Email': row_data.get('Email')
-                            }, ensure_ascii=False),
-                            IslemDetayi=f'Excel import ile müşteri güncellendi: {row_data.get("MusteriAdi")} {row_data.get("MusteriSoyadi")} (Telefon: {row_data.get("Telefon")})',
-                            IPAdresi=get_client_ip(),
-                            UserAgent=request.headers.get('User-Agent', '')
-                        )
-                        db.session.add(update_log)
-                        db.session.commit()
-                        
-                        results['updated'] += 1
-                        results['details'].append({
-                            'row': row_number,
-                            'status': 'updated',
-                            'message': f'Mevcut müşteri güncellendi: {row_data.get("MusteriAdi")} {row_data.get("MusteriSoyadi")}'
-                        })
-                        continue
-                    elif skip_duplicates:
-                        results['skipped'] += 1
-                        results['details'].append({
-                            'row': row_number,
-                            'status': 'skipped',
-                            'message': 'Duplicate kayıt atlandı'
-                        })
-                        continue
-                
-                # Yeni müşteri oluştur
-                yeni_musteri = Musteri(
-                    FirmaID=session['firma_id'],
-                    MusteriAdi=row_data.get('MusteriAdi'),
-                    MusteriSoyadi=row_data.get('MusteriSoyadi'),
-                    Telefon=row_data.get('Telefon'),
-                    Email=row_data.get('Email'),
-                    Cinsiyet=row_data.get('Cinsiyet'),
-                    DogumTarihi=row_data.get('DogumTarihi'),
-                    Adres=row_data.get('Adres'),
-                    Notlar=row_data.get('Notlar'),
-                    Aktif=True
-                )
-                
-                db.session.add(yeni_musteri)
-                db.session.commit()
-                
-                # Her müşteri için ayrı log
-                musteri_log = KullaniciLog(
-                    KullaniciID=session['user_id'],
-                    IslemTipi='musteri_excel_import_add',
-                    TabloAdi='Musteri',
-                    KayitID=yeni_musteri.MusteriID,
-                    YeniVeri=json.dumps({
-                        'MusteriAdi': row_data.get('MusteriAdi'),
-                        'MusteriSoyadi': row_data.get('MusteriSoyadi'),
-                        'Telefon': row_data.get('Telefon'),
-                        'Email': row_data.get('Email'),
-                        'Cinsiyet': row_data.get('Cinsiyet'),
-                        'DogumTarihi': row_data.get('DogumTarihi'),
-                        'Adres': row_data.get('Adres'),
-                        'Notlar': row_data.get('Notlar')
-                    }, ensure_ascii=False),
-                    IslemDetayi=f'Excel import ile müşteri eklendi: {row_data.get("MusteriAdi")} {row_data.get("MusteriSoyadi")} (Telefon: {row_data.get("Telefon")})',
-                    IPAdresi=get_client_ip(),
-                    UserAgent=request.headers.get('User-Agent', '')
-                )
-                db.session.add(musteri_log)
-                db.session.commit()
-                
-                results['success'] += 1
-                results['details'].append({
-                    'row': row_number,
-                    'status': 'success',
-                    'message': f'Müşteri eklendi: {row_data.get("MusteriAdi")} {row_data.get("MusteriSoyadi")}'
-                })
-                
-            except Exception as e:
-                db.session.rollback()
-                results['errors'] += 1
-                results['details'].append({
-                    'row': row_number,
-                    'status': 'error',
-                    'message': f'Kayıt hatası: {str(e)}'
-                })
-        
-        # Genel Excel import log kaydı
-        log_mesaj = f"Excel import tamamlandı: {results['success']} müşteri eklendi, {results['updated']} müşteri güncellendi, {results['skipped']} kayıt atlandı, {results['errors']} hata oluştu"
-        yeni_log = KullaniciLog(
-            KullaniciID=session['user_id'],
-            IslemTipi='musteri_excel_import_summary',
-            TabloAdi='Musteri',
-            IslemDetayi=log_mesaj,
-            IPAdresi=get_client_ip(),
-            UserAgent=request.headers.get('User-Agent', '')
-        )
-        db.session.add(yeni_log)
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'results': results,
-            'message': log_mesaj
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'message': f'İşlem hatası: {str(e)}'}), 500
-
-# ==================== TODO SİSTEMİ ====================
-
-@app.route('/gorevler')
-@login_required
-def gorevler():
-    """Görev listesi sayfası - Randevu bazlı görevler"""
-    firma_id = session['firma_id']
-    
-    # Kullanıcının randevu bazlı TÜM görevlerini getir (tamamlananlar dahil).
-    # Ekranda varsayılan olarak tamamlananlar JS ile gizlenecek; filtre 'Tamamlandı' seçildiğinde gösterilecek.
-    user_todos = (Todo.query
-        .filter_by(KullaniciID=session['user_id'], Tip='Randevu')
-        .order_by(Todo.Oncelik.desc(), Todo.OlusturmaTarihi.desc())
-        .all())
-    
-    # Firma bazlı durumları getir
-    durumlar = TodoDurum.query.filter_by(FirmaID=firma_id, Aktif=True).order_by(TodoDurum.Sira).all()
-    
-    # Her durum için sayıları DB'den güvenilir şekilde hesapla (tamamlananlar dahil)
-    from sqlalchemy import func
-    counts_by_name = dict(
-        db.session.query(TodoDurum.DurumAdi, func.count(Todo.TodoID))
-        .join(Todo, Todo.DurumID == TodoDurum.DurumID)
-        .filter(Todo.KullaniciID == session['user_id'], Todo.Tip == 'Randevu')
-        .group_by(TodoDurum.DurumAdi)
-        .all()
-    )
-    durum_istatistikleri = [
-        {
-            'durum': durum,
-            'sayi': int(counts_by_name.get(durum.DurumAdi, 0) or 0)
-        }
-        for durum in durumlar
-    ]
-    
-    # Toplam görev sayısı
-    toplam_gorev = len(user_todos)
-    
-    # Yaklaşan hatırlatmalar (bugünden itibaren 3 gün)
-    bugun = datetime.now().date()
-    uc_gun_sonra = bugun + timedelta(days=3)
-    yaklasan_gorevler = [t for t in user_todos 
-                        if t.HatirlatmaTarihi and (not t.durum or t.durum.DurumAdi != 'Tamamlandı')
-                        and bugun <= t.HatirlatmaTarihi.date() <= uc_gun_sonra]
-    
-    # Bu ayın ilk ve son gününü hesapla
-    from datetime import date
-    today = date.today()
-    first_day_of_month = date(today.year, today.month, 1)
-    if today.month == 12:
-        last_day_of_month = date(today.year + 1, 1, 1) - timedelta(days=1)
-    else:
-        last_day_of_month = date(today.year, today.month + 1, 1) - timedelta(days=1)
-    
-    return render_template('gorevler.html', 
-                         gorevler=user_todos,
-                         toplam_gorev=toplam_gorev,
-                         durum_istatistikleri=durum_istatistikleri,
-                         yaklasan_gorevler=yaklasan_gorevler,
-                         first_day_of_month=first_day_of_month,
-                         last_day_of_month=last_day_of_month)
-
-@app.route('/gorev-raporlar')
-@login_required
-def gorev_raporlar():
-    """Görev raporları sayfası"""
-    return render_template('gorev_raporlar.html')
-
-@app.route('/todos')
-@login_required
-def todos():
-    """Todo listesi sayfası - Kişisel yapılacaklar"""
-    # Kullanıcının sadece kişisel yapılacaklarını getir
-    user_todos = Todo.query.filter_by(KullaniciID=session['user_id'], Tip='Kisisel').order_by(
-        Todo.Oncelik.desc(), Todo.OlusturmaTarihi.desc()
-    ).all()
-    
-    # İstatistikler
-    toplam_todo = len(user_todos)
-    tamamlanan_todo = len([t for t in user_todos if t.durum and t.durum.DurumAdi == 'Tamamlandı'])
-    beklemede_todo = len([t for t in user_todos if t.durum and t.durum.DurumAdi == 'Beklemede'])
-    devam_eden_todo = len([t for t in user_todos if t.durum and t.durum.DurumAdi == 'Devam Ediyor'])
-    
-    # Yaklaşan hatırlatmalar (bugünden itibaren 3 gün)
-    bugun = datetime.now().date()
-    uc_gun_sonra = bugun + timedelta(days=3)
-    yaklasan_todos = [t for t in user_todos 
-                     if t.HatirlatmaTarihi and (not t.durum or t.durum.DurumAdi != 'Tamamlandı')
-                     and bugun <= t.HatirlatmaTarihi.date() <= uc_gun_sonra]
-    
-    return render_template('todos.html', 
-                         todos=user_todos,
-                         toplam_todo=toplam_todo,
-                         tamamlanan_todo=tamamlanan_todo,
-                         beklemede_todo=beklemede_todo,
-                         devam_eden_todo=devam_eden_todo,
-                         yaklasan_todos=yaklasan_todos)
-
-def create_default_todo_durumlar(firma_id, durum_adi):
-    """Yapılacaklar için varsayılan durumları oluştur"""
-    try:
-        # Varsayılan durumları oluştur
-        default_durumlar = [
-            {'DurumAdi': 'Beklemede', 'Renk': '#ffc107', 'Sira': 1, 'Aktif': True},
-            {'DurumAdi': 'Devam Ediyor', 'Renk': '#17a2b8', 'Sira': 2, 'Aktif': True},
-            {'DurumAdi': 'Tamamlandı', 'Renk': '#28a745', 'Sira': 3, 'Aktif': True}
-        ]
-        
-        for durum_data in default_durumlar:
-            # Durum zaten var mı kontrol et
-            existing = TodoDurum.query.filter_by(
-                DurumAdi=durum_data['DurumAdi'], 
-                FirmaID=firma_id
-            ).first()
-            
-            if not existing:
-                yeni_durum = TodoDurum(
-                    DurumAdi=durum_data['DurumAdi'],
-                    Renk=durum_data['Renk'],
-                    Sira=durum_data['Sira'],
-                    Aktif=durum_data['Aktif'],
-                    FirmaID=firma_id
-                )
-                db.session.add(yeni_durum)
-        
-        db.session.commit()
-        
-        # İstenen durumun ID'sini döndür
-        durum = TodoDurum.query.filter_by(DurumAdi=durum_adi, FirmaID=firma_id).first()
-        return durum.DurumID if durum else None
-        
-    except Exception as e:
-        print(f"Varsayılan durumlar oluşturulurken hata: {e}")
-        db.session.rollback()
-        return None
-
-@app.route('/todos/ekle', methods=['POST'])
-@login_required
-def todo_ekle():
-    """Yeni todo ekle"""
-    try:
-        data = request.get_json()
-        print(f"Todo ekleme isteği: {data}")  # Debug log
-        
-        # Tarih formatlarını parse et
-        bitis_tarihi = None
-        if data.get('bitis_tarihi'):
-            bitis_tarihi = datetime.strptime(data['bitis_tarihi'], '%Y-%m-%d')
-        
-        hatirlatma_tarihi = None
-        if data.get('hatirlatma_tarihi'):
-            hatirlatma_tarihi = datetime.strptime(data['hatirlatma_tarihi'], '%Y-%m-%d')
-        
-        # Randevu tarihini parse et
-        randevu_tarihi = None
-        if data.get('randevu_tarihi'):
-            randevu_tarihi = datetime.strptime(data['randevu_tarihi'], '%Y-%m-%d').date()
-        
-        # Durum ID'sini al - önce durum_id, sonra durum adından
-        durum_id = None
-        if data.get('durum_id'):
-            # Direkt durum ID'si gönderilmiş
-            durum_id = int(data['durum_id'])
-            print(f"Durum ID direkt alındı: {durum_id}")
-        elif data.get('durum'):
-            # Durum adından ID'yi bul (firma kontrolü yok)
-            durum = TodoDurum.query.filter_by(DurumAdi=data['durum']).first()
-            if durum:
-                durum_id = durum.DurumID
-                print(f"Durum adından ID bulundu: {durum_id}")
-            else:
-                # Eğer durum bulunamazsa varsayılan durumları oluştur
-                durum_id = create_default_todo_durumlar(session['firma_id'], data['durum'])
-                print(f"Varsayılan durum oluşturuldu: {durum_id}")
-        
-        print(f"Final durum_id: {durum_id}")
-        
-        # Tip belirleme
-        todo_tip = data.get('tip', 'Kisisel')
-        
-        # Yeni todo oluştur
-        yeni_todo = Todo(
-            KullaniciID=session['user_id'],
-            Baslik=data['baslik'],
-            Aciklama=data.get('aciklama', ''),
-            Oncelik=data.get('oncelik', 'Orta'),
-            DurumID=durum_id,  # Yeni durum sistemi
-            Tip=todo_tip,  # Kisisel veya Randevu
-            BitisTarihi=bitis_tarihi,
-            HatirlatmaTarihi=hatirlatma_tarihi,
-            # Müşteri bilgileri
-            MusteriAdi=data.get('musteri_adi', ''),
-            MusteriSoyadi=data.get('musteri_soyadi', ''),
-            MusteriTelefon=data.get('musteri_telefon', ''),
-            MusteriEmail=data.get('musteri_email', ''),
-            # Randevu bilgileri (eğer görev ise)
-            RandevuTarihi=randevu_tarihi,
-            RandevuDefteriID=data.get('randevu_defteri_id'),
-            RandevuSaati=data.get('selected_randevu_saat'),
-            AtananKullaniciID=data.get('kullanici_id')
-        )
-        
-        print(f"Todo oluşturuluyor: {yeni_todo}")  # Debug log
-        db.session.add(yeni_todo)
-        db.session.flush()  # ID'yi almak için
-        
-        # Eğer randevu bilgileri varsa randevu oluştur
-        if (data.get('randevu_tarihi') and data.get('randevu_defteri_id') and 
-            data.get('selected_randevu_saat')):
-            
-            try:
-                # Randevu tarihini parse et
-                randevu_dt = datetime.strptime(f"{data['randevu_tarihi']} {data['selected_randevu_saat']}", '%Y-%m-%d %H:%M')
-                
-                # Randevu defterini kontrol et
-                defter_ayar = RandevuDefterAyar.query.filter_by(
-                    AyarID=data['randevu_defteri_id'], 
-                    FirmaID=session['firma_id'], 
-                    Aktif=True
-                ).first()
-                
-                if defter_ayar:
-                    # Çakışma kontrolü
-                    randevu_suresi = defter_ayar.SlotDakika  # Defter ayarındaki slot dakikası
-                    randevu_bas = randevu_dt
-                    randevu_bit = randevu_dt + timedelta(minutes=randevu_suresi)
-                    
-                    # Mevcut randevularla çakışma kontrolü
-                    day_start_chk = datetime(randevu_dt.year, randevu_dt.month, randevu_dt.day, 0, 0)
-                    day_end_chk = day_start_chk + timedelta(days=1)
-                    
-                    existing_randevular = Randevu.query.filter(
-                        Randevu.FirmaID == session['firma_id'],
-                        Randevu.DefterID == data['randevu_defteri_id'],
-                        Randevu.RandevuTarihi >= day_start_chk,
-                        Randevu.RandevuTarihi < day_end_chk,
-                        Randevu.Durum != 'Iptal'
-                    ).all()
-                    
-                    cakisma_var = False
-                    for r in existing_randevular:
-                        r_start = r.RandevuTarihi
-                        r_dur = r.RandevuSuresi or 60
-                        r_end = r_start + timedelta(minutes=int(r_dur))
-                        if r_start < randevu_bit and randevu_bas < r_end:
-                            cakisma_var = True
-                            break
-                    
-                    if not cakisma_var:
-                        # Randevu oluştur
-                        randevu = Randevu(
-                            RandevuBaslik=data['baslik'],
-                            RandevuAciklamasi=data.get('aciklama', ''),
-                            RandevuTarihi=randevu_dt,
-                            RandevuSuresi=randevu_suresi,
-                            MusteriAdi=data.get('musteri_adi', ''),
-                            MusteriSoyadi=data.get('musteri_soyadi', 'Müşteri'),
-                            MusteriTelefon=data.get('musteri_telefon', ''),
-                            MusteriEmail=data.get('musteri_email', ''),
-                            OlusturanKullaniciID=session['user_id'],
-                            FirmaID=session['firma_id'],
-                            DefterID=data['randevu_defteri_id'],
-                            GorevID=yeni_todo.TodoID  # Görev ID'sini bağla
-                        )
-                        
-                        db.session.add(randevu)
-                        db.session.flush()  # Randevu ID'sini almak için
-                        
-                        # Todo'ya RandevuID'yi ekle
-                        yeni_todo.RandevuID = randevu.RandevuID
-                        
-                        # Kullanıcıya randevu yetkisi ver
-                        try:
-                            randevu_yetki = RandevuYetki(
-                                RandevuID=randevu.RandevuID,
-                                KullaniciID=session['user_id'],
-                                GoruntulemeYetkisi=True,
-                                DuzenlemeYetkisi=True,
-                                SilmeYetkisi=True
-                            )
-                            db.session.add(randevu_yetki)
-                        except Exception as yetki_error:
-                            print(f"Randevu yetkisi ekleme hatası: {yetki_error}")
-                        
-                        print(f"Randevu oluşturuldu: {randevu_dt} - {data['selected_randevu_saat']}")
-                    else:
-                        print("Randevu oluşturulamadı: Çakışma var")
-                else:
-                    print("Randevu defteri bulunamadı")
-                    
-            except Exception as randevu_error:
-                print(f"Randevu oluşturma hatası: {randevu_error}")
-                # Randevu hatası olsa bile todo'yu kaydet
-        
-        db.session.commit()
-        print("Todo başarıyla kaydedildi")  # Debug log
-        
-        # Log ekle
-        try:
-            log_user_action(
-                action_type='Todo Oluşturuldu',
-                table_name='Todos',
-                record_id=yeni_todo.TodoID,
-                old_data=None,
-                new_data={'baslik': data['baslik'], 'oncelik': data.get('oncelik', 'Orta')},
-                detail=f"Başlık: {data['baslik']}"
-            )
-        except Exception as log_error:
-            print(f"Log hatası (önemli değil): {log_error}")
-        
-        return jsonify({'success': True, 'message': 'Todo başarıyla eklendi!'})
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"Todo ekleme hatası: {str(e)}")  # Debug log
-        import traceback
-        traceback.print_exc()  # Detaylı hata log'u
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
-
-@app.route('/todos/<int:todo_id>/guncelle', methods=['GET', 'POST'])
-@login_required
-def todo_guncelle(todo_id):
-    """Todo güncelle"""
-    try:
-        todo = Todo.query.filter_by(TodoID=todo_id, KullaniciID=session['user_id']).first()
-        if not todo:
-            return jsonify({'success': False, 'message': 'Todo bulunamadı!'}), 404
-        
-        # GET isteği - todo verilerini döndür
-        if request.method == 'GET':
-            return jsonify({
-                'success': True,
-                'todo': {
-                    'TodoID': todo.TodoID,
-                    'Baslik': todo.Baslik,
-                    'Aciklama': todo.Aciklama,
-                    'Oncelik': todo.Oncelik,
-                    'DurumID': todo.DurumID,
-                    'Durum': todo.durum.DurumAdi if todo.durum else None,
-                    'BitisTarihi': todo.BitisTarihi.strftime('%Y-%m-%d') if todo.BitisTarihi else None,
-                    'HatirlatmaTarihi': todo.HatirlatmaTarihi.strftime('%Y-%m-%d') if todo.HatirlatmaTarihi else None,
-                    'AtananKullaniciID': todo.AtananKullaniciID,
-                    'RandevuDefteriID': todo.RandevuDefteriID,
-                    'MusteriAdi': todo.MusteriAdi,
-                    'MusteriSoyadi': todo.MusteriSoyadi,
-                    'Telefon': todo.MusteriTelefon,
-                    'Email': todo.MusteriEmail
-                }
-            })
-        
-        data = request.get_json()
-        old_data = {
-            'baslik': todo.Baslik,
-            'aciklama': todo.Aciklama,
-            'oncelik': todo.Oncelik,
-            'durum': todo.durum.DurumAdi if todo.durum else None,
-            'bitis_tarihi': todo.BitisTarihi.isoformat() if todo.BitisTarihi else None,
-            'hatirlatma_tarihi': todo.HatirlatmaTarihi.isoformat() if todo.HatirlatmaTarihi else None,
-            'musteri_adi': todo.MusteriAdi,
-            'musteri_soyadi': todo.MusteriSoyadi,
-            'musteri_telefon': todo.MusteriTelefon,
-            'musteri_email': todo.MusteriEmail
-        }
-        
-        # Durum ID'sini al - durum adından ID'ye çevir
-        durum_id = None
-        if data.get('durum'):
-            try:
-                # Önce sayı olarak deneyelim
-                durum_id = int(data['durum'])
-            except (ValueError, TypeError):
-                # Sayı değilse, durum adından ID bulalım
-                try:
-                    firma_id = session.get('firma_id')
-                    if firma_id:
-                        durum_obj = TodoDurum.query.filter_by(
-                            FirmaID=firma_id,
-                            DurumAdi=data['durum']
-                        ).first()
-                        if durum_obj:
-                            durum_id = durum_obj.DurumID
-                except Exception as e:
-                    print(f"Durum arama hatası: {e}")
-                    pass
-        
-        # Güncelle
-        todo.Baslik = data['baslik']
-        todo.Aciklama = data.get('aciklama', '')
-        todo.Oncelik = data.get('oncelik', 'Orta')
-        todo.DurumID = durum_id  # Yeni durum sistemi
-        
-        # Atanan kullanıcıyı güncelle
-        if data.get('AtananKullaniciID'):
-            todo.AtananKullaniciID = data['AtananKullaniciID']
-        
-        # Randevu defteri ID'sini güncelle
-        if data.get('randevu_defteri_id'):
-            todo.RandevuDefteriID = data['randevu_defteri_id']
-        
-        # Müşteri bilgilerini güncelle
-        todo.MusteriAdi = data.get('musteri_adi', '')
-        todo.MusteriSoyadi = data.get('musteri_soyadi', '')
-        todo.MusteriTelefon = data.get('musteri_telefon', '')
-        todo.MusteriEmail = data.get('musteri_email', '')
-        
-        # Tarih formatlarını parse et
-        if data.get('bitis_tarihi'):
-            todo.BitisTarihi = datetime.strptime(data['bitis_tarihi'], '%Y-%m-%d')
-        else:
-            todo.BitisTarihi = None
-            
-        if data.get('hatirlatma_tarihi'):
-            todo.HatirlatmaTarihi = datetime.strptime(data['hatirlatma_tarihi'], '%Y-%m-%d')
-        else:
-            todo.HatirlatmaTarihi = None
-        
-        # Eğer durum "Tamamlandı" ise tamamlanma tarihini set et
-        if todo.durum and todo.durum.DurumAdi == 'Tamamlandı' and not todo.TamamlanmaTarihi:
-            todo.TamamlanmaTarihi = datetime.now()
-        elif not todo.durum or todo.durum.DurumAdi != 'Tamamlandı':
-            todo.TamamlanmaTarihi = None
-        
-        db.session.commit()
-        
-        # Log ekle
-        try:
-            log_user_action(
-                action_type='Todo Güncellendi',
-                table_name='Todos',
-                record_id=todo_id,
-                old_data=old_data,
-                new_data=data,
-                detail=f"Başlık: {data['baslik']}"
-            )
-        except Exception as log_error:
-            print(f"Log hatası (önemli değil): {log_error}")
-        
-        return jsonify({'success': True, 'message': 'Todo başarıyla güncellendi!'})
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
-
-@app.route('/todos/<int:todo_id>/delete', methods=['DELETE'])
-@login_required
-def todo_delete(todo_id):
-    """Todo sil"""
-    try:
-        todo = Todo.query.filter_by(TodoID=todo_id, KullaniciID=session['user_id']).first()
-        if not todo:
-            return jsonify({'success': False, 'message': 'Todo bulunamadı!'}), 404
-        
-        baslik = todo.Baslik
-        
-        # Önce bağlantılı randevuyu sil (eğer varsa)
-        if todo.RandevuID:
-            randevu = Randevu.query.filter_by(RandevuID=todo.RandevuID).first()
-            if randevu:
-                print(f"Bağlantılı randevu siliniyor: {randevu.RandevuID}")
-                
-                # Önce RandevuYetki kayıtlarını sil
-                from app import RandevuYetki
-                RandevuYetki.query.filter_by(RandevuID=randevu.RandevuID).delete()
-                
-                # GorevID'yi NULL yap (circular reference'ı kır)
-                randevu.GorevID = None
-                db.session.flush()
-                
-                # Randevu'yu sil
-                db.session.delete(randevu)
-        
-        # Todo'yu sil
-        db.session.delete(todo)
-        db.session.commit()
-        
-        # Log ekle
-        try:
-            log_user_action(
-                action_type='Todo Silindi',
-                table_name='Todos',
-                record_id=todo_id,
-                old_data={'baslik': baslik, 'tip': todo.Tip},
-                new_data=None,
-                detail=f"Başlık: {baslik}"
-            )
-        except Exception as log_error:
-            print(f"Log hatası (önemli değil): {log_error}")
-        
-        return jsonify({'success': True, 'message': 'Todo ve bağlantılı randevu başarıyla silindi!'})
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"Todo silme hatası: {str(e)}")
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
-
-@app.route('/todos/<int:todo_id>/durum', methods=['POST'])
-@login_required
-def todo_durum_degistir(todo_id):
-    """Todo durumunu değiştir"""
-    try:
-        print(f"Todo durum değiştirme isteği: todo_id={todo_id}, user_id={session.get('user_id')}")
-        
-        todo = Todo.query.filter_by(TodoID=todo_id, KullaniciID=session['user_id']).first()
-        if not todo:
-            print(f"Todo bulunamadı: todo_id={todo_id}, user_id={session.get('user_id')}")
-            return jsonify({'success': False, 'message': 'Todo bulunamadı!'}), 404
-        
-        data = request.get_json()
-        print(f"Request data: {data}")
-        yeni_durum_adi = data.get('durum')
-        
-        # Durum adından ID'yi bul
-        yeni_durum_id = None
-        if yeni_durum_adi:
-            # Önce firmanın durumları içinde ara, yoksa genel kataloğa bak
-            print(f"Firma ID: {session.get('firma_id')}")
-            print(f"Aranan durum: {yeni_durum_adi}")
-            
-            durum = TodoDurum.query.filter_by(
-                DurumAdi=yeni_durum_adi,
-                FirmaID=session.get('firma_id'),
-                Aktif=True
-            ).first()
-            if not durum:
-                durum = TodoDurum.query.filter_by(DurumAdi=yeni_durum_adi, Aktif=True).first()
-            if not durum:
-                print(f"Geçersiz durum adı: {yeni_durum_adi}")
-                return jsonify({'success': False, 'message': 'Geçersiz durum!'}), 400
-            yeni_durum_id = durum.DurumID
-            print(f"Bulunan durum: ID {durum.DurumID}, Ad: '{durum.DurumAdi}', Firma: {durum.FirmaID}")
-        
-        eski_durum = todo.durum.DurumAdi if todo.durum else 'Durum Yok'
-        todo.DurumID = yeni_durum_id
-        print(f"Durum değiştiriliyor: {eski_durum} -> {yeni_durum_id}")
-        
-        # Eğer durum "Tamamlandı" ise tamamlanma tarihini set et, KAYDI SİLME
-        yeni_durum_adi = durum.DurumAdi if durum else None
-        if yeni_durum_adi == 'Tamamlandı':
-            if not todo.TamamlanmaTarihi:
-                todo.TamamlanmaTarihi = datetime.now()
-            
-            # Bu todo ile ilgili bildirimleri sil
-            deleted_notifications = Bildirim.query.filter(
-                Bildirim.KullaniciID == todo.KullaniciID,
-                Bildirim.Metin.contains(todo.Baslik),
-                Bildirim.Tip == 'todo_reminder'
-            ).delete(synchronize_session=False)
-            print(f"Todo ile ilgili {deleted_notifications} bildirim silindi: {todo.Baslik}")
-            
-            # Kaydı silmeden değişiklikleri kaydet
-            db.session.commit()
-            print("Todo tamamlandı olarak işaretlendi (silinmedi)")
-        else:
-            todo.TamamlanmaTarihi = None
-            db.session.commit()
-            print("Todo durumu başarıyla güncellendi")
-        
-        # Log ekle
-        if yeni_durum_adi == 'Tamamlandı':
-            log_user_action(
-                action_type='Todo Tamamlandı',
-                table_name='Todos',
-                record_id=todo_id,
-                old_data={'durum': eski_durum},
-                new_data={'durum': yeni_durum_adi, 'action': 'completed'},
-                detail=f"Başlık: {todo.Baslik} - {eski_durum} → {yeni_durum_adi} (Silinmedi)"
-            )
-            return jsonify({'success': True, 'message': 'Görev tamamlandı olarak işaretlendi!'})
-        else:
-            log_user_action(
-                action_type='Todo Durumu Değiştirildi',
-                table_name='Todos',
-                record_id=todo_id,
-                old_data={'durum': eski_durum},
-                new_data={'durum': yeni_durum_adi},
-                detail=f"Başlık: {todo.Baslik} - {eski_durum} → {yeni_durum_adi}"
-            )
-            return jsonify({'success': True, 'message': f'Durum {yeni_durum_adi} olarak güncellendi!'})
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"Todo durum değiştirme hatası: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
-
-@app.route('/api/gorev-raporlar')
-@login_required
-def api_gorev_raporlar():
-    """Görev raporları API'si"""
-    try:
-        user_id = session.get('user_id')
-        if not user_id:
-            return jsonify({'success': False, 'message': 'Kullanıcı bilgisi bulunamadı'}), 400
-        
-        # Filtre parametreleri
-        start_date = request.args.get('start_date', '').strip()
-        end_date = request.args.get('end_date', '').strip()
-        status_filter = request.args.get('status', 'all')
-        user_filter = request.args.get('user', 'all')
-        priority_filter = request.args.get('priority', 'all')
-        type_filter = request.args.get('type', 'all')
-        
-        # Admin ise tüm görevleri, değilse sadece kendi görevlerini getir
-        if session.get('is_admin', False):
-            query = Todo.query
-        else:
-            query = Todo.query.filter_by(KullaniciID=user_id)
-        
-        # Tarih filtresi
-        if start_date and end_date:
-            try:
-                start_dt = datetime.strptime(start_date, '%Y-%m-%d')
-                end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)  # Son gün dahil
-                query = query.filter(Todo.OlusturmaTarihi.between(start_dt, end_dt))
-            except ValueError:
-                pass
-        
-        # Durum filtresi
-        if status_filter != 'all':
-            query = query.filter(Todo.DurumID == status_filter)
-        
-        # Kullanıcı filtresi
-        if user_filter != 'all':
-            query = query.filter(Todo.KullaniciID == user_filter)
-        
-        # Öncelik filtresi
-        if priority_filter != 'all':
-            query = query.filter(Todo.Oncelik == priority_filter)
-        
-        # Tip filtresi
-        if type_filter != 'all':
-            query = query.filter(Todo.Tip == type_filter)
-        
-        gorevler = query.all()
-        
-        # İstatistikler
-        total_tasks = len(gorevler)
-        completed_tasks = len([g for g in gorevler if g.durum and g.durum.DurumAdi == 'Tamamlandı'])
-        pending_tasks = len([g for g in gorevler if g.durum and g.durum.DurumAdi != 'Tamamlandı'])
-        completion_rate = round((completed_tasks / total_tasks * 100) if total_tasks > 0 else 0, 1)
-        
-        stats = {
-            'total_tasks': total_tasks,
-            'completed_tasks': completed_tasks,
-            'pending_tasks': pending_tasks,
-            'completion_rate': completion_rate
-        }
-        
-        # Durum dağılımı (renkler TodoDurum.Renk değerlerinden)
-        status_counts = {}
-        status_colors_map = {}
-        for gorev in gorevler:
-            durum_adi = gorev.durum.DurumAdi if gorev.durum else 'Durum Yok'
-            status_counts[durum_adi] = status_counts.get(durum_adi, 0) + 1
-            if durum_adi not in status_colors_map:
-                renk = (gorev.durum.Renk if gorev.durum and getattr(gorev.durum, 'Renk', None) else '#6c757d')
-                status_colors_map[durum_adi] = renk
-        # Listeleri aynı sırada üret
-        status_labels = list(status_counts.keys())
-        status_values = [status_counts[lbl] for lbl in status_labels]
-        status_colors = [status_colors_map.get(lbl, '#6c757d') for lbl in status_labels]
-        status_chart = {
-            'labels': status_labels,
-            'values': status_values,
-            'colors': status_colors
-        }
-        
-        # Öncelik dağılımı (sabit renkler)
-        priority_counts = {}
-        priority_colors_map = {
-            'Yüksek': '#dc3545',    # Kırmızı
-            'Orta': '#ffc107',      # Sarı
-            'Düşük': '#28a745',     # Yeşil
-            'Belirsiz': '#6c757d'   # Gri
-        }
-        for gorev in gorevler:
-            priority = gorev.Oncelik or 'Belirsiz'
-            priority_counts[priority] = priority_counts.get(priority, 0) + 1
-        
-        priority_labels = list(priority_counts.keys())
-        priority_values = [priority_counts[lbl] for lbl in priority_labels]
-        priority_colors = [priority_colors_map.get(lbl, '#6c757d') for lbl in priority_labels]
-        
-        priority_chart = {
-            'labels': priority_labels,
-            'values': priority_values,
-            'colors': priority_colors
-        }
-        
-        # Kullanıcı dağılımı
-        user_counts = {}
-        for gorev in gorevler:
-            kullanici_adi = f"{gorev.kullanici.Ad} {gorev.kullanici.Soyad}" if gorev.kullanici else 'Bilinmeyen'
-            user_counts[kullanici_adi] = user_counts.get(kullanici_adi, 0) + 1
-        
-        user_chart = {
-            'labels': list(user_counts.keys()),
-            'values': list(user_counts.values()),
-            'colors': ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8', '#fd7e14', '#20c997']
-        }
-        
-        # Kullanıcı tamamlanan görevler dağılımı
-        user_completed_counts = {}
-        for gorev in gorevler:
-            if gorev.durum and gorev.durum.DurumAdi == 'Tamamlandı':
-                kullanici_adi = f"{gorev.kullanici.Ad} {gorev.kullanici.Soyad}" if gorev.kullanici else 'Bilinmeyen'
-                user_completed_counts[kullanici_adi] = user_completed_counts.get(kullanici_adi, 0) + 1
-        
-        user_completed_chart = {
-            'labels': list(user_completed_counts.keys()),
-            'values': list(user_completed_counts.values()),
-            'colors': ['#28a745', '#007bff', '#ffc107', '#dc3545', '#6c757d', '#17a2b8', '#fd7e14', '#20c997']
-        }
-        
-        # Aylık trend (son 12 ay)
-        trend_data = {}
-        for gorev in gorevler:
-            month_key = gorev.OlusturmaTarihi.strftime('%Y-%m')
-            if month_key not in trend_data:
-                trend_data[month_key] = {'created': 0, 'completed': 0}
-            trend_data[month_key]['created'] += 1
-            
-            if gorev.durum and gorev.durum.DurumAdi == 'Tamamlandı' and gorev.TamamlanmaTarihi:
-                completed_month = gorev.TamamlanmaTarihi.strftime('%Y-%m')
-                if completed_month not in trend_data:
-                    trend_data[completed_month] = {'created': 0, 'completed': 0}
-                trend_data[completed_month]['completed'] += 1
-        
-        # Son 12 ayı oluştur
-        trend_labels = []
-        trend_created = []
-        trend_completed = []
-        
-        for i in range(12):
-            date = datetime.now() - timedelta(days=30*i)
-            month_key = date.strftime('%Y-%m')
-            month_name = date.strftime('%b %Y')
-            
-            trend_labels.insert(0, month_name)
-            trend_created.insert(0, trend_data.get(month_key, {}).get('created', 0))
-            trend_completed.insert(0, trend_data.get(month_key, {}).get('completed', 0))
-        
-        trend_chart = {
-            'labels': trend_labels,
-            'created': trend_created,
-            'completed': trend_completed
-        }
-        
-        # Görev detayları
-        tasks = []
-        for gorev in gorevler:
-            tasks.append({
-                'baslik': gorev.Baslik,
-                'durum': gorev.durum.DurumAdi if gorev.durum else 'Durum Yok',
-                'durum_rengi': gorev.durum.Renk if gorev.durum and gorev.durum.Renk else '#6c757d',
-                'oncelik': gorev.Oncelik or 'Belirsiz',
-                'kullanici_adi': f"{gorev.kullanici.Ad} {gorev.kullanici.Soyad}" if gorev.kullanici else 'Bilinmeyen',
-                'olusturma_tarihi': gorev.OlusturmaTarihi.isoformat() if gorev.OlusturmaTarihi else None,
-                'bitis_tarihi': gorev.BitisTarihi.isoformat() if gorev.BitisTarihi else None,
-                'musteri_adi': f"{gorev.MusteriAdi or ''} {gorev.MusteriSoyadi or ''}".strip() or None
-            })
-        
-        return jsonify({
-            'success': True,
-            'stats': stats,
-            'charts': {
-                'status': status_chart,
-                'priority': priority_chart,
-                'user': user_chart,
-                'user_completed': user_completed_chart,
-                'trend': trend_chart
-            },
-            'tasks': tasks
-        })
-        
-    except Exception as e:
-        print(f"Görev raporları hatası: {e}")
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
-
-@app.route('/api/gorev-bilgi/<int:gorev_id>', methods=['GET'])
-@login_required
-def gorev_bilgi(gorev_id):
-    """Görev bilgilerini getir"""
-    try:
-        print(f"Görev bilgisi isteği: gorev_id={gorev_id}, user_id={session.get('user_id')}")
-        
-        # Görevi bul
-        gorev = Todo.query.filter_by(TodoID=gorev_id, KullaniciID=session['user_id'], Tip='Randevu').first()
-        print(f"Bulunan görev: {gorev}")
-        
-        if not gorev:
-            return jsonify({'success': False, 'message': 'Görev bulunamadı!'}), 404
-        
-        # Durum bilgisini güvenli şekilde al
-        durum_adi = None
-        try:
-            if gorev.durum:
-                durum_adi = gorev.durum.DurumAdi
-        except Exception as durum_error:
-            print(f"Durum bilgisi alınırken hata: {durum_error}")
-            durum_adi = None
-        
-        # Müşteri bilgilerini görevden al (yeni format)
-        musteri_adi = gorev.MusteriAdi
-        musteri_soyadi = gorev.MusteriSoyadi
-        telefon = gorev.MusteriTelefon
-        email = gorev.MusteriEmail
-        
-        # Eğer görevde müşteri bilgileri yoksa, eski formattan çıkar
-        if not musteri_adi and gorev.Aciklama:
-            # Açıklamadan müşteri adını çıkar
-            if 'Müşteri:' in gorev.Aciklama:
-                musteri_line = [line for line in gorev.Aciklama.split('\n') if 'Müşteri:' in line]
-                if musteri_line:
-                    musteri_full = musteri_line[0].split('Müşteri:')[1].strip()
-                    ad_soyad = musteri_full.split(' ')
-                    musteri_adi = ad_soyad[0] if len(ad_soyad) > 0 else None
-                    musteri_soyadi = ' '.join(ad_soyad[1:]) if len(ad_soyad) > 1 else None
-        
-        # Eğer açıklamada müşteri adı yoksa, başlıktan çıkar
-        if not musteri_adi and gorev.Baslik and 'Randevu:' in gorev.Baslik:
-            baslik_parts = gorev.Baslik.split('Randevu:')[1]
-            if baslik_parts:
-                tarih_parts = baslik_parts.split(' - ')
-                if len(tarih_parts) > 0:
-                    musteri_full = tarih_parts[0].strip()
-                    ad_soyad = musteri_full.split(' ')
-                    musteri_adi = ad_soyad[0] if len(ad_soyad) > 0 else None
-                    musteri_soyadi = ' '.join(ad_soyad[1:]) if len(ad_soyad) > 1 else None
-        
-        # Müşteri adı varsa ve telefon/email yoksa, müşteriler tablosundan al
-        if musteri_adi and musteri_soyadi and (not telefon or not email):
-            try:
-                print(f"Müşteri aranıyor: {musteri_adi} {musteri_soyadi}, FirmaID: {session.get('firma_id')}")
-                musteri = Musteri.query.filter_by(
-                    MusteriAdi=musteri_adi,
-                    MusteriSoyadi=musteri_soyadi,
-                    FirmaID=session['firma_id']
-                ).first()
-                
-                if musteri:
-                    telefon = telefon or musteri.Telefon
-                    email = email or musteri.Email
-                    print(f"Müşteri bulundu: {musteri_adi} {musteri_soyadi}, Telefon: {telefon}, Email: {email}")
-                else:
-                    print(f"Müşteri bulunamadı: {musteri_adi} {musteri_soyadi}")
-            except Exception as musteri_error:
-                print(f"Müşteri arama hatası: {musteri_error}")
-                import traceback
-                traceback.print_exc()
-        
-        gorev_data = {
-            'TodoID': gorev.TodoID,
-            'Baslik': gorev.Baslik,
-            'Aciklama': gorev.Aciklama,
-            'Oncelik': gorev.Oncelik,
-            'BitisTarihi': gorev.BitisTarihi.strftime('%Y-%m-%d') if gorev.BitisTarihi else None,
-            'HatirlatmaTarihi': gorev.HatirlatmaTarihi.strftime('%Y-%m-%d') if gorev.HatirlatmaTarihi else None,
-            'RandevuTarihi': None,  # Şimdilik None
-            'RandevuSaati': None,  # Şimdilik None
-            'Durum': durum_adi,
-            'MusteriAdi': musteri_adi,
-            'MusteriSoyadi': musteri_soyadi,
-            'Telefon': telefon,
-            'Email': email
-        }
-        
-        print(f"Görev verisi: {gorev_data}")
-        
-        return jsonify({
-            'success': True,
-            'gorev': gorev_data
-        })
-        
-    except Exception as e:
-        print(f"Görev bilgisi API hatası: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
-
-@app.route('/api/randevu-defterleri', methods=['GET'])
-@login_required
-def api_randevu_defterleri():
-    """Randevu defterlerini getir"""
-    try:
-        print(f"Randevu defterleri isteği: firma_id={session.get('firma_id')}")
-        
-        defterler = RandevuDefterAyar.query.filter_by(FirmaID=session['firma_id'], Aktif=True).all()
-        print(f"Bulunan defterler: {len(defterler)}")
-        
-        defter_listesi = []
-        for d in defterler:
-            defter_listesi.append({
-                'AyarID': d.AyarID, 
-                'DefterAdi': d.DefterAdi,
-                'SlotDakika': d.SlotDakika
-            })
-        
-        print(f"Defter listesi: {defter_listesi}")
-        
-        return jsonify({
-            'success': True,
-            'defterler': defter_listesi
-        })
-    except Exception as e:
-        print(f"Randevu defterleri API hatası: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
-
-@app.route('/api/randevu-slotlari', methods=['GET'])
-@login_required
-def api_randevu_slotlari():
-    """Randevu slotlarını getir"""
-    try:
-        tarih = request.args.get('tarih')
-        defter_id = request.args.get('defter_id')
-        
-        if not tarih or not defter_id:
-            return jsonify({'success': False, 'message': 'Tarih ve defter ID gerekli!'}), 400
-        
-        # Defter ayarlarını al
-        defter_ayar = RandevuDefterAyar.query.filter_by(AyarID=defter_id, FirmaID=session['firma_id']).first()
-        if not defter_ayar:
-            return jsonify({'success': False, 'message': 'Defter bulunamadı!'}), 404
-        
-        # Mevcut randevuları kontrol et
-        tarih_obj = datetime.strptime(tarih, '%Y-%m-%d').date()
-        tarih_baslangic = datetime.combine(tarih_obj, datetime.min.time())
-        tarih_bitis = datetime.combine(tarih_obj, datetime.max.time())
-        
-        existing_randevular = Randevu.query.filter(
-            Randevu.RandevuTarihi >= tarih_baslangic,
-            Randevu.RandevuTarihi <= tarih_bitis,
-            Randevu.DefterID == defter_id,
-            Randevu.FirmaID == session['firma_id']
-        ).all()
-        
-        # Mevcut saatleri al
-        occupied_slots = []
-        for r in existing_randevular:
-            if r.RandevuTarihi:
-                # Saat bilgisini al
-                saat_str = r.RandevuTarihi.strftime('%H:%M')
-                occupied_slots.append(saat_str)
-        
-        print(f"Mevcut randevular: {len(existing_randevular)}")
-        print(f"Dolu slotlar: {occupied_slots}")
-        
-        # Çalışma günlerini kontrol et
-        calisma_gunleri = defter_ayar.CalismaGunleri or '1,2,3,4,5'  # Varsayılan: Pazartesi-Cuma
-        calisma_gunleri_list = [int(g.strip()) for g in calisma_gunleri.split(',')]
-        
-        # Bugünün haftanın günü (1=Pazartesi, 7=Pazar)
-        bugun_gun = tarih_obj.weekday() + 1  # Python'da 0=Pazartesi, bizim sistemde 1=Pazartesi
-        
-        if bugun_gun not in calisma_gunleri_list:
-            print(f"Bugün çalışma günü değil: {bugun_gun}, Çalışma günleri: {calisma_gunleri_list}")
-            return jsonify({
-                'success': True,
-                'slotlar': [],
-                'mesaj': 'Bu gün çalışma günü değil!'
-            })
-        
-        # Defter ayarlarından çalışma saatlerini ve slot süresini al
-        baslangic_saati = defter_ayar.BaslangicSaati or '09:00'
-        bitis_saati = defter_ayar.BitisSaati or '18:00'
-        slot_dakika = defter_ayar.SlotDakika or 30
-        
-        # Başlangıç ve bitiş saatlerini parse et
-        baslangic_hour, baslangic_minute = map(int, baslangic_saati.split(':'))
-        bitis_hour, bitis_minute = map(int, bitis_saati.split(':'))
-        
-        # Tüm slotları oluştur (hem müsait hem dolu)
-        all_slots = []
-        available_slots = []
-        current_hour = baslangic_hour
-        current_minute = baslangic_minute
-        
-        while (current_hour < bitis_hour) or (current_hour == bitis_hour and current_minute < bitis_minute):
-            slot = f"{current_hour:02d}:{current_minute:02d}"
-            all_slots.append(slot)
-            
-            if slot not in occupied_slots:
-                available_slots.append(slot)
-            
-            # Sonraki slot için dakika ekle
-            current_minute += slot_dakika
-            if current_minute >= 60:
-                current_hour += 1
-                current_minute -= 60
-        
-        print(f"Defter: {defter_ayar.DefterAdi}, Slot süresi: {slot_dakika} dk, Başlangıç: {baslangic_saati}, Bitiş: {bitis_saati}")
-        print(f"Oluşturulan slotlar: {all_slots[:5]}...")  # İlk 5 slotu göster
-        
-        return jsonify({
-            'success': True,
-            'slotlar': available_slots,
-            'dolu_slotlar': occupied_slots,
-            'tum_slotlar': all_slots
-        })
-        
-    except Exception as e:
-        print(f"Slot oluşturma hatası: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
-
-@app.route('/api/gorev-to-randevu/<int:gorev_id>', methods=['POST'])
-@login_required
-def gorev_to_randevu(gorev_id):
-    """Görevi randevu defterine taşı"""
-    try:
-        # Görevi bul
-        gorev = Todo.query.filter_by(TodoID=gorev_id, KullaniciID=session['user_id'], Tip='Randevu').first()
-        if not gorev:
-            return jsonify({'success': False, 'message': 'Görev bulunamadı!'}), 404
-        
-        # Görev tipini 'Randevu' olarak değiştir (zaten Randevu ama emin olmak için)
-        gorev.Tip = 'Randevu'
-        
-        # Randevu defteri için gerekli alanları ekle/güncelle
-        if not gorev.RandevuTarihi:
-            gorev.RandevuTarihi = gorev.BitisTarihi or datetime.now().date()
-        
-        if not gorev.RandevuSaati:
-            gorev.RandevuSaati = '09:00'  # Varsayılan saat
-        
-        # Durumu 'Beklemede' yap
-        beklemede_durum = TodoDurum.query.filter_by(DurumAdi='Beklemede', FirmaID=session['firma_id']).first()
-        if beklemede_durum:
-            gorev.DurumID = beklemede_durum.DurumID
-        
-        db.session.commit()
-        
-        # Log ekle
-        try:
-            log_user_action(
-                action_type='Görev Randevu Defterine Taşındı',
-                table_name='Todos',
-                record_id=gorev_id,
-                old_data={'tip': 'Randevu'},
-                new_data={'tip': 'Randevu', 'randevu_tarihi': str(gorev.RandevuTarihi), 'randevu_saati': gorev.RandevuSaati},
-                detail=f"Başlık: {gorev.Baslik} - Randevu Tarihi: {gorev.RandevuTarihi}"
-            )
-        except Exception as log_error:
-            print(f"Log hatası (önemli değil): {log_error}")
-        
-        return jsonify({'success': True, 'message': 'Görev başarıyla randevu defterine taşındı!'})
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
-
-@app.route('/todos/<int:todo_id>/sil', methods=['DELETE'])
-@login_required
-def todo_sil(todo_id):
-    """Todo sil"""
-    try:
-        todo = Todo.query.filter_by(TodoID=todo_id, KullaniciID=session['user_id']).first()
-        if not todo:
-            return jsonify({'success': False, 'message': 'Todo bulunamadı!'}), 404
-        
-        baslik = todo.Baslik
-        
-        # Önce bağlantılı randevuyu sil (eğer varsa)
-        if todo.RandevuID:
-            randevu = Randevu.query.filter_by(RandevuID=todo.RandevuID).first()
-            if randevu:
-                print(f"Bağlantılı randevu siliniyor: {randevu.RandevuID}")
-                
-                # Önce RandevuYetki kayıtlarını sil
-                from app import RandevuYetki
-                RandevuYetki.query.filter_by(RandevuID=randevu.RandevuID).delete()
-                
-                # GorevID'yi NULL yap (circular reference'ı kır)
-                randevu.GorevID = None
-                db.session.flush()
-                
-                # Randevu'yu sil
-                db.session.delete(randevu)
-        
-        # Todo'yu sil
-        db.session.delete(todo)
-        db.session.commit()
-        
-        # Log ekle
-        try:
-            log_user_action(
-                action_type='Todo Silindi',
-                table_name='Todos',
-                record_id=todo_id,
-                old_data={'baslik': baslik, 'durum': todo.durum.DurumAdi if todo.durum else 'Durum Yok'},
-                new_data=None,
-                detail=f"Başlık: {baslik}"
-            )
-        except Exception as log_error:
-            print(f"Log hatası (önemli değil): {log_error}")
-        
-        return jsonify({'success': True, 'message': 'Todo ve bağlantılı randevu başarıyla silindi!'})
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"Todo silme hatası: {str(e)}")
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'}), 500
-
-@app.route('/todos/api')
-@login_required
-def todos_api():
-    """Todo verilerini API olarak döndür (dashboard için)"""
-    try:
-        # Kullanıcının todolarını getir
-        todos = Todo.query.filter_by(KullaniciID=session['user_id']).all()
-        
-        result = []
-        for todo in todos:
-            result.append({
-                'id': todo.TodoID,
-                'baslik': todo.Baslik,
-                'aciklama': todo.Aciklama,
-                'oncelik': todo.Oncelik,
-                'durum': todo.durum.DurumAdi if todo.durum else 'Durum Yok',
-                'bitis_tarihi': todo.BitisTarihi.isoformat() if todo.BitisTarihi else None,
-                'hatirlatma_tarihi': todo.HatirlatmaTarihi.isoformat() if todo.HatirlatmaTarihi else None,
-                'olusturma_tarihi': todo.OlusturmaTarihi.isoformat(),
-                'tamamlanma_tarihi': todo.TamamlanmaTarihi.isoformat() if todo.TamamlanmaTarihi else None
-            })
-        
-        return jsonify(result)
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 # ==================== TODO BİLDİRİM SİSTEMİ ====================
 
-def check_todo_reminders():
-    """Todo hatırlatmalarını kontrol et ve bildirim oluştur"""
-    try:
-        bugun = datetime.now().date()
-        simdi = datetime.now()
-        
-        # Bugün hatırlatma tarihi olan todoları bul
-        hatirlatma_todos = Todo.query.filter(
-            Todo.HatirlatmaTarihi == bugun
-        ).all()
-        
-        # Tamamlanmamış todoları filtrele
-        hatirlatma_todos = [todo for todo in hatirlatma_todos if not todo.durum or todo.durum.DurumAdi != 'Tamamlandı']
-        
-        yeni_bildirim_sayisi = 0
-        
-        for todo in hatirlatma_todos:
-            # Bu todo için bugün zaten bildirim oluşturulmuş mu kontrol et
-            existing_notification = Bildirim.query.filter(
-                Bildirim.KullaniciID == todo.KullaniciID,
-                Bildirim.Metin.contains(todo.Baslik),
-                Bildirim.Tip == 'todo_reminder',
-                Bildirim.OlusturmaTarihi >= datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            ).first()
-            
-            if not existing_notification:
-                # Yeni bildirim oluştur
-                bildirim = Bildirim(
-                    KullaniciID=todo.KullaniciID,
-                    FirmaID=1,  # Varsayılan firma ID
-                    Metin=f'[HATIRLATMA] "{todo.Baslik}" gorevinin hatirlatma tarihi bugun!',
-                    Tip='todo_reminder',
-                    Okundu=False
-                )
-                db.session.add(bildirim)
-                yeni_bildirim_sayisi += 1
-                print(f"Todo hatırlatma bildirimi oluşturuldu: {todo.Baslik} (Kullanıcı: {todo.KullaniciID})")
-        
-        db.session.commit()
-        
-        if yeni_bildirim_sayisi > 0:
-            print(f"Todo hatırlatma kontrolü tamamlandı. {yeni_bildirim_sayisi} yeni bildirim oluşturuldu.")
-        else:
-            print(f"Todo hatırlatma kontrolü tamamlandı. {len(hatirlatma_todos)} todo kontrol edildi, yeni bildirim yok.")
-        
-    except Exception as e:
-        print(f"Todo hatırlatma kontrolünde hata: {str(e)}")
-        db.session.rollback()
 
-def todo_reminder_worker():
-    """Todo hatırlatma worker'ı - her 5 dakikada bir çalışır"""
-    while True:
-        try:
-            now = datetime.now()
-            # Her 5 dakikada bir kontrol et
-            check_todo_reminders()
-            
-            # 5 dakika bekle
-            time.sleep(300)
-            
-        except Exception as e:
-            print(f"Todo reminder worker hatası: {str(e)}")
-            time.sleep(300)
 
 # Şifre Hatırlatma Route'ları
 @app.route('/forgot-password', methods=['GET', 'POST'])
@@ -10715,40 +8468,133 @@ def reset_password(token):
 def serve_user_avatar(user_id):
     """Kullanıcı avatar resmini gönder, yoksa varsayılan avatar'ı gönder"""
     import os
-    avatar_path = os.path.join('static', 'uploads', 'users', f'user_{user_id}.jpg')
+    # Önce veritabanından dosya yolunu kontrol et
+    kullanici = Kullanici.query.get(user_id)
+    if kullanici and kullanici.ProfilFotografi:
+        # Veritabanından gelen dosya yolunu kullan
+        avatar_path = os.path.join('static', kullanici.ProfilFotografi)
+        if os.path.exists(avatar_path) and os.path.isfile(avatar_path):
+            return send_file(avatar_path, mimetype='image/jpeg')
     
-    # Avatar dosyası var mı kontrol et
+    # Veritabanında yol yoksa, eski yöntemle kontrol et (geriye dönük uyumluluk)
+    avatar_path = os.path.join('static', 'uploads', 'users', f'user_{user_id}.jpg')
     if os.path.exists(avatar_path) and os.path.isfile(avatar_path):
+        # Dosya varsa ama veritabanında yoksa, veritabanına kaydet
+        if kullanici:
+            relative_path = f'uploads/users/user_{user_id}.jpg'
+            kullanici.ProfilFotografi = relative_path
+            db.session.commit()
         return send_file(avatar_path, mimetype='image/jpeg')
+    
+    # Varsayılan avatar'ı gönder
+    default_avatar = os.path.join('static', 'img', 'avatar-default.svg')
+    if os.path.exists(default_avatar):
+        return send_file(default_avatar, mimetype='image/svg+xml')
     else:
-        # Varsayılan avatar'ı gönder
-        default_avatar = os.path.join('static', 'img', 'avatar-default.svg')
-        if os.path.exists(default_avatar):
-            return send_file(default_avatar, mimetype='image/svg+xml')
-        else:
-            # Varsayılan avatar da yoksa 404 döndür
-            from flask import abort
-            abort(404)
+        # Varsayılan avatar da yoksa 404 döndür
+        from flask import abort
+        abort(404)
+
+
 
 # Production'da WSGI server kullanıldığında da çalışması için
 def initialize_app():
     """Uygulamayı başlat - WSGI server'lar için"""
     with app.app_context():
-        print("[LOAD] Veritabani tablolari olusturuluyor/kontrol ediliyor...")
-        db.create_all()
-        print("[OK] Tablo kontrolu tamamlandi.\n")
-        
-        # Veritabanı ayarlarını SistemAyarlar'dan yükle
+        # Önce SistemAyarlar'dan veritabanı ayarlarını yükle
+        # Bu, gerçek veritabanı bağlantısını kurar (MySQL/MSSQL)
         print("[INFO] SistemAyarlar'dan veritabani ayarlari yukleniyor...")
-        initialize_database_from_settings()
+        new_engine = initialize_database_from_settings()
         print("[OK] Veritabani ayarlari yukleme islemi tamamlandi.\n")
+        
+        # ProfilFotografi kolonunu kontrol et ve ekle (gerekirse)
+        try:
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            columns = [col['name'] for col in inspector.get_columns('Kullanicilar')]
+            
+            if 'ProfilFotografi' not in columns:
+                print("[MIGRATION] ProfilFotografi kolonu bulunamadi, ekleniyor...")
+                dialect_name = db.engine.dialect.name
+                
+                if dialect_name == 'mysql':
+                    with db.engine.connect() as conn:
+                        conn.execute(text("""
+                            ALTER TABLE Kullanicilar 
+                            ADD COLUMN ProfilFotografi VARCHAR(500) NULL 
+                            AFTER LogModulu
+                        """))
+                        conn.commit()
+                    print("[OK] ProfilFotografi kolonu MySQL'de eklendi!")
+                elif dialect_name == 'mssql':
+                    with db.engine.connect() as conn:
+                        conn.execute(text("""
+                            ALTER TABLE Kullanicilar 
+                            ADD ProfilFotografi NVARCHAR(500) NULL
+                        """))
+                        conn.commit()
+                    print("[OK] ProfilFotografi kolonu MSSQL'de eklendi!")
+                else:
+                    print(f"[WARN] ProfilFotografi kolonu eklenemedi - desteklenmeyen veritabani: {dialect_name}")
+            else:
+                print("[OK] ProfilFotografi kolonu mevcut.")
+        except Exception as e:
+            error_msg = str(e).lower()
+            if 'duplicate' in error_msg or 'already exists' in error_msg:
+                print("[INFO] ProfilFotografi kolonu zaten mevcut.")
+            else:
+                print(f"[WARN] ProfilFotografi kolonu kontrol edilemedi: {e}")
+                # Hata olsa bile devam et
+        
+        # SistemAyarlar'dan bağlantı kurulduktan sonra tabloları kontrol et/oluştur
+        print("[LOAD] Veritabani tablolari kontrol ediliyor...")
+        
+        # Yeni engine'i kullan (eğer döndürüldüyse)
+        actual_engine = new_engine if new_engine else None
+        
+        # Eğer new_engine yoksa, db.get_engine() ile kontrol et
+        if not actual_engine:
+            try:
+                actual_engine = db.get_engine()
+                actual_dialect = actual_engine.dialect.name if hasattr(actual_engine, 'dialect') else None
+                print(f"[DEBUG] Veritabani dialect: {actual_dialect}")
+            except Exception as engine_check_err:
+                print(f"[WARN] Engine kontrolu yapilamadi: {engine_check_err}")
+                actual_engine = None
+        
+        # Flask-SQLAlchemy zaten sadece eksik tabloları oluşturur, mevcut tabloları değiştirmez
+        try:
+            # db.create_all() çağrısı - MySQL veya MSSQL engine kullanılacak
+            # Flask-SQLAlchemy'nin internal get_engine() çağrısını bypass etmek için
+            # doğrudan SQLAlchemy metadata'sını kullan
+            if actual_engine:
+                print(f"[DEBUG] db.metadata.create_all() yeni engine ile cagriliyor (dialect: {actual_engine.dialect.name})")
+                # Doğrudan SQLAlchemy metadata'sını kullan - Flask-SQLAlchemy bypass
+                db.metadata.create_all(bind=actual_engine, checkfirst=True)
+            else:
+                print("[WARN] Engine bulunamadi, db.create_all() varsayilan engine ile cagriliyor")
+                # Engine yoksa, db.get_engine() ile al
+                try:
+                    fallback_engine = db.get_engine()
+                    print(f"[DEBUG] Fallback engine dialect: {fallback_engine.dialect.name}")
+                    db.metadata.create_all(bind=fallback_engine, checkfirst=True)
+                except Exception as fallback_err:
+                    print(f"[WARN] Fallback engine alinamadi: {fallback_err}")
+                    # Son çare: db.create_all() kullan
+                    db.create_all()
+            print("[OK] Tablo kontrolu tamamlandi.\n")
+        except Exception as create_err:
+            print(f"[WARN] Tablo olusturma sirasinda hata: {create_err}")
+            import traceback
+            traceback.print_exc()
+            print("[INFO] Devam ediliyor...")
     
     # Hatirlatma worker'i arka planda baslat
-    worker_thread = threading.Thread(target=reminder_worker, daemon=True)
+    worker_thread = threading.Thread(target=reminder_worker, args=(app,), daemon=True)
     worker_thread.start()
     
     # Todo hatırlatma worker'ını başlat
-    todo_worker_thread = threading.Thread(target=todo_reminder_worker, daemon=True)
+    todo_worker_thread = threading.Thread(target=todo_reminder_worker, args=(app,), daemon=True)
     todo_worker_thread.start()
     
     return app
