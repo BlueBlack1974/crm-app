@@ -1,17 +1,684 @@
+# English translations for Crandyx CRM Project.
+# Copyright (C) 2025 Crandyx CRM Project
+# This file is distributed under the same license as the Crandyx CRM
+# project.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Crandyx CRM 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-04 18:14+0300\n"
+"PO-Revision-Date: 2025-09-27 16:04+0300\n"
+"Last-Translator: \n"
+"Language: fr\n"
+"Language-Team: fr <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+msgid "Customers"
+msgstr "Customers"
+
+msgid "Login to your account"
+msgstr "Login to your account"
+
+msgid "Select date"
+msgstr "Select date"
+
+msgid "Available time slots"
+msgstr "Available time slots"
+
+msgid "Select time slot"
+msgstr "Select time slot"
+
+msgid "Notes"
+msgstr "Notes"
+
+msgid "Save"
+msgstr "Enregistrer"
+
+msgid "Search"
+msgstr "Search"
+
+msgid "Filter"
+msgstr "Filter"
+
+msgid "Clear"
+msgstr "Effacer"
+
+msgid "Export CSV"
+msgstr "Rapports"
+
+msgid "Active Only"
+msgstr "Actions"
+
+msgid ""
+"You cannot make an appointment for "
+"a past time. Please select a "
+"future time."
+msgstr ""
+
+msgid "appointment created for"
+msgstr "appointment created for"
+
+msgid "Appointment moved from"
+msgstr "Appointment moved from"
+
+msgid "Selected date"
+msgstr "Client Sélectionné"
+
+msgid "Default Admin"
+msgstr "Default Admin"
+
+msgid "min"
+msgstr "Mon"
+
+msgid "Clear Filters"
+msgstr "Clear Filters"
+
+msgid "January"
+msgstr "January"
+
+msgid "February"
+msgstr "February"
+
+msgid "March"
+msgstr "March"
+
+msgid "April"
+msgstr "April"
+
+msgid "May"
+msgstr "May"
+
+msgid "June"
+msgstr "June"
+
+msgid "July"
+msgstr "July"
+
+msgid "August"
+msgstr "August"
+
+msgid "September"
+msgstr "September"
+
+msgid "October"
+msgstr "October"
+
+msgid "November"
+msgstr "November"
+
+msgid "December"
+msgstr "December"
+
+msgid "Drag to move"
+msgstr "Drag to move"
+
+msgid "Price"
+msgstr "Price"
+
+msgid "Select City"
+msgstr "Select Country"
+
+msgid "Enter district"
+msgstr "Enter district"
+
+msgid "Generate Report"
+msgstr "Generate Report"
+
+msgid "Peak Hours Report"
+msgstr "Peak Hours Report"
+
+msgid "Hourly Appointment Distribution"
+msgstr "Hourly Appointment Distribution"
+
+msgid "Capacity Utilization"
+msgstr "Capacity Utilization"
+
+msgid "Weekly Heatmap"
+msgstr "Weekly Heatmap"
+
+msgid "Used"
+msgstr "Used"
+
+msgid "Appointment density by day and hour"
+msgstr "Appointment density by day and hour"
+
+msgid "Empty"
+msgstr "Empty"
+
+msgid "Very High"
+msgstr "Very High"
+
+# WhatsApp Chat
+msgid "WhatsApp Chat"
+msgstr "WhatsApp Chat"
+
+msgid "Refresh"
+msgstr "Refresh"
+
+msgid "Loading WhatsApp Web..."
+msgstr "Loading WhatsApp Web..."
+
+msgid "Please wait while WhatsApp Web loads"
+msgstr "Please wait while WhatsApp Web loads"
+
+msgid "Common WhatsApp operations"
+msgstr "Common WhatsApp operations"
+
+msgid "Customer Support"
+msgstr "Customer Support"
+
+msgid "Contact customers directly"
+msgstr "Contact customers directly"
+
+msgid "View Customers"
+msgstr "View Customers"
+
+msgid "View Appointments"
+msgstr "View Appointments"
+
+msgid "Configure WhatsApp settings"
+msgstr "Configure WhatsApp settings"
+
+msgid "All Settings"
+msgstr "All Settings"
+
+msgid "Please use the new chat button in WhatsApp Web interface"
+msgstr "Please use the new chat button in WhatsApp Web interface"
+
+msgid "Manage your WhatsApp conversations directly from CRM"
+msgstr "Manage your WhatsApp conversations directly from CRM"
+
+msgid ""
+"WhatsApp Web requires you to scan "
+"the QR code with your phone to "
+"connect. Make sure your phone has "
+"internet connection."
+msgstr ""
+"WhatsApp Web requires you to scan "
+"the QR code with your phone to "
+"connect. Make sure your phone has "
+"internet connection."
+
+msgid "Connected"
+msgstr "Connected"
+
+msgid "Using your company WhatsApp Business API settings"
+msgstr "Using your company WhatsApp Business API settings"
+
+msgid "Test Connection"
+msgstr "Tester la Connexion"
+
+msgid "Send WhatsApp Message"
+msgstr "Send WhatsApp Message"
+
+msgid "Send messages using your WhatsApp Business API"
+msgstr "Send messages using your WhatsApp Business API"
+
+msgid "Select Customer"
+msgstr "Select Customer"
+
+msgid "Message"
+msgstr "Message"
+
+msgid "Type your message here..."
+msgstr "Type your message here..."
+
+msgid "Cancellation"
+msgstr "Cancellation"
+
+msgid "Send Message"
+msgstr "Send Message"
+
+msgid "API Information"
+msgstr "API Information"
+
+msgid "Please fill in all fields"
+msgstr "Please fill in all fields"
+
+msgid "Sending..."
+msgstr "Sending..."
+
+msgid "Message sent successfully!"
+msgstr "Message sent successfully!"
+
+msgid "Error sending message:"
+msgstr "Error sending message:"
+
+msgid "Testing..."
+msgstr "Test en cours..."
+
+msgid "Connection test successful!"
+msgstr "Connection test successful!"
+
+msgid "Connection test failed:"
+msgstr "Connection test failed:"
+
+msgid "Todos"
+msgstr "Tâches"
+
+msgid "No reminders for today!"
+msgstr ""
+
+msgid "All your tasks are up to date."
+msgstr ""
+
+msgid "An error occurred while loading reminders."
+msgstr "An error occurred while moving the appointment"
+
+msgid "Loading reminders..."
+msgstr "Appointment Reminder"
+
+msgid "Mark All as Read"
+msgstr "Tout marquer comme lu"
+
+# Excel Import Log Operations
+msgid "musteri_excel_import_summary"
+msgstr "Résumé d'Import Excel"
+
+msgid "musteri_excel_import_add"
+msgstr "Ajout par Import Excel"
+
+msgid "musteri_excel_import_update"
+msgstr "Mise à jour par Import Excel"
+
+# Log Operation Types
+msgid "CREATE"
+msgstr "Créer"
+
+msgid "UPDATE"
+msgstr "Mettre à jour"
+
+msgid "VIEW"
+msgstr "Voir"
+
+msgid "LOGIN"
+msgstr "Connexion"
+
+msgid "LOGOUT"
+msgstr "Déconnexion"
+
+# Calendar days
+msgid "Pzt"
+msgstr "Lun"
+
+msgid "Çar"
+msgstr "Mer"
+
+msgid "Per"
+msgstr "Jeu"
+
+msgid "Cum"
+msgstr "Ven"
+
+msgid "Cmt"
+msgstr "Sam"
+
+msgid "Paz"
+msgstr "Dim"
+
+msgid "Todo List"
+msgstr "Liste des Tâches"
+
+msgid "Edit Todo"
+msgstr "Edit Category"
+
+msgid "No todos found"
+msgstr "No appointments found"
+
+msgid "Create your first todo to get started!"
+msgstr ""
+
+msgid "Create Todo"
+msgstr "Créé par"
+
+# Excel Import Log Messages
+msgid "Excel import ile müşteri eklendi: {name} {surname} (Telefon: {phone})"
+msgstr "Client ajouté via import Excel : {name} {surname} (Téléphone : {phone})"
+
+msgid ""
+"Excel import ile müşteri güncellendi: "
+"{name} {surname} (Telefon: {phone})"
+msgstr ""
+"Client mis à jour via import Excel"
+" : {name} {surname} (Téléphone : "
+"{phone})"
+
+msgid ""
+"Excel import tamamlandı: {success} müşteri "
+"eklendi, {updated} müşteri güncellendi, "
+"{skipped} kayıt atlandı, {errors} hata "
+"oluştu"
+msgstr ""
+"Import Excel terminé : {success} clients"
+" ajoutés, {updated} clients mis à "
+"jour, {skipped} enregistrements ignorés, "
+"{errors} erreurs survenues"
+
+msgid "Surname"
+msgstr "Nom"
+
+msgid ""
+"Appointment duration must be multiples "
+"of the selected book's slot minutes"
+msgstr ""
+"La durée du rendez-vous doit être"
+" un multiple des minutes de créneau"
+" du livre sélectionné"
+
+msgid "Başlangıç"
+msgstr "Début"
+
+msgid "Bu Ay"
+msgstr "Ce Mois"
+
+msgid "Oluşturma Tarihi"
+msgstr ""
+
+msgid "Görev güncellenirken hata:"
+msgstr ""
+
+msgid "Randevu oluşturulurken hata:"
+msgstr ""
+
+msgid "Back to Customer Reports"
+msgstr "Retour aux Rapports Clients"
+
+msgid "An error occurred while uploading the file"
+msgstr "Une erreur s'est produite lors du téléchargement du fichier"
+
+msgid "Please map required fields"
+msgstr "Veuillez mapper les champs requis"
+
+msgid "An error occurred during validation"
+msgstr "Une erreur s'est produite lors de la validation"
+
+msgid "An error occurred during import"
+msgstr "Une erreur s'est produite lors de l'importation"
+
+msgid "Approximately"
+msgstr "Environ"
+
+msgid "of"
+msgstr "de"
+
+msgid "customers will be imported"
+msgstr "clients seront importés"
+
+msgid "Warning"
+msgstr "Avertissement"
+
+msgid "Duplicate"
+msgstr "Doublon"
+
+msgid "Success"
+msgstr "Succès"
+
+msgid "Edit Appointment"
+msgstr "Edit Appointment"
+
+msgid "Select Reference"
+msgstr "Select Reference"
+
+msgid "Reminder Day"
+msgstr "Rappel"
+
+msgid "If set, related task reminder date will be updated"
+msgstr ""
+
+msgid "Customer Contact Information"
+msgstr "Customer Contact Information"
+
+msgid "Enter age"
+msgstr "Sender Name"
+
+msgid "Customer information not found"
+msgstr "Customer information not found"
+
+msgid "Please enter valid phone number and email address."
+msgstr "Please enter valid phone number and email address."
+
+msgid "Valid phone number"
+msgstr "Valid phone number"
+
+msgid "Valid email address"
+msgstr "Adresse e-mail valide"
+
+msgid "Minimum duration must be"
+msgstr "Minimum duration must be"
+
+msgid "Valid duration"
+msgstr "Valid duration"
+
+msgid "Age will be calculated automatically"
+msgstr ""
+
+# Additional translations
+msgid "Has Phone"
+msgstr "A un Téléphone"
+
+msgid "Has Email"
+msgstr "A un E-mail"
+
+msgid "Error loading customer data"
+msgstr "Erreur lors du chargement des données client"
+
+msgid "Category name is required"
+msgstr "Le nom de la catégorie est requis"
+
+msgid "A category with this name already exists"
+msgstr "Une catégorie avec ce nom existe déjà"
+
+msgid "Category added successfully"
+msgstr "Catégorie ajoutée avec succès"
+
+msgid "Category updated successfully"
+msgstr "Catégorie mise à jour avec succès"
+
+msgid "Category deleted successfully"
+msgstr "Catégorie supprimée avec succès"
+
+msgid "Database settings saved and exported to .env file"
+msgstr ""
+"Paramètres de base de données "
+"enregistrés et exportés vers le fichier"
+" .env"
+
+msgid "Database settings saved, but failed to export to .env file"
+msgstr ""
+"Paramètres de base de données "
+"enregistrés, mais échec de l'exportation "
+"vers le fichier .env"
+
+msgid ""
+"Database changed. All sessions have been"
+" terminated. Please log in again with"
+" the new database."
+msgstr ""
+"Base de données modifiée. Toutes les "
+"sessions ont été terminées. Veuillez "
+"vous reconnecter avec la nouvelle base"
+" de données."
+
+msgid "Database settings saved successfully"
+msgstr "Paramètres de base de données enregistrés avec succès"
+
+msgid "Error saving database settings:"
+msgstr "Erreur lors de l'enregistrement des paramètres de base de données:"
+
+msgid "Error loading database settings:"
+msgstr "Erreur lors du chargement des paramètres de base de données:"
+
+msgid "Missing required fields"
+msgstr "Champs obligatoires manquants"
+
+msgid "Invalid database type"
+msgstr "Type de base de données invalide"
+
+msgid "Password reset link has been sent to your email address."
+msgstr ""
+"Le lien de réinitialisation du mot "
+"de passe a été envoyé à votre "
+"adresse e-mail."
+
+msgid "Invalid username or email address."
+msgstr "Nom d'utilisateur ou adresse e-mail invalide."
+
+msgid "Invalid or expired reset token."
+msgstr "Jeton de réinitialisation invalide ou expiré."
+
+msgid "Passwords do not match."
+msgstr "Les mots de passe ne correspondent pas."
+
+msgid "Password must be at least 6 characters long."
+msgstr "Le mot de passe doit contenir au moins 6 caractères."
+
+msgid ""
+"Password has been reset successfully. "
+"You can now login with your new"
+" password."
+msgstr ""
+"Le mot de passe a été réinitialisé"
+" avec succès. Vous pouvez maintenant "
+"vous connecter avec votre nouveau mot"
+" de passe."
+
+msgid "User not found."
+msgstr "Utilisateur non trouvé."
+
+msgid "Turkish"
+msgstr "Turc"
+
+msgid "English"
+msgstr "Anglais"
+
+msgid "French"
+msgstr "French"
+
+msgid "German"
+msgstr "Allemand"
+
+msgid ""
+"Appointment\n"
+"                                Report"
+msgstr ""
+
+msgid ""
+"Customer\n"
+"                                Report"
+msgstr ""
+
+msgid "Mark as read"
+msgstr "Marquer comme lu"
+
+msgid "No todos yet"
+msgstr "Aucune tâche pour le moment"
+
+msgid "Create First Todo"
+msgstr "Créer la Première Tâche"
+
+msgid "No tasks yet"
+msgstr "Aucune tâche pour le moment"
+
+msgid "Create First Task"
+msgstr "Créer la Première Tâche"
+
+msgid "Task Statistics"
+msgstr "Statistiques des Tâches"
+
+msgid "Total Tasks"
+msgstr "Total Customers"
+
+msgid "No task status defined yet"
+msgstr ""
+
+msgid "Quick Add Todo"
+msgstr "Ajout Rapide de Tâche"
+
+msgid "Priority"
+msgstr "Priorité"
+
+msgid "Low"
+msgstr "Faible"
+
+msgid "Medium"
+msgstr "Moyen"
+
+msgid "High"
+msgstr "Élevé"
+
+msgid "Due Date"
+msgstr "Date d'Échéance"
+
+msgid "Add Todo"
+msgstr "Ajouter Tâche"
+
+msgid "No Customer"
+msgstr "Aucun Client"
+
 msgid "Excel"
 msgstr "Excel"
 
 msgid "PDF"
 msgstr "PDF"
-# Reports page translations
-msgid "Görev Raporları"
-msgstr "Rapports des Tâches"
 
-msgid "Durum Dağılımı"
-msgstr "Répartition par Statut"
+msgid "Başlangıç Tarihi"
+msgstr "Date de Début"
+
+msgid "Bitiş Tarihi"
+msgstr "Date de Fin"
+
+msgid "Durum"
+msgstr "Statut"
+
+msgid "Tümü"
+msgstr "Tous"
+
+msgid "Kullanıcı"
+msgstr "Utilisateur"
+
+msgid "Öncelik"
+msgstr "Priorité"
+
+msgid "Düşük"
+msgstr "Faible"
+
+msgid "Orta"
+msgstr "Moyen"
+
+msgid "Yüksek"
+msgstr "Élevé"
+
+msgid "Tip"
+msgstr "Type"
+
+msgid "Kişisel"
+msgstr "Personnel"
+
+msgid "Randevu"
+msgstr "Rendez-vous"
+
+msgid "Toplam Görev"
+msgstr "Total des Tâches"
+
+msgid "Tamamlanan"
+msgstr "Terminé"
+
+msgid "Bekleyen"
+msgstr "En attente"
+
+msgid "Tamamlanma Oranı"
+msgstr ""
 
 msgid "Öncelik Dağılımı"
 msgstr "Répartition par Priorité"
+
+msgid "Durum Dağılımı"
+msgstr "Répartition par Statut"
 
 msgid "Kullanıcı Bazlı Dağılım"
 msgstr "Répartition par Utilisateur"
@@ -21,6 +688,21 @@ msgstr "Tâches Terminées par Utilisateur"
 
 msgid "Aylık Trend"
 msgstr "Tendance Mensuelle"
+
+msgid "Detaylı Görev Listesi"
+msgstr "Liste détaillée des tâches"
+
+msgid "Görev"
+msgstr "Tâche"
+
+msgid "Oluşturma"
+msgstr "Création"
+
+msgid "Müşteri"
+msgstr "Client"
+
+msgid "Rapor yükleniyor..."
+msgstr "Chargement du rapport..."
 
 msgid "Görev Sayısı"
 msgstr "Nombre de Tâches"
@@ -34,9 +716,6 @@ msgstr "Tâches Créées"
 msgid "Veri bulunamadı"
 msgstr "Aucune donnée"
 
-msgid "Rapor yükleniyor..."
-msgstr "Chargement du rapport..."
-
 msgid "Görev Raporu"
 msgstr "Rapport des Tâches"
 
@@ -46,3732 +725,1506 @@ msgstr "Date du Rapport"
 msgid "Önce rapor oluşturun"
 msgstr "Générez d'abord le rapport"
 
-msgid "Detaylı Görev Listesi"
-msgstr "Liste détaillée des tâches"
-
-msgid "Başlangıç Tarihi"
-msgstr "Date de Début"
-
-msgid "Bitiş Tarihi"
-msgstr "Date de Fin"
-
-msgid "Tip"
-msgstr "Type"
-
-msgid "Kişisel"
-msgstr "Personnel"
-
-msgid "Randevu"
-msgstr "Rendez-vous"
-
-msgid "Oluşturma"
-msgstr "Création"
-
 msgid "Bitiş"
 msgstr "Fin"
+
+msgid "Görevler Listesi"
+msgstr "Liste des Tâches"
+
+msgid "Yeni Görev"
+msgstr "Nouvelle tâche"
+
+msgid "Yenile"
+msgstr "Actualiser"
+
+msgid "Filtreler"
+msgstr "Filtres"
+
+msgid "Arama"
+msgstr "Recherche"
+
+msgid "Görev ara..."
+msgstr "Rechercher une tâche..."
 
 msgid "Tarih Aralığı"
 msgstr "Plage de dates"
 
-msgid "Başlangıç"
-msgstr "Début"
-
-msgid "Bu Ay"
-msgstr "Ce Mois"
-
-msgid "Müşteri"
-msgstr "Client"
-# English translations for Crandyx CRM Project.
-# Copyright (C) 2025 Crandyx CRM Project
-# This file is distributed under the same license as the Crandyx CRM
-# project.
-#
-msgid ""
-msgstr ""
-"Project-Id-Version: Crandyx CRM 1.0\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-28 23:36+0300\n"
-"PO-Revision-Date: 2025-09-27 16:04+0300\n"
-"Last-Translator: \n"
-"Language: fr\n"
-"Language-Team: fr <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n > 1);\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.17.0\n"
-
-#: app.py:2710
-msgid "Category name is required"
-msgstr "Le nom de la catégorie est requis"
-
-#: app.py:2720 app.py:2768
-msgid "A category with this name already exists"
-msgstr "Une catégorie avec ce nom existe déjà"
-
-#: app.py:2734
-msgid "Category added successfully"
-msgstr "Catégorie ajoutée avec succès"
-
-#: app.py:2778
-msgid "Category updated successfully"
-msgstr "Catégorie mise à jour avec succès"
-
-#: app.py:2810
-msgid "Category deleted successfully"
-msgstr "Catégorie supprimée avec succès"
-
-#: app.py:9575
-msgid "Password reset link has been sent to your email address."
-msgstr ""
-"Le lien de réinitialisation du mot de passe a été envoyé à votre adresse "
-"e-mail."
-
-#: app.py:9578
-msgid "Invalid username or email address."
-msgstr "Nom d'utilisateur ou adresse e-mail invalide."
-
-#: app.py:9597 app.py:9626
-msgid "Invalid or expired reset token."
-msgstr "Jeton de réinitialisation invalide ou expiré."
-
-#: app.py:9607
-msgid "Passwords do not match."
-msgstr "Les mots de passe ne correspondent pas."
-
-#: app.py:9611
-msgid "Password must be at least 6 characters long."
-msgstr "Le mot de passe doit contenir au moins 6 caractères."
-
-#: app.py:9639
-msgid ""
-"Password has been reset successfully. You can now login with your new "
-"password."
-msgstr ""
-"Le mot de passe a été réinitialisé avec succès. Vous pouvez maintenant "
-"vous connecter avec votre nouveau mot de passe."
-
-#: app.py:9642
-msgid "User not found."
-msgstr "Utilisateur non trouvé."
-
-# Navigation
-#: templates/base.html:149 templates/base.html:309 templates/dashboard.html:3
-#: templates/dashboard.html:7
-msgid "Dashboard"
-msgstr "Tableau de bord"
-
-#: templates/base.html:155 templates/base.html:310
-#: templates/musteri_detay_raporu.html:264 templates/randevular.html:3
-#: templates/randevular.html:134 templates/rapor_musteriler.html:707
-#: templates/raporlar.html:173
-msgid "Appointments"
-msgstr "Rendez-vous"
-
-#: templates/base.html:161 templates/base.html:311 templates/dashboard.html:12
-#: templates/randevu_ekle.html:3 templates/randevular.html:173
-#: templates/randevular.html:256 templates/randevular.html:347
-#: templates/randevular.html:389 templates/takvim.html:179
-msgid "New Appointment"
-msgstr "Nouveau Rendez-vous"
-
-#: templates/base.html:167 templates/base.html:312
-#: templates/randevu_ekle.html:500 templates/takvim.html:3
-#: templates/takvim.html:174
-msgid "Calendar"
-msgstr "Calendrier"
-
-#: templates/base.html:173 templates/base.html:313
-msgid "WhatsApp"
-msgstr "WhatsApp"
-
-#: templates/ayarlar/kullanici_duzenle.html:188
-#: templates/ayarlar/kullanicilar.html:114 templates/base.html:180
-#: templates/base.html:319 templates/raporlar.html:3 templates/raporlar.html:47
-msgid "Reports"
-msgstr "Rapports"
-
-#: templates/base.html:186 templates/base.html:322
-msgid "Appointment Report"
-msgstr "Rapport de Rendez-vous"
-
-#: templates/base.html:189 templates/base.html:323
-#: templates/rapor_musteriler.html:3 templates/rapor_musteriler.html:35
-msgid "Customer Report"
-msgstr "Rapport Client"
-
-#: templates/base.html:198 templates/base.html:314
-msgid "Yapılacaklar"
-msgstr "Tâches"
-
-#: templates/base.html:204 templates/base.html:315 templates/gorevler.html:1671
-msgid "Görevler"
-msgstr "Tâches"
-
-#: templates/base.html:210 templates/gorev_raporlar.html:3
-#: templates/gorev_raporlar.html:87
-msgid "Görev Raporları"
-msgstr ""
-
-#: templates/base.html:216 templates/base.html:768
-msgid "Today's Reminders"
-msgstr "Rappel"
-
-# Login
-#: templates/ayarlar/kullanici_duzenle.html:194
-#: templates/ayarlar/kullanicilar.html:120 templates/base.html:224
-msgid "Logs"
-msgstr "Journaux"
-
-# Settings page translations
-#: templates/ayarlar/index.html:3 templates/ayarlar/index.html:7
-#: templates/ayarlar/kullanici_duzenle.html:191
-#: templates/ayarlar/kullanicilar.html:117 templates/ayarlar/whatsapp.html:9
-#: templates/base.html:232 templates/base.html:343
-msgid "Settings"
-msgstr "Paramètres"
-
-#: templates/base.html:244 templates/base.html:332
-msgid "Language"
-msgstr "Langue"
-
-#: templates/base.html:247 templates/base.html:335
-msgid "Turkish"
-msgstr "Turc"
-
-#: templates/base.html:248 templates/base.html:336
-msgid "English"
-msgstr "Anglais"
-
-#: templates/base.html:249 templates/base.html:337
-msgid "French"
-msgstr "French"
-
-#: templates/base.html:250 templates/base.html:338
-msgid "German"
-msgstr "Allemand"
-
-#: templates/base.html:264
-msgid "Notifications"
-msgstr "Notifications"
-
-#: templates/base.html:273
-msgid "Mark all as read"
-msgstr "Tout marquer comme lu"
-
-#: templates/base.html:274
-msgid "Clear all"
-msgstr "Tout effacer"
-
-#: templates/base.html:284 templates/profil.html:3 templates/profil.html:7
-msgid "Profile"
-msgstr "Profil"
-
-#: templates/base.html:286 templates/base.html:345 templates/profil.html:66
-msgid "Logout"
-msgstr "Déconnexion"
-
-#: templates/base.html:428
-msgid "Mark as read"
-msgstr "Marquer comme lu"
-
-# Dashboard
-#: templates/dashboard.html:26 templates/musteri_detay_modal.html:107
-#: templates/musteri_detay_raporu.html:113 templates/raporlar.html:100
-msgid "Total Appointments"
-msgstr "Total des Rendez-vous"
-
-#: templates/dashboard.html:43 templates/randevular.html:165
-#: templates/randevular.html:223
-msgid "This Week"
-msgstr "Cette Semaine"
-
-#: templates/dashboard.html:62 templates/dashboard.html:213
-#: templates/dashboard.html:451 templates/musteri_detay_modal.html:119
-#: templates/musteri_detay_modal.html:204
-#: templates/musteri_detay_raporu.html:129
-#: templates/musteri_detay_raporu.html:209 templates/randevu_detay.html:43
-#: templates/randevu_duzenle.html:259 templates/randevu_ekle.html:489
-#: templates/randevular.html:151 templates/randevular.html:208
-#: templates/randevular.html:323 templates/randevular.html:333
-#: templates/randevular.html:524 templates/takvim.html:315
-#: templates/takvim.html:448 templates/takvim.html:499 templates/todos.html:116
-#: templates/todos.html:159 templates/todos.html:225 templates/todos.html:296
-msgid "Pending"
-msgstr "En Attente"
-
-#: templates/dashboard.html:82 templates/dashboard.html:453
-#: templates/randevu_detay.html:45 templates/randevu_duzenle.html:261
-#: templates/randevu_ekle.html:490 templates/randevular.html:152
-#: templates/randevular.html:209 templates/randevular.html:325
-#: templates/randevular.html:334 templates/takvim.html:317
-#: templates/takvim.html:450 templates/takvim.html:500
-msgid "Confirmed"
-msgstr "Confirmé"
-
-# Dashboard translations
-#: templates/dashboard.html:104
-msgid "My Todos"
-msgstr "Mes Tâches"
-
-#: templates/dashboard.html:108 templates/dashboard.html:236
-msgid "View All"
-msgstr "Voir Tout"
-
-#: templates/dashboard.html:125 templates/dashboard.html:250
-msgid "Mark as Completed"
-msgstr "Marquer comme Terminé"
-
-#: templates/ayarlar/gorev_durumlar.html:61 templates/dashboard.html:172
-#: templates/dashboard.html:282 templates/randevular.html:354
-#: templates/todos.html:179
-msgid "Edit"
-msgstr "Modifier"
-
-#: templates/ayarlar/email.html:128 templates/ayarlar/gorev_durumlar.html:64
-#: templates/ayarlar/islemler.html:82 templates/ayarlar/sms.html:227
-#: templates/ayarlar/whatsapp.html:152 templates/dashboard.html:175
-#: templates/dashboard.html:285 templates/loglar.html:75
-#: templates/randevular.html:358 templates/todos.html:182
-msgid "Delete"
-msgstr "Supprimer"
-
-#: templates/dashboard.html:185
-msgid "No todos yet"
-msgstr "Aucune tâche pour le moment"
-
-#: templates/dashboard.html:187
-msgid "Create First Todo"
-msgstr "Créer la Première Tâche"
-
-#: templates/dashboard.html:199
-msgid "Todo Statistics"
-msgstr "Statistiques des Tâches"
-
-#: templates/dashboard.html:205
-msgid "Total"
-msgstr "Total"
-
-#: templates/dashboard.html:209 templates/dashboard.html:457
-#: templates/musteri_detay_modal.html:113
-#: templates/musteri_detay_modal.html:200
-#: templates/musteri_detay_raporu.html:121
-#: templates/musteri_detay_raporu.html:205 templates/randevu_detay.html:49
-#: templates/randevu_duzenle.html:265 templates/randevu_ekle.html:492
-#: templates/randevular.html:154 templates/randevular.html:211
-#: templates/randevular.html:329 templates/randevular.html:336
-#: templates/randevular.html:526 templates/takvim.html:319
-#: templates/takvim.html:452 templates/takvim.html:502 templates/todos.html:132
-#: templates/todos.html:165 templates/todos.html:235 templates/todos.html:298
-msgid "Completed"
-msgstr "Terminé"
-
-#: templates/dashboard.html:217 templates/randevular.html:525
-#: templates/todos.html:124 templates/todos.html:162 templates/todos.html:230
-#: templates/todos.html:297
-msgid "In Progress"
-msgstr "En Cours"
-
-# Dashboard translations
-#: templates/dashboard.html:232
-msgid "My Tasks"
-msgstr "Mes Tâches"
-
-#: templates/dashboard.html:295
-msgid "No tasks yet"
-msgstr "Aucune tâche pour le moment"
-
-#: templates/dashboard.html:297
-msgid "Create First Task"
-msgstr "Créer la Première Tâche"
-
-#: templates/dashboard.html:309
-msgid "Task Statistics"
-msgstr "Statistiques des Tâches"
-
-#: templates/dashboard.html:316
-msgid "Total Tasks"
-msgstr "Total Customers"
-
-#: templates/dashboard.html:338
-msgid "No task status defined yet"
-msgstr ""
-
-#: templates/dashboard.html:351
-msgid "Quick Add Todo"
-msgstr "Ajout Rapide de Tâche"
-
-#: templates/dashboard.html:357 templates/dashboard.html:422
-#: templates/gorevler.html:2409 templates/randevular.html:410
-#: templates/randevular.html:500 templates/todos.html:269
-msgid "Title"
-msgstr "Titre"
-
-#: templates/dashboard.html:361 templates/randevular.html:512
-#: templates/todos.html:281
-msgid "Priority"
-msgstr "Priorité"
-
-#: templates/dashboard.html:363 templates/randevular.html:514
-#: templates/todos.html:283
-msgid "Low"
-msgstr "Faible"
-
-#: templates/dashboard.html:364 templates/randevular.html:515
-#: templates/todos.html:284
-msgid "Medium"
-msgstr "Moyen"
-
-#: templates/dashboard.html:365 templates/randevular.html:516
-#: templates/todos.html:285
-msgid "High"
-msgstr "Élevé"
-
-#: templates/dashboard.html:369 templates/randevular.html:535
-#: templates/todos.html:212 templates/todos.html:307
-msgid "Due Date"
-msgstr "Date d'Échéance"
-
-#: templates/ayarlar/defter.html:306 templates/ayarlar/firmalar.html:119
-#: templates/ayarlar/gorev_durumlar.html:142
-#: templates/ayarlar/kullanici_duzenle.html:141
-#: templates/ayarlar/kullanici_duzenle.html:236
-#: templates/ayarlar/kullanicilar.html:189 templates/dashboard.html:374
-#: templates/gorevler.html:2478 templates/login.html:70
-#: templates/login.html:118 templates/loglar.html:77
-#: templates/randevu_duzenle.html:208 templates/randevu_ekle.html:465
-#: templates/randevular.html:479 templates/randevular.html:548
-#: templates/rapor_musteriler.html:1638 templates/todos.html:320
-msgid "Cancel"
-msgstr "Annuler"
-
-#: templates/dashboard.html:404
-msgid "Add Todo"
-msgstr "Ajouter Tâche"
-
-#: templates/dashboard.html:414
-msgid "Recent Appointments"
-msgstr "Rendez-vous Récents"
-
-#: templates/dashboard.html:423 templates/loglar.html:85
-#: templates/randevular.html:277 templates/takvim.html:335
-#: templates/takvim.html:468
-msgid "Customer"
-msgstr "Client"
-
-#: templates/ayarlar/defter.html:178 templates/ayarlar/whatsapp.html:187
-#: templates/dashboard.html:424 templates/gorevler.html:2418
-#: templates/loglar.html:123 templates/musteri_detay_modal.html:173
-#: templates/musteri_detay_raporu.html:182 templates/randevu_detay.html:30
-#: templates/randevu_duzenle.html:26 templates/randevu_ekle.html:122
-#: templates/randevular.html:279 templates/randevular.html:419
-msgid "Date"
-msgstr "Date"
-
-#: templates/ayarlar/defter.html:128 templates/ayarlar/defter.html:177
-#: templates/ayarlar/whatsapp.html:189 templates/dashboard.html:425
-#: templates/musteri_detay_modal.html:175
-#: templates/musteri_detay_raporu.html:184 templates/randevular.html:187
-#: templates/randevular.html:281 templates/raporlar.html:78
-#: templates/takvim.html:341 templates/takvim.html:474
-msgid "Book"
-msgstr "Carnet"
-
-#: templates/ayarlar/defter.html:225
-#: templates/ayarlar/kullanici_duzenle.html:175 templates/dashboard.html:426
-#: templates/musteri_detay_modal.html:176
-#: templates/musteri_detay_raporu.html:185 templates/musteriler_import.html:220
-#: templates/musteriler_import.html:349 templates/profil.html:39
-#: templates/randevu_detay.html:40 templates/randevu_duzenle.html:256
-#: templates/randevular.html:205 templates/randevular.html:282
-#: templates/randevular.html:522 templates/rapor_musteriler.html:193
-#: templates/raporlar.html:176 templates/takvim.html:337
-#: templates/takvim.html:470 templates/todos.html:294
-msgid "Status"
-msgstr "Statut"
-
-#: templates/ayarlar/defter.html:132 templates/ayarlar/defter.html:226
-#: templates/ayarlar/firmalar.html:56 templates/ayarlar/gorev_durumlar.html:31
-#: templates/ayarlar/kullanicilar.html:103
-#: templates/ayarlar/referanslar.html:48 templates/dashboard.html:427
-#: templates/randevu_detay.html:103 templates/randevular.html:284
-msgid "Actions"
-msgstr "Actions"
-
-#: templates/dashboard.html:438 templates/randevu_detay.html:75
-#: templates/randevular.html:301
-msgid "No Customer"
-msgstr "Aucun Client"
-
-#: templates/dashboard.html:455 templates/musteri_detay_modal.html:125
-#: templates/musteri_detay_modal.html:202
-#: templates/musteri_detay_raporu.html:137
-#: templates/musteri_detay_raporu.html:207 templates/randevu_detay.html:47
-#: templates/randevu_duzenle.html:263 templates/randevu_ekle.html:491
-#: templates/randevular.html:153 templates/randevular.html:210
-#: templates/randevular.html:327 templates/randevular.html:335
-#: templates/takvim.html:321 templates/takvim.html:454
-#: templates/takvim.html:501
-msgid "Cancelled"
-msgstr "Annulé"
-
-#: templates/dashboard.html:473 templates/randevular.html:373
-msgid "No appointments found"
-msgstr "Aucun rendez-vous trouvé"
-
-#: templates/dashboard.html:474 templates/randevular.html:374
-msgid "Use the button above to create your first appointment."
-msgstr "Utilisez le bouton ci-dessus pour créer votre premier rendez-vous."
-
-#: templates/dashboard.html:477 templates/randevu_ekle.html:70
-#: templates/randevular.html:377
-msgid "Create New Appointment"
-msgstr "Créer un Nouveau Rendez-vous"
-
-#: templates/gorev_raporlar.html:102
-msgid "Başlangıç Tarihi"
-msgstr ""
-
-#: templates/gorev_raporlar.html:106 templates/gorev_raporlar.html:260
-#: templates/gorevler.html:2062 templates/gorevler.html:2215
-#: templates/gorevler.html:3871 templates/gorevler.html:4583
-msgid "Bitiş Tarihi"
-msgstr ""
-
-#: templates/gorev_raporlar.html:110 templates/gorev_raporlar.html:256
-#: templates/gorevler.html:1743 templates/gorevler.html:2049
-#: templates/gorevler.html:2167 templates/gorevler.html:3805
-#: templates/gorevler.html:4572
-msgid "Durum"
-msgstr "Statut"
-
-#: templates/gorev_raporlar.html:112 templates/gorev_raporlar.html:118
-#: templates/gorev_raporlar.html:124 templates/gorev_raporlar.html:133
-#: templates/gorevler.html:1745 templates/gorevler.html:1755
-msgid "Tümü"
-msgstr "Tous"
-
-#: templates/gorev_raporlar.html:116 templates/gorev_raporlar.html:258
-msgid "Kullanıcı"
-msgstr "Utilisateur"
-
-#: templates/gorev_raporlar.html:122 templates/gorev_raporlar.html:257
-#: templates/gorevler.html:1753 templates/gorevler.html:2039
-#: templates/gorevler.html:2157 templates/gorevler.html:3795
-#: templates/gorevler.html:4562
-msgid "Öncelik"
-msgstr "Priorité"
-
-#: templates/gorev_raporlar.html:125 templates/gorevler.html:1758
-#: templates/gorevler.html:2041 templates/gorevler.html:2159
-#: templates/gorevler.html:3797 templates/gorevler.html:4564
-msgid "Düşük"
-msgstr "Faible"
-
-#: templates/gorev_raporlar.html:126 templates/gorevler.html:1757
-#: templates/gorevler.html:2042 templates/gorevler.html:2160
-#: templates/gorevler.html:3798 templates/gorevler.html:4565
-msgid "Orta"
-msgstr "Moyen"
-
-#: templates/gorev_raporlar.html:127 templates/gorevler.html:1756
-#: templates/gorevler.html:2043 templates/gorevler.html:2161
-#: templates/gorevler.html:3799 templates/gorevler.html:4566
-msgid "Yüksek"
-msgstr "Élevé"
-
-#: templates/gorev_raporlar.html:131
-msgid "Tip"
-msgstr "VIP"
-
-#: templates/gorev_raporlar.html:134
-msgid "Kişisel"
-msgstr ""
-
-#: templates/gorev_raporlar.html:135 templates/gorevler.html:2618
-#: templates/gorevler.html:4278
-msgid "Randevu"
-msgstr "Rendez-vous"
-
-#: templates/gorev_raporlar.html:152 templates/gorevler.html:1696
-msgid "Toplam Görev"
-msgstr "Total des Tâches"
-
-#: templates/gorev_raporlar.html:158
-msgid "Tamamlanan"
-msgstr "Terminé"
-
-#: templates/gorev_raporlar.html:164
-msgid "Bekleyen"
-msgstr "En attente"
-
-#: templates/gorev_raporlar.html:170
-msgid "Tamamlanma Oranı"
-msgstr ""
-
-#: templates/gorev_raporlar.html:180
-msgid "Durum Dağılımı"
-msgstr ""
-
-#: templates/gorev_raporlar.html:192
-msgid "Öncelik Dağılımı"
-msgstr ""
-
-#: templates/gorev_raporlar.html:207
-msgid "Kullanıcı Bazlı Dağılım"
-msgstr "Répartition par Utilisateur"
-
-#: templates/gorev_raporlar.html:219
-msgid "Kullanıcı Tamamlanan Görevler"
-msgstr "Tâches Terminées par Utilisateur"
-
-#: templates/gorev_raporlar.html:234
-msgid "Aylık Trend"
-msgstr ""
-
-#: templates/gorev_raporlar.html:248
-msgid "Detaylı Görev Listesi"
-msgstr ""
-
-#: templates/gorev_raporlar.html:255
-msgid "Görev"
-msgstr "Tâche"
-
-#: templates/gorev_raporlar.html:259
-msgid "Oluşturma Tarihi"
-msgstr ""
-
-#: templates/gorev_raporlar.html:261
-msgid "Müşteri"
-msgstr ""
-
-#: templates/gorev_raporlar.html:267
-msgid "Rapor yükleniyor..."
-msgstr ""
-
-#: templates/gorevler.html:3
-msgid "Görevler Listesi"
-msgstr "Liste des Tâches"
-
-#: templates/gorevler.html:1677 templates/gorevler.html:3777
-msgid "Yeni Görev"
-msgstr "Nouvelle tâche"
-
-#: templates/gorevler.html:1681
-msgid "Yenile"
-msgstr "Actualiser"
-
-#: templates/gorevler.html:1729
-msgid "Filtreler"
-msgstr "Filtres"
-
-#: templates/gorevler.html:1735
-msgid "Arama"
-msgstr "Recherche"
-
-#: templates/gorevler.html:1738
-msgid "Görev ara..."
-msgstr "Rechercher une tâche..."
-
-#: templates/gorevler.html:1763 templates/gorevler.html:5140
-msgid "Tarih"
-msgstr "Date"
-
-#: templates/gorevler.html:1769
 msgid "Temizle"
 msgstr "Effacer"
 
-#: templates/gorevler.html:1772
 msgid "Filtrele"
 msgstr "Filtres"
 
-#: templates/gorevler.html:1789
 msgid "Yaklaşan Hatırlatmalar"
 msgstr "Rappels à Venir"
 
-#: templates/gorevler.html:1814
 msgid "Görünüm Seçenekleri"
 msgstr "Options d'Affichage"
 
-#: templates/gorevler.html:1819
 msgid "Kart Görünümü"
 msgstr ""
 
-#: templates/gorevler.html:1820
 msgid "Kartlar"
 msgstr "Cartes"
 
-#: templates/gorevler.html:1822
 msgid "Liste Görünümü"
 msgstr ""
 
-#: templates/gorevler.html:1823
 msgid "Liste"
 msgstr "Fermer"
 
-#: templates/gorevler.html:1825 templates/gorevler.html:1997
 msgid "Takvim Görünümü"
 msgstr "Vue Calendrier"
 
-#: templates/gorevler.html:1826
 msgid "Takvim"
 msgstr "Heure"
 
-#: templates/gorevler.html:1862
-msgid "Bitiş"
-msgstr "Fin"
-
-#: templates/gorevler.html:1871
 msgid "Hatırlatma"
 msgstr "Rappel"
 
-#: templates/gorevler.html:1879
 msgid "Oluşturulma"
 msgstr "Créé le"
 
-#: templates/gorevler.html:1886 templates/gorevler.html:1887
-#: templates/gorevler.html:1932
-msgid "Tamamla"
-msgstr "Terminer"
-
-#: templates/gorevler.html:1891 templates/gorevler.html:1965
-msgid "Randevu Defterine Taşı"
-msgstr "Déplacer vers l'agenda"
-
-#: templates/gorevler.html:1894 templates/gorevler.html:1968
-msgid "Düzenle"
-msgstr "Modifier"
-
-#: templates/gorevler.html:1897 templates/gorevler.html:1971
-#: templates/gorevler.html:2621 templates/gorevler.html:4281
-msgid "Sil"
-msgstr "Supprimer"
-
-#: templates/gorevler.html:1911 templates/gorevler.html:1985
-msgid "Görev bulunamadı"
-msgstr "Aucune tâche trouvée"
-
-#: templates/gorevler.html:1912 templates/gorevler.html:1986
-msgid "Henüz size atanmış görev bulunmuyor."
-msgstr ""
-
-#: templates/gorevler.html:2019 templates/gorevler.html:2137
-#: templates/gorevler.html:2615 templates/gorevler.html:4275
-#: templates/gorevler.html:4542
-msgid "Görev Düzenle"
-msgstr "Modifier la tâche"
-
-#: templates/gorevler.html:2027 templates/gorevler.html:2145
-#: templates/gorevler.html:3783 templates/gorevler.html:4550
-msgid "Başlık"
-msgstr "Retour"
-
-#: templates/gorevler.html:2032 templates/gorevler.html:2150
-#: templates/gorevler.html:3788 templates/gorevler.html:4555
-#: templates/gorevler.html:5161 templates/todos.html:274
-msgid "Açıklama"
-msgstr "Description"
-
-#: templates/gorevler.html:2051
-msgid "Beklemede"
-msgstr "En Attente"
-
-#: templates/gorevler.html:2052
-msgid "Devam Ediyor"
-msgstr "En Cours"
-
-#: templates/gorevler.html:2053
 msgid "Tamamlandı"
 msgstr "Terminé"
 
-#: templates/gorevler.html:2068 templates/gorevler.html:2221
-#: templates/gorevler.html:3877 templates/gorevler.html:4592
-#: templates/todos.html:313
+msgid "Tamamla"
+msgstr "Terminer"
+
+msgid "Randevu Defterine Taşı"
+msgstr "Déplacer vers l'agenda"
+
+msgid "Düzenle"
+msgstr "Modifier"
+
+msgid "Sil"
+msgstr "Supprimer"
+
+msgid "Görev bulunamadı"
+msgstr "Aucune tâche trouvée"
+
+msgid "Henüz size atanmış görev bulunmuyor."
+msgstr ""
+
+msgid "Görev Düzenle"
+msgstr "Modifier la tâche"
+
+msgid "Başlık"
+msgstr "Retour"
+
+msgid "Açıklama"
+msgstr "Description"
+
+msgid "Beklemede"
+msgstr "En Attente"
+
+msgid "Devam Ediyor"
+msgstr "En Cours"
+
 msgid "Hatırlatma Tarihi"
 msgstr "Date de Rappel"
 
-#: templates/gorevler.html:2076 templates/gorevler.html:2229
-#: templates/gorevler.html:3922 templates/gorevler.html:4662
-#: templates/gorevler.html:5167
 msgid "İptal"
 msgstr ""
 
-#: templates/gorevler.html:2077 templates/gorevler.html:2230
-#: templates/gorevler.html:3923
 msgid "Kaydet"
 msgstr ""
 
-#: templates/gorevler.html:2125 templates/gorevler.html:3807
-#: templates/gorevler.html:4574 templates/gorevler.html:5403
 msgid "Durum Seçin"
 msgstr ""
 
-#: templates/gorevler.html:2178 templates/gorevler.html:3886
-#: templates/gorevler.html:4627
 msgid "Müşteri Bilgileri"
 msgstr ""
 
-#: templates/gorevler.html:2184 templates/gorevler.html:3892
-#: templates/gorevler.html:4633 templates/gorevler.html:5102
 msgid "Müşteri Adı"
 msgstr ""
 
-#: templates/gorevler.html:2190 templates/gorevler.html:3899
-#: templates/gorevler.html:4639 templates/gorevler.html:5108
 msgid "Müşteri Soyadı"
 msgstr ""
 
-#: templates/gorevler.html:2198 templates/gorevler.html:3907
-#: templates/gorevler.html:4647 templates/gorevler.html:5117
 msgid "Telefon"
 msgstr ""
 
-#: templates/gorevler.html:2204 templates/gorevler.html:3913
-#: templates/gorevler.html:4653 templates/gorevler.html:5123
 msgid "E-posta"
 msgstr "Exporter"
 
-#: templates/gorevler.html:2278
 msgid "Başlık gerekli!"
 msgstr ""
 
-#: templates/gorevler.html:2306
 msgid "Bu görevi silmek istediğinizden emin misiniz?"
 msgstr ""
 
-#: templates/gorevler.html:2370 templates/gorevler.html:2435
-#: templates/gorevler.html:2521 templates/randevular.html:436
-#: templates/randevular.html:658 templates/randevular.html:682
 msgid "Select date and book first"
 msgstr "Sélectionnez d'abord la date et le carnet"
 
-#: templates/gorevler.html:2392
 msgid "Create Appointment from Task"
 msgstr "Create Appointment"
 
-#: templates/ayarlar/index.html:35 templates/ayarlar/islemler.html:28
-#: templates/ayarlar/islemler.html:62 templates/gorevler.html:2400
-#: templates/randevu_ekle.html:90 templates/randevular.html:397
-msgid "Appointment Book"
-msgstr "Carnet de Rendez-vous"
-
-#: templates/gorevler.html:2402 templates/gorevler.html:2500
-#: templates/randevular.html:399 templates/takvim.html:198
-msgid "Select Book"
-msgstr "Sélectionner un Carnet"
-
-#: templates/gorevler.html:2424 templates/randevu_detay.html:37
-#: templates/randevular.html:280 templates/randevular.html:425
-msgid "Duration"
-msgstr "Durée"
-
-#: templates/gorevler.html:2424 templates/randevu_detay.html:38
-#: templates/randevu_duzenle.html:61 templates/randevu_duzenle.html:65
-#: templates/randevu_duzenle.html:524 templates/randevu_duzenle.html:529
-#: templates/randevu_ekle.html:1144 templates/randevular.html:425
 msgid "minutes"
 msgstr "minutes"
 
-#: templates/gorevler.html:2433 templates/randevular.html:434
 msgid "Available Times"
 msgstr "Heures Disponibles"
 
-#: templates/ayarlar/whatsapp.html:186 templates/gorevler.html:2445
-#: templates/randevu_ekle.html:286 templates/randevular.html:446
-msgid "Customer Name"
-msgstr "Nom du Client"
-
-#: templates/gorevler.html:2451 templates/randevu_ekle.html:299
-#: templates/randevular.html:452
-msgid "Customer Surname"
-msgstr "Prénom du Client"
-
-# Additional translations
-#: templates/ayarlar/firmalar.html:31 templates/ayarlar/firmalar.html:110
-#: templates/gorevler.html:2460 templates/musteri_detay_modal.html:45
-#: templates/musteri_detay_raporu.html:51 templates/musteriler_import.html:218
-#: templates/musteriler_import.html:684 templates/profil.html:35
-#: templates/randevu_detay.html:81 templates/randevu_detay.html:84
-#: templates/randevu_duzenle.html:106 templates/randevu_duzenle.html:232
-#: templates/randevular.html:278 templates/randevular.html:461
-#: templates/rapor_musteriler.html:303 templates/rapor_musteriler.html:1570
-#: templates/takvim.html:357 templates/takvim.html:478
-msgid "Phone"
-msgstr "Téléphone"
-
-#: templates/ayarlar/firmalar.html:35 templates/ayarlar/firmalar.html:55
-#: templates/ayarlar/firmalar.html:114
-#: templates/ayarlar/kullanici_duzenle.html:30
-#: templates/ayarlar/kullanici_duzenle.html:167
-#: templates/ayarlar/kullanicilar.html:30 templates/gorevler.html:2466
-#: templates/musteri_detay_modal.html:49 templates/musteri_detay_raporu.html:55
-#: templates/musteriler_import.html:219 templates/musteriler_import.html:685
-#: templates/profil.html:31 templates/randevu_detay.html:90
-#: templates/randevu_detay.html:93 templates/randevu_duzenle.html:161
-#: templates/randevu_duzenle.html:238 templates/randevu_ekle.html:362
-#: templates/randevular.html:467 templates/rapor_musteriler.html:304
-#: templates/rapor_musteriler.html:1576 templates/takvim.html:358
-#: templates/takvim.html:479
-msgid "Email"
-msgstr "E-mail"
-
-#: templates/ayarlar/defter.html:107 templates/ayarlar/defter.html:180
-#: templates/ayarlar/defter.html:224 templates/ayarlar/defter.html:293
-#: templates/ayarlar/gorev_durumlar.html:28
-#: templates/ayarlar/gorev_durumlar.html:115 templates/gorevler.html:2473
-#: templates/randevu_detay.html:57 templates/randevu_ekle.html:243
-#: templates/randevular.html:474 templates/randevular.html:505
-#: templates/takvim.html:359 templates/takvim.html:480
-msgid "Description"
-msgstr "Description"
-
-#: templates/gorevler.html:2479 templates/randevu_ekle.html:468
-#: templates/randevular.html:480
 msgid "Create Appointment"
 msgstr "Create Appointment"
 
-#: templates/gorevler.html:2560
 msgid "No available times for this date"
 msgstr "No available time slots for this date. Please choose another date."
 
-#: templates/gorevler.html:2566
 msgid "Error loading times"
 msgstr "Erreur lors du chargement des données client"
 
-#: templates/gorevler.html:3813 templates/gorevler.html:4602
 msgid "Atanan Kullanıcı"
 msgstr ""
 
-#: templates/gorevler.html:3815 templates/gorevler.html:4604
-#: templates/gorevler.html:5683
 msgid "Kullanıcı Seçin"
 msgstr ""
 
-#: templates/gorevler.html:3824 templates/gorevler.html:4613
-#: templates/gorevler.html:5132
 msgid "Randevu Defteri"
 msgstr ""
 
-#: templates/gorevler.html:3826 templates/gorevler.html:4615
-#: templates/gorevler.html:5134 templates/gorevler.html:5198
-#: templates/gorevler.html:5716
 msgid "Defter Seçin"
 msgstr ""
 
-#: templates/gorevler.html:3832
 msgid "Randevu Tarihi"
 msgstr ""
 
-#: templates/gorevler.html:3842
 msgid "Randevu Süresi (Dakika)"
 msgstr ""
 
-#: templates/gorevler.html:3848
 msgid "Randevu Saati"
 msgstr ""
 
-#: templates/gorevler.html:3857 templates/gorevler.html:5152
 msgid "Müsait Saatler"
 msgstr ""
 
-#: templates/gorevler.html:3860 templates/gorevler.html:5155
 msgid "Önce randevu defteri ve tarih seçin"
 msgstr ""
 
-#: templates/gorevler.html:3893
 msgid "Müşteri adı yazın..."
 msgstr ""
 
-#: templates/gorevler.html:4663
 msgid "Güncelle"
 msgstr "Annulé"
 
-#: templates/gorevler.html:4725
 msgid "Görev başarıyla güncellendi!"
 msgstr ""
 
-#: templates/gorevler.html:4732
-msgid "Görev güncellenirken hata:"
+msgid "Görev güncellenirken hata: "
 msgstr ""
 
-#: templates/gorevler.html:4737
 msgid "Görev güncellenirken hata oluştu"
 msgstr ""
 
-#: templates/gorevler.html:5092
 msgid "Görevden Randevu Oluştur"
 msgstr ""
 
-#: templates/gorevler.html:5147
+msgid "Tarih"
+msgstr "Date"
+
 msgid "Süre (Dakika)"
 msgstr ""
 
-#: templates/gorevler.html:5168
 msgid "Randevu Oluştur"
 msgstr ""
 
-#: templates/gorevler.html:5252 templates/gorevler.html:5797
 msgid "Yükleniyor..."
 msgstr ""
 
-#: templates/gorevler.html:5269 templates/gorevler.html:5812
 msgid "Slotlar yüklenirken hata oluştu"
 msgstr ""
 
-#: templates/gorevler.html:5280
 msgid "Slot verileri geçersiz"
 msgstr ""
 
-#: templates/gorevler.html:5285 templates/gorevler.html:5822
 msgid "Bu tarih için müsait slot bulunmuyor"
 msgstr ""
 
-#: templates/gorevler.html:5342
 msgid "Lütfen bir saat seçin"
 msgstr ""
 
-#: templates/gorevler.html:5371
 msgid "Randevu başarıyla oluşturuldu!"
 msgstr ""
 
-#: templates/gorevler.html:5378
-msgid "Randevu oluşturulurken hata:"
+msgid "Randevu oluşturulurken hata: "
 msgstr ""
 
-#: templates/gorevler.html:5383
 msgid "Randevu kaydedilirken hata oluştu"
 msgstr ""
 
 # Login
-#: templates/login.html:3 templates/login.html:13 templates/login.html:37
 msgid "Login"
 msgstr "Connexion"
 
-#: templates/login.html:14
 msgid "Appointment Management System"
 msgstr "Système de Gestion des Rendez-vous"
 
-#: templates/ayarlar/email.html:67 templates/ayarlar/email.html:155
-#: templates/ayarlar/kullanici_duzenle.html:24
-#: templates/ayarlar/kullanici_duzenle.html:159
-#: templates/ayarlar/kullanicilar.html:18
-#: templates/ayarlar/kullanicilar.html:99 templates/ayarlar/sms.html:91
-#: templates/ayarlar/sms.html:139 templates/ayarlar/sms.html:276
-#: templates/ayarlar/sms.html:318 templates/login.html:19
-#: templates/login.html:101 templates/profil.html:27
 msgid "Username"
 msgstr "Nom d'utilisateur"
 
-#: templates/ayarlar/email.html:74 templates/ayarlar/email.html:162
-#: templates/ayarlar/kullanici_duzenle.html:69 templates/ayarlar/sms.html:98
-#: templates/ayarlar/sms.html:146 templates/ayarlar/sms.html:282
-#: templates/ayarlar/sms.html:324 templates/login.html:27
 msgid "Password"
 msgstr "Mot de passe"
 
 # User edit reset password
-#: templates/login.html:45
 msgid "Forgot Password?"
 msgstr "Mot de passe oublié ?"
 
-#: templates/login.html:53
 msgid ""
-"This user is already logged in. Do you want to close the existing session"
-" and login again?"
+"This user is already logged in. Do you want to close the existing\n"
+"                                session and login again?"
 msgstr ""
-"This user is already logged in. Do you want to close the existing session"
-" and login again?"
+"This user is already logged in. Do"
+" you want to close the existing "
+"session and login again?"
 
-#: templates/login.html:66
 msgid "Close Session and Login"
 msgstr "Fermer la session et se connecter"
 
 # User edit reset password
-#: templates/login.html:89
-#, fuzzy
 msgid "Forgot Password"
 msgstr "Mot de passe oublié"
 
-#: templates/login.html:97
 msgid ""
-"Enter your username and email address. We will send you a password reset "
-"link."
+"Enter your username and email address."
+" We will send you a password "
+"reset link."
 msgstr ""
 
-#: templates/login.html:109
-#, fuzzy
 msgid "Email Address"
 msgstr "Adresse e-mail valide"
 
-#: templates/login.html:122
-#, fuzzy
 msgid "Send Reset Link"
 msgstr "Utilise l'API REST"
 
-#: templates/loglar.html:3
+# Messages de Changement de Mot de Passe
+msgid "Eski şifreniz hatalı!"
+msgstr "Votre ancien mot de passe est incorrect!"
+
+msgid "Yeni şifreler eşleşmiyor!"
+msgstr "Les nouveaux mots de passe ne correspondent pas!"
+
+msgid "Şifre en az 6 karakter olmalıdır!"
+msgstr "Le mot de passe doit contenir au moins 6 caractères!"
+
+msgid "Şifreniz başarıyla değiştirildi. Lütfen yeni şifrenizle giriş yapın."
+msgstr ""
+"Votre mot de passe a été changé"
+" avec succès. Veuillez vous connecter "
+"avec votre nouveau mot de passe."
+
 msgid "User Logs"
 msgstr "Journaux d'Activité Utilisateur"
 
-#: templates/loglar.html:37
 msgid "User Activity Logs"
 msgstr "Journaux d'Activité Utilisateur"
 
-#: templates/loglar.html:42 templates/rapor_musteriler.html:45
-#: templates/raporlar.html:52
 msgid "Export"
 msgstr "Exporter"
 
-#: templates/loglar.html:45 templates/rapor_musteriler.html:48
-#: templates/raporlar.html:55
 msgid "CSV Format"
 msgstr "Format CSV"
 
-#: templates/loglar.html:46 templates/rapor_musteriler.html:49
-#: templates/raporlar.html:56
 msgid "Excel Format"
 msgstr "Format Excel"
 
-#: templates/loglar.html:47 templates/rapor_musteriler.html:50
-#: templates/raporlar.html:57
 msgid "PDF Format"
 msgstr "Format PDF"
 
-#: templates/loglar.html:59 templates/loglar.html:86 templates/loglar.html:124
 msgid "User"
 msgstr "Utilisateur"
 
-#: templates/loglar.html:61 templates/randevular.html:157
-#: templates/randevular.html:243
-msgid "All Users"
-msgstr "Tous les Utilisateurs"
-
-#: templates/loglar.html:70
 msgid "Action Type"
 msgstr "Type d'Action"
 
-#: templates/loglar.html:72
 msgid "All Actions"
 msgstr "Toutes les Actions"
 
-#: templates/loglar.html:73
 msgid "Create"
 msgstr "Créer"
 
-#: templates/ayarlar/email.html:124 templates/ayarlar/firmalar.html:120
-#: templates/ayarlar/kullanici_duzenle.html:143 templates/ayarlar/sms.html:219
-#: templates/ayarlar/whatsapp.html:157 templates/loglar.html:74
-#: templates/randevu_duzenle.html:210
 msgid "Update"
 msgstr "Mettre à jour"
 
-#: templates/loglar.html:76 templates/randevular.html:344
 msgid "View"
 msgstr "Voir"
 
-#: templates/loglar.html:81 templates/loglar.html:126
 msgid "Table"
 msgstr "Table"
 
-#: templates/loglar.html:83
 msgid "All Tables"
 msgstr "Toutes les Tables"
 
-#: templates/loglar.html:84
 msgid "Appointment"
 msgstr "Rendez-vous"
 
-#: templates/loglar.html:87
 msgid "System"
 msgstr "Système"
 
-#: templates/ayarlar/defter.html:91 templates/loglar.html:91
-#: templates/randevular.html:169 templates/randevular.html:229
-#: templates/raporlar.html:66
-msgid "Start Date"
-msgstr "Date de Début"
-
-#: templates/ayarlar/defter.html:95 templates/loglar.html:96
-#: templates/randevular.html:170 templates/randevular.html:233
-#: templates/raporlar.html:70
-msgid "End Date"
-msgstr "Date de Fin"
-
-#: templates/loglar.html:125
 msgid "Action"
 msgstr "Action"
 
-#: templates/loglar.html:127
 msgid "Record Info"
 msgstr "Informations d'Enregistrement"
 
-#: templates/loglar.html:128
 msgid "Detail"
 msgstr "Détail"
 
-#: templates/loglar.html:129
 msgid "IP Address"
 msgstr "Adresse IP"
 
-#: templates/loglar.html:130
 msgid "Data"
 msgstr "Données"
 
-#: templates/loglar.html:198
 msgid "Previous"
 msgstr "Précédent"
 
-#: templates/loglar.html:210 templates/musteriler_import.html:114
-#: templates/musteriler_import.html:150 templates/musteriler_import.html:235
 msgid "Next"
 msgstr "Suivant"
 
-#: templates/loglar.html:220
 msgid "No logs found"
 msgstr "Aucun log trouvé"
 
-#: templates/loglar.html:221
 msgid "Try adjusting your filters"
 msgstr "Essayez d'ajuster vos filtres"
 
-#: templates/loglar.html:232
 msgid "Log Data"
 msgstr "Données de Journal"
 
-#: templates/loglar.html:586
 msgid "Old Data"
 msgstr "Anciennes Données"
 
-#: templates/loglar.html:590
 msgid "New Data"
 msgstr "Nouvelles Données"
 
-#: templates/loglar.html:598
 msgid "Error loading log data"
 msgstr "Erreur lors du chargement des données de journal"
 
-#: templates/musteri_detay_modal.html:10 templates/musteri_detay_raporu.html:3
-#: templates/musteri_detay_raporu.html:16 templates/rapor_musteriler.html:279
-#: templates/rapor_musteriler.html:282 templates/rapor_musteriler.html:359
 msgid "Customer Detail Report"
 msgstr "Rapport Détaillé du Client"
 
-#: templates/musteri_detay_modal.html:11 templates/musteri_detay_raporu.html:17
 msgid "Detailed analysis for"
 msgstr "Analyse détaillée pour"
 
-#: templates/musteri_detay_modal.html:15 templates/rapor_musteriler.html:1545
 msgid "Edit Customer"
 msgstr "Modifier le Client"
 
-#: templates/musteri_detay_modal.html:18 templates/musteri_detay_raporu.html:24
 msgid "PDF Report"
 msgstr "PDF Report"
 
-#: templates/musteri_detay_modal.html:21 templates/musteri_detay_raporu.html:27
 msgid "Excel Report"
 msgstr "Rapport Excel"
 
-#: templates/musteri_detay_modal.html:34 templates/musteri_detay_raporu.html:40
-#: templates/randevu_detay.html:65 templates/randevu_duzenle.html:221
-#: templates/randevu_ekle.html:260
-msgid "Customer Information"
-msgstr "Information"
-
-#: templates/ayarlar/firmalar.html:53 templates/ayarlar/referanslar.html:47
-#: templates/musteri_detay_modal.html:41 templates/musteri_detay_raporu.html:47
 msgid "Name"
 msgstr "Nom"
 
-#: templates/musteri_detay_modal.html:46 templates/musteri_detay_modal.html:50
-#: templates/musteri_detay_modal.html:54 templates/musteri_detay_modal.html:60
-#: templates/musteri_detay_modal.html:64 templates/musteri_detay_modal.html:72
-#: templates/musteri_detay_raporu.html:52
-#: templates/musteri_detay_raporu.html:56
-#: templates/musteri_detay_raporu.html:60
-#: templates/musteri_detay_raporu.html:66
-#: templates/musteri_detay_raporu.html:74
-#: templates/musteri_detay_raporu.html:78
 msgid "Not specified"
 msgstr "Non spécifié"
 
-#: templates/musteri_detay_modal.html:53 templates/musteri_detay_raporu.html:59
-#: templates/randevu_duzenle.html:186 templates/rapor_musteriler.html:1585
-#, fuzzy
 msgid "Age"
 msgstr "Âge Minimum"
 
-#: templates/musteri_detay_modal.html:59 templates/musteri_detay_raporu.html:65
-#: templates/musteriler_import.html:686 templates/randevu_duzenle.html:194
-#: templates/randevu_ekle.html:383 templates/rapor_musteriler.html:234
-#: templates/rapor_musteriler.html:1591
-msgid "Gender"
-msgstr "Sexe"
-
-#: templates/musteri_detay_modal.html:63 templates/musteri_detay_raporu.html:77
-#: templates/musteriler_import.html:687 templates/randevu_duzenle.html:176
-#: templates/randevu_ekle.html:393 templates/rapor_musteriler.html:242
-#: templates/rapor_musteriler.html:1601
-msgid "Birth Date"
-msgstr "Date de Naissance"
-
-#: templates/musteri_detay_modal.html:67 templates/musteri_detay_raporu.html:69
-#: templates/rapor_musteriler.html:253 templates/rapor_musteriler.html:1610
 msgid "City"
 msgstr "Ville"
 
-#: templates/musteri_detay_modal.html:71 templates/musteri_detay_raporu.html:73
-#: templates/randevu_ekle.html:444 templates/rapor_musteriler.html:262
-#: templates/rapor_musteriler.html:1621
-msgid "District"
-msgstr "Quartier"
-
-#: templates/ayarlar/firmalar.html:27 templates/ayarlar/firmalar.html:106
-#: templates/musteri_detay_modal.html:78 templates/musteri_detay_raporu.html:86
-#: templates/musteriler_import.html:688 templates/randevu_ekle.html:452
-#: templates/rapor_musteriler.html:1628
-msgid "Address"
-msgstr "Adresse"
-
-#: templates/musteri_detay_modal.html:84 templates/musteri_detay_modal.html:178
-#: templates/musteri_detay_raporu.html:96
-#: templates/musteri_detay_raporu.html:187 templates/musteriler_import.html:689
-#: templates/randevu_duzenle.html:80 templates/rapor_musteriler.html:1633
-msgid "Notes"
-msgstr "Notes"
-
-#: templates/musteri_detay_modal.html:99
 msgid "Appointment Statistics"
 msgstr "Statistiques de Rendez-vous"
 
-#: templates/musteri_detay_modal.html:139
-#: templates/musteri_detay_raporu.html:148 templates/rapor_musteriler.html:720
 msgid "Monthly Appointment Distribution"
 msgstr "Distribution Mensuelle des Rendez-vous"
 
-#: templates/musteri_detay_modal.html:149
-#: templates/musteri_detay_raporu.html:158 templates/rapor_musteriler.html:764
 msgid "Appointment Book Distribution"
 msgstr "Distribution des Carnets de Rendez-vous"
 
-#: templates/musteri_detay_modal.html:164
-#: templates/musteri_detay_raporu.html:173
 msgid "Appointment History"
 msgstr "Historique des Rendez-vous"
 
-#: templates/ayarlar/defter.html:131 templates/ayarlar/defter.html:179
-#: templates/ayarlar/whatsapp.html:188 templates/musteri_detay_modal.html:174
-#: templates/musteri_detay_raporu.html:183 templates/randevu_duzenle.html:33
-#: templates/takvim.html:336 templates/takvim.html:469
 msgid "Time"
 msgstr "Heure"
 
-#: templates/ayarlar/whatsapp.html:190 templates/musteri_detay_modal.html:177
-#: templates/musteri_detay_raporu.html:186 templates/randevu_detay.html:27
-#: templates/randevu_duzenle.html:43 templates/randevu_ekle.html:148
-#: templates/randevular.html:196 templates/randevular.html:276
-#: templates/takvim.html:355
-msgid "Reference"
-msgstr "Référence"
-
-#: templates/musteri_detay_modal.html:219
-#: templates/musteri_detay_raporu.html:224
 msgid "No appointments found for this customer."
 msgstr "Aucun rendez-vous trouvé pour ce client."
 
-#: templates/musteri_detay_raporu.html:21
-msgid "Back to Customer Reports"
-msgstr "Retour aux Rapports Clients"
-
 # Excel Import
-#: templates/musteriler_import.html:3 templates/musteriler_import.html:12
 msgid "Customer Excel Import"
 msgstr "Importation Excel des Clients"
 
-#: templates/musteriler_import.html:22
 msgid "Upload File"
 msgstr "Télécharger le Fichier"
 
-#: templates/musteriler_import.html:27
 msgid "Map Columns"
 msgstr "Mapper les Colonnes"
 
-#: templates/musteriler_import.html:32
 msgid "Preview & Validate"
 msgstr "Aperçu et Validation"
 
-#: templates/musteriler_import.html:37
 msgid "Import"
 msgstr "Importer"
 
-#: templates/musteriler_import.html:42
 msgid "Results"
 msgstr "Résultats"
 
-#: templates/musteriler_import.html:50
 msgid "Step 1: Upload Excel File"
 msgstr "Étape 1 : Télécharger le Fichier Excel"
 
-#: templates/musteriler_import.html:54
 msgid "Important Notes:"
 msgstr "Notes Importantes :"
 
-#: templates/musteriler_import.html:56
 msgid "Excel file must be in .xlsx or .xls format"
 msgstr "Le fichier Excel doit être au format .xlsx ou .xls"
 
-#: templates/musteriler_import.html:57
 msgid "First row must contain column headers"
 msgstr "La première ligne doit contenir les en-têtes de colonne"
 
-#: templates/musteriler_import.html:58
 msgid "Required columns: Name, Surname, Phone"
 msgstr "Colonnes requises : Prénom, Nom, Téléphone"
 
-#: templates/musteriler_import.html:59
 msgid "Phone numbers must be in 05XX format (11 digits)"
 msgstr "Les numéros de téléphone doivent être au format 05XX (11 chiffres)"
 
-#: templates/musteriler_import.html:67 templates/musteriler_import.html:70
 msgid "Download Template"
 msgstr "Télécharger le Modèle"
 
-#: templates/musteriler_import.html:68
-msgid "Download the Excel template with example data and instructions"
-msgstr "Téléchargez le modèle Excel avec des données d'exemple et des instructions"
+msgid ""
+"Download the Excel template with example data and\n"
+"                                            instructions"
+msgstr ""
+"Téléchargez le modèle Excel avec des "
+"données d'exemple et des instructions"
 
-#: templates/musteriler_import.html:78
 msgid "Upload Your File"
 msgstr "Téléchargez Votre Fichier"
 
-#: templates/musteriler_import.html:83
 msgid "Drag & drop Excel file here"
 msgstr "Glissez-déposez le fichier Excel ici"
 
-#: templates/musteriler_import.html:84
 msgid "or"
 msgstr "ou"
 
-#: templates/musteriler_import.html:86
 msgid "Select File"
 msgstr "Sélectionner un Fichier"
 
-#: templates/musteriler_import.html:98
 msgid "Uploading..."
 msgstr "Téléchargement en cours..."
 
-#: templates/musteriler_import.html:121
 msgid "Step 2: Map Excel Columns to Database Fields"
 msgstr "Étape 2 : Mapper les Colonnes Excel aux Champs de Base de Données"
 
-#: templates/musteriler_import.html:125
 msgid ""
-"Match your Excel columns with database fields. System will auto-detect "
-"common column names."
+"Match your Excel columns with database"
+" fields. System will auto-detect "
+"common column\n"
+"                            names."
 msgstr ""
-"Associez vos colonnes Excel aux champs de la base de données. Le système "
-"détectera automatiquement les noms de colonnes courants."
+"Associez vos colonnes Excel aux champs"
+" de la base de données. Le "
+"système détectera automatiquement les noms "
+"de colonnes courants."
 
-#: templates/musteriler_import.html:133
 msgid "Excel Column"
 msgstr "Colonne Excel"
 
-#: templates/musteriler_import.html:134
 msgid "Database Field"
 msgstr "Champ de Base de Données"
 
-#: templates/ayarlar/kullanici_duzenle.html:93
-#: templates/ayarlar/kullanicilar.html:57 templates/musteriler_import.html:135
 msgid "Preview"
 msgstr "Aperçu"
 
-#: templates/ayarlar/defter.html:22 templates/ayarlar/email.html:28
-#: templates/ayarlar/firmalar.html:8 templates/ayarlar/islemler.html:11
-#: templates/ayarlar/kullanicilar.html:8 templates/ayarlar/referanslar.html:8
-#: templates/ayarlar/sms.html:28 templates/musteriler_import.html:147
-#: templates/musteriler_import.html:232 templates/musteriler_import.html:292
-#: templates/profil.html:9 templates/randevu_detay.html:12
-#: templates/randevu_duzenle.html:10 templates/randevu_ekle.html:75
-msgid "Back"
-msgstr "Retour"
-
-#: templates/musteriler_import.html:157
 msgid "Step 3: Preview and Validate Data"
 msgstr "Étape 3 : Aperçu et Validation des Données"
 
-#: templates/musteriler_import.html:164
 msgid "Total Rows"
 msgstr "Total des Lignes"
 
-#: templates/musteriler_import.html:172 templates/musteriler_import.html:200
-#: templates/musteriler_import.html:505
 msgid "Valid"
 msgstr "Valide"
 
-#: templates/musteriler_import.html:180 templates/musteriler_import.html:203
 msgid "Warnings"
 msgstr "Avertissements"
 
-#: templates/musteriler_import.html:188 templates/musteriler_import.html:206
-#: templates/musteriler_import.html:333
 msgid "Errors"
 msgstr "Erreurs"
 
-#: templates/ayarlar/defter.html:187 templates/musteriler_import.html:197
-#: templates/randevular.html:189 templates/randevular.html:198
-#: templates/randevular.html:207 templates/rapor_musteriler.html:195
-#: templates/rapor_musteriler.html:236 templates/todos.html:156
-msgid "All"
-msgstr "Tous"
-
-#: templates/musteriler_import.html:214 templates/musteriler_import.html:348
 msgid "Row"
 msgstr "Ligne"
 
-#: templates/ayarlar/kullanici_duzenle.html:39
-#: templates/ayarlar/kullanicilar.html:22 templates/musteriler_import.html:215
-#: templates/musteriler_import.html:681 templates/rapor_musteriler.html:1555
 msgid "First Name"
 msgstr "Prénom"
 
-#: templates/ayarlar/kullanici_duzenle.html:45
-#: templates/ayarlar/kullanicilar.html:26 templates/musteriler_import.html:216
-#: templates/musteriler_import.html:682 templates/rapor_musteriler.html:1561
 msgid "Last Name"
 msgstr "Nom de Famille"
 
-#: templates/musteriler_import.html:217 templates/musteriler_import.html:683
 msgid "Country Code"
 msgstr "Code Pays"
 
-#: templates/musteriler_import.html:221
-msgid "Messages"
-msgstr "Messages"
-
-#: templates/musteriler_import.html:242
 msgid "Step 4: Import Options"
 msgstr "Étape 4 : Options d'Importation"
 
-#: templates/musteriler_import.html:248
 msgid "How should we handle different situations?"
 msgstr "Comment devons-nous gérer différentes situations ?"
 
-#: templates/musteriler_import.html:254
 msgid "Skip rows with errors"
 msgstr "Ignorer les lignes avec des erreurs"
 
-#: templates/musteriler_import.html:255
-msgid "Rows with validation errors will be skipped"
+msgid ""
+"Rows with validation errors will be\n"
+"                                                        skipped"
 msgstr "Les lignes avec des erreurs de validation seront ignorées"
 
-#: templates/musteriler_import.html:264
 msgid "Update existing customers"
 msgstr "Mettre à jour les clients existants"
 
-#: templates/musteriler_import.html:265
-msgid "If phone number exists, update customer information"
-msgstr "Si le numéro de téléphone existe, mettre à jour les informations du client"
+msgid ""
+"If phone number exists, update\n"
+"                                                        customer"
+" information"
+msgstr ""
+"Si le numéro de téléphone existe, "
+"mettre à jour les informations du "
+"client"
 
-#: templates/musteriler_import.html:274
 msgid "Skip duplicate customers"
 msgstr "Ignorer les clients en double"
 
-#: templates/musteriler_import.html:275
-msgid "If phone number exists and update is disabled, skip"
-msgstr "Si le numéro de téléphone existe et la mise à jour est désactivée, ignorer"
+msgid ""
+"If phone number exists and update is\n"
+"                                                        disabled, skip"
+msgstr ""
+"Si le numéro de téléphone existe "
+"et la mise à jour est désactivée,"
+" ignorer"
 
-#: templates/musteriler_import.html:282
 msgid "Warning:"
 msgstr "Attention :"
 
-#: templates/musteriler_import.html:295
 msgid "Start Import"
 msgstr "Démarrer l'Importation"
 
-#: templates/musteriler_import.html:302
 msgid "Step 5: Import Results"
 msgstr "Étape 5 : Résultats de l'Importation"
 
-#: templates/musteriler_import.html:309
 msgid "Successfully Added"
 msgstr "Ajouté avec Succès"
 
-#: templates/musteriler_import.html:317 templates/musteriler_import.html:509
-#: templates/randevu_detay.html:112 templates/randevu_duzenle.html:279
 msgid "Updated"
 msgstr "Date"
 
-#: templates/musteriler_import.html:325 templates/musteriler_import.html:510
 msgid "Skipped"
 msgstr "Ignoré"
 
-#: templates/musteriler_import.html:341
 msgid "Detailed Results"
 msgstr "Résultats Détaillés"
 
-#: templates/musteriler_import.html:350
-msgid "Message"
-msgstr "Message"
-
-#: templates/musteriler_import.html:363
 msgid "Go to Customers"
 msgstr "Aller aux Clients"
 
-#: templates/musteriler_import.html:366
 msgid "Import Another File"
 msgstr "Importer un Autre Fichier"
 
-#: templates/musteriler_import.html:496
 msgid "Please select a valid Excel file (.xlsx or .xls)"
 msgstr "Veuillez sélectionner un fichier Excel valide (.xlsx ou .xls)"
 
-#: templates/musteriler_import.html:497 templates/takvim.html:611
-msgid "Error"
-msgstr "Error"
-
-#: templates/musteriler_import.html:498
-msgid "An error occurred while uploading the file"
-msgstr "Une erreur s'est produite lors du téléchargement du fichier"
-
-#: templates/musteriler_import.html:499
-msgid "Please map required fields"
-msgstr "Veuillez mapper les champs requis"
-
-#: templates/musteriler_import.html:500
-msgid "An error occurred during validation"
-msgstr "Une erreur s'est produite lors de la validation"
-
-#: templates/musteriler_import.html:501
-msgid "An error occurred during import"
-msgstr "Une erreur s'est produite lors de l'importation"
-
-#: templates/musteriler_import.html:502
-msgid "Approximately"
-msgstr "Environ"
-
-#: templates/musteriler_import.html:503
-msgid "of"
-msgstr "de"
-
-#: templates/musteriler_import.html:504
-msgid "customers will be imported"
-msgstr "clients seront importés"
-
-#: templates/musteriler_import.html:506
-msgid "Warning"
-msgstr "Avertissement"
-
-#: templates/musteriler_import.html:507
-msgid "Duplicate"
-msgstr "Doublon"
-
-#: templates/musteriler_import.html:508
-msgid "Success"
-msgstr "Succès"
-
-#: templates/musteriler_import.html:680
 msgid "-- Not Mapped --"
 msgstr "-- Non Mappé --"
 
-#: templates/ayarlar/defter.html:241 templates/ayarlar/defter.html:300
-#: templates/ayarlar/email.html:119 templates/ayarlar/email.html:205
-#: templates/ayarlar/gorev_durumlar.html:30
-#: templates/ayarlar/gorev_durumlar.html:54
-#: templates/ayarlar/gorev_durumlar.html:136
-#: templates/ayarlar/kullanici_duzenle.html:132
-#: templates/ayarlar/kullanici_duzenle.html:178 templates/ayarlar/sms.html:213
-#: templates/ayarlar/sms.html:383 templates/profil.html:41
-#: templates/rapor_musteriler.html:196
 msgid "Active"
 msgstr "Actif"
 
-#: templates/ayarlar/defter.html:243 templates/ayarlar/gorev_durumlar.html:56
-#: templates/ayarlar/kullanici_duzenle.html:180 templates/profil.html:41
-#: templates/rapor_musteriler.html:197
 msgid "Inactive"
 msgstr "Inactif"
 
-#: templates/ayarlar/kullanici_duzenle.html:202 templates/profil.html:49
-#: templates/randevu_detay.html:110 templates/randevu_duzenle.html:274
-#: templates/todos.html:217
 msgid "Created"
 msgstr "Créé par"
 
-#: templates/ayarlar/kullanici_duzenle.html:207 templates/profil.html:53
 msgid "Last Updated"
 msgstr "Dernière Mise à Jour"
 
-#: templates/profil.html:63
 msgid "Quick Actions"
 msgstr "Actions Rapides"
 
-#: templates/profil.html:65
-#, fuzzy
 msgid "Edit Profile"
 msgstr "Profil"
 
-#: templates/randevu_detay.html:3 templates/randevu_detay.html:7
-#: templates/randevu_ekle.html:141
-msgid "Appointment Details"
-msgstr "Détails du Rendez-vous"
-
-#: templates/randevu_detay.html:22 templates/randevu_duzenle.html:19
-#: templates/randevu_duzenle.html:251
 msgid "Appointment Information"
 msgstr "Information"
 
-#: templates/ayarlar/kullanici_duzenle.html:163
-#: templates/ayarlar/kullanicilar.html:100 templates/randevu_detay.html:70
-#: templates/randevu_duzenle.html:227 templates/rapor_musteriler.html:302
 msgid "Full Name"
 msgstr "Nom Complet"
 
-#: templates/randevu_detay.html:107
 msgid "Back to List"
 msgstr "Customer"
 
-#: templates/randevu_duzenle.html:3 templates/randevu_duzenle.html:7
-msgid "Edit Appointment"
-msgstr "Edit Appointment"
-
-#: templates/randevu_duzenle.html:45
-msgid "Select Reference"
-msgstr "Select Reference"
-
-#: templates/randevu_duzenle.html:57 templates/randevu_ekle.html:230
-msgid "Duration (minutes)"
-msgstr "Duration (minutes)"
-
-#: templates/randevu_duzenle.html:61 templates/randevu_duzenle.html:65
-#: templates/randevu_duzenle.html:529 templates/randevu_ekle.html:1143
-msgid "Duration must be multiples of"
-msgstr "Duration must be multiples of"
-
-#: templates/randevu_duzenle.html:71
-#, fuzzy
-msgid "Reminder Day"
-msgstr "Rappel"
-
-#: templates/randevu_duzenle.html:73
-msgid "If set, related task reminder date will be updated"
-msgstr ""
-
-#: templates/randevu_duzenle.html:85 templates/randevu_ekle.html:248
-msgid "Assign to User"
-msgstr "Assigner à l'utilisateur"
-
-#: templates/randevu_duzenle.html:87 templates/randevu_ekle.html:250
-msgid "Select user (optional)"
-msgstr "Sélectionner un utilisateur (optionnel)"
-
-#: templates/randevu_duzenle.html:92 templates/randevu_ekle.html:255
-msgid "Seçilen kullanıcıya bu randevu için otomatik görev oluşturulacak"
-msgstr ""
-"Une tâche automatique sera créée pour ce rendez-vous pour l'utilisateur "
-"sélectionné"
-
-#: templates/randevu_duzenle.html:100
-msgid "Customer Contact Information"
-msgstr "Customer Contact Information"
-
-#: templates/randevu_duzenle.html:152 templates/randevu_duzenle.html:155
-#: templates/randevu_duzenle.html:494 templates/randevu_ekle.html:353
-#: templates/randevu_ekle.html:356
-msgid "Enter a valid phone number (e.g.: 536 555 66 44)"
-msgstr "Enter a valid phone number (e.g.: 536 555 66 44)"
-
-#: templates/randevu_duzenle.html:165 templates/randevu_duzenle.html:167
-#: templates/randevu_duzenle.html:513 templates/randevu_ekle.html:374
-msgid "Enter a valid email address"
-msgstr "Enter a valid email address"
-
-#: templates/randevu_duzenle.html:189
-#, fuzzy
-msgid "Enter age"
-msgstr "Sender Name"
-
-#: templates/ayarlar/defter.html:39 templates/ayarlar/islemler.html:30
-#: templates/ayarlar/kullanici_duzenle.html:57
-#: templates/ayarlar/kullanicilar.html:37 templates/ayarlar/referanslar.html:20
-#: templates/randevu_duzenle.html:196 templates/randevu_ekle.html:385
-msgid "Select"
-msgstr "Sélectionner"
-
-#: templates/randevu_duzenle.html:197 templates/randevu_ekle.html:386
-#: templates/rapor_musteriler.html:237 templates/rapor_musteriler.html:806
-#: templates/rapor_musteriler.html:1594
-msgid "Male"
-msgstr "Homme"
-
-#: templates/randevu_duzenle.html:198 templates/randevu_ekle.html:387
-#: templates/rapor_musteriler.html:238 templates/rapor_musteriler.html:806
-#: templates/rapor_musteriler.html:1595
-msgid "Female"
-msgstr "Femme"
-
-#: templates/randevu_duzenle.html:244
-msgid "Customer information not found"
-msgstr "Customer information not found"
-
-#: templates/randevu_duzenle.html:270 templates/randevular.html:241
-#: templates/randevular.html:283
-msgid "Created By"
-msgstr "Créé par"
-
-#: templates/randevu_duzenle.html:435
-msgid "Please enter valid phone number and email address."
-msgstr "Please enter valid phone number and email address."
-
-#: templates/randevu_duzenle.html:491
-msgid "Valid phone number"
-msgstr "Valid phone number"
-
-#: templates/randevu_duzenle.html:510
-msgid "Valid email address"
-msgstr "Adresse e-mail valide"
-
-#: templates/randevu_duzenle.html:524
-msgid "Minimum duration must be"
-msgstr "Minimum duration must be"
-
-#: templates/randevu_duzenle.html:533
-msgid "Valid duration"
-msgstr "Valid duration"
-
-# Appointment
-#: templates/randevu_ekle.html:86
-msgid "Appointment Book Selection"
-msgstr "Sélection du Carnet de Rendez-vous"
-
-#: templates/randevu_ekle.html:93
-msgid "Select appointment book..."
-msgstr "Sélectionner un carnet de rendez-vous..."
-
-#: templates/randevu_ekle.html:117
-msgid "Date and Time Selection"
-msgstr "Sélection de la Date et de l'Heure"
-
-#: templates/randevu_ekle.html:131
-msgid "Loading available time slots..."
-msgstr "Chargement des créneaux disponibles..."
-
-#: templates/ayarlar/kullanici_duzenle.html:197
-#: templates/ayarlar/kullanicilar.html:123 templates/randevu_ekle.html:150
-#: templates/takvim.html:308 templates/takvim.html:351
-#: templates/takvim.html:441
-msgid "None"
-msgstr "None"
-
-#: templates/ayarlar/islemler.html:61 templates/randevu_ekle.html:159
-msgid "Operation"
-msgstr "Opération"
-
-#: templates/randevu_ekle.html:161 templates/randevu_ekle.html:184
-msgid "Select Operation"
-msgstr "Sélectionner une Opération"
-
-#: templates/randevu_ekle.html:289
-msgid "Type name, existing customers will appear..."
-msgstr "Tapez le nom, les clients existants apparaîtront..."
-
-#: templates/randevu_ekle.html:294
-msgid "Type at least 2 characters. Matching customers will appear automatically."
-msgstr ""
-"Tapez au moins 2 caractères. Les clients correspondants apparaîtront "
-"automatiquement."
-
-#: templates/randevu_ekle.html:308
-msgid "Phone Number"
-msgstr "Numéro de Téléphone"
-
-#: templates/randevu_ekle.html:365
-msgid "username"
-msgstr "nom d'utilisateur"
-
-#: templates/randevu_ekle.html:396
-msgid "Age will be calculated automatically"
-msgstr ""
-
-#: templates/randevu_ekle.html:401 templates/rapor_musteriler.html:201
-#: templates/rapor_musteriler.html:305
-msgid "Category"
-msgstr "Catégorie"
-
-#: templates/randevu_ekle.html:405
-msgid "Select Category"
-msgstr ""
-
-#: templates/randevu_ekle.html:421
-msgid "Country"
-msgstr "Country"
-
-#: templates/randevu_ekle.html:423
-msgid "Select Country"
-msgstr "Select Country"
-
-#: templates/randevu_ekle.html:432
-msgid "State/City"
-msgstr "State/City"
-
-#: templates/randevu_ekle.html:434 templates/randevu_ekle.html:1722
-#: templates/randevu_ekle.html:1762 templates/randevu_ekle.html:1807
-msgid "Select State/City"
-msgstr "Select State/City"
-
-#: templates/randevu_ekle.html:446 templates/randevu_ekle.html:1723
-#: templates/randevu_ekle.html:1738 templates/randevu_ekle.html:1825
-#: templates/randevu_ekle.html:1872
-msgid "Select District"
-msgstr "Select District"
-
-#: templates/randevu_ekle.html:453
-msgid "Street, building, apartment..."
-msgstr "Street, building, apartment..."
-
-#: templates/randevu_ekle.html:459
-msgid "Customer Notes"
-msgstr "Customer Notes"
-
-#: templates/randevu_ekle.html:460
-msgid "Allergies, preferences, important information..."
-msgstr ""
-
-#: templates/ayarlar/whatsapp.html:168 templates/randevu_ekle.html:479
-msgid "Information"
-msgstr "Informations"
-
-#: templates/ayarlar/whatsapp.html:173 templates/randevu_ekle.html:484
-msgid "Note"
-msgstr "Note"
-
-# Additional translations
-#: templates/randevu_ekle.html:484
 msgid ""
-"Full permissions will be automatically granted to the appointment you "
-"create."
+"Type at least 2 characters. Matching customers will\n"
+"                                        appear automatically."
 msgstr ""
-"Full permissions will be automatically granted to the appointment you "
-"create."
+"Tapez au moins 2 caractères. Les "
+"clients correspondants apparaîtront automatiquement."
 
-#: templates/randevu_ekle.html:487
-msgid "Appointment Statuses"
-msgstr "Statuts des Rendez-vous"
+msgid ""
+"Age will be calculated\n"
+"                                        automatically"
+msgstr ""
 
-#: templates/randevu_ekle.html:489
-msgid "Newly created appointments"
-msgstr "Rendez-vous nouvellement créés"
+msgid ""
+"Full permissions will be automatically "
+"granted to the appointment you create."
+msgstr ""
+"Toutes les permissions seront automatiquement"
+" accordées au rendez-vous que vous"
+" créez."
 
-#: templates/randevu_ekle.html:490 templates/takvim.html:500
-msgid "Confirmed appointments"
-msgstr "Rendez-vous confirmés"
-
-#: templates/randevu_ekle.html:491 templates/takvim.html:501
-msgid "Cancelled appointments"
-msgstr "Rendez-vous annulés"
-
-#: templates/randevu_ekle.html:492 templates/takvim.html:502
-msgid "Completed appointments"
-msgstr "Rendez-vous terminés"
-
-#: templates/randevu_ekle.html:517
-#, fuzzy
 msgid "Selectable"
 msgstr "Sélectionner un Fichier"
 
-#: templates/randevu_ekle.html:518
-#, fuzzy
 msgid "Closed/Full"
 msgstr "Closed/Full"
 
-#: templates/randevu_ekle.html:519
-#, fuzzy
 msgid "Slot available"
 msgstr "Available"
 
-#: templates/randevu_ekle.html:520
-#, fuzzy
 msgid "Slot not available"
 msgstr "Available"
 
-#: templates/randevu_ekle.html:521
-msgid ""
-"You cannot make an appointment for a past time. Please select a future "
-"time."
-msgstr ""
-
-#: templates/randevu_ekle.html:801 templates/randevular.html:694
-#: templates/takvim.html:595
-msgid "Session expired. Please login again."
-msgstr ""
-
-#: templates/randevu_ekle.html:812
-msgid "No available time slots for this date. Please choose another date."
-msgstr "No available time slots for this date. Please choose another date."
-
-#: templates/randevu_ekle.html:1084
-#, fuzzy
-msgid "Selected date"
-msgstr "Client Sélectionné"
-
-#: templates/randevu_ekle.html:1117
 msgid "Select book first"
 msgstr "Select book first"
 
-#: templates/randevu_ekle.html:1118
 msgid "Select appointment book first"
 msgstr "Select appointment book first"
 
-# Appointments List
-#: templates/randevular.html:138
-msgid "All References"
-msgstr "Toutes les Références"
+msgid "Duration must be multiples of"
+msgstr "Duration must be multiples of"
 
-#: templates/randevular.html:144 templates/raporlar.html:80
-#: templates/takvim.html:201
-msgid "All Books"
-msgstr "Tous les Carnets"
+msgid ""
+"No\n"
+"                            Customer"
+msgstr ""
 
-#: templates/randevular.html:150
-msgid "All Statuses"
-msgstr "Tous les Statuts"
-
-#: templates/randevular.html:163 templates/randevular.html:221
-msgid "Custom"
-msgstr "Personnalisé"
-
-#: templates/randevular.html:164 templates/randevular.html:222
-#: templates/takvim.html:268
-msgid "Today"
-msgstr "Aujourd'hui"
-
-#: templates/randevular.html:166 templates/randevular.html:224
-msgid "This Month"
-msgstr "Ce Mois"
-
-#: templates/randevular.html:167 templates/randevular.html:225
-msgid "This Year"
-msgstr "Cette Année"
-
-#: templates/randevular.html:219
-msgid "Quick Date"
-msgstr "Date Rapide"
-
-#: templates/randevular.html:268
-msgid "Appointment List"
-msgstr "Liste des Rendez-vous"
-
-#: templates/randevular.html:350
 msgid "Add to Tasks"
 msgstr "Ajouter aux Tâches"
 
-#: templates/randevular.html:357
 msgid "Are you sure you want to delete this appointment?"
 msgstr "Êtes-vous sûr de vouloir supprimer ce rendez-vous ?"
 
-#: templates/randevular.html:492
 msgid "New Todo"
 msgstr "Nouvelle Tâche"
 
-#: templates/randevular.html:541
-#, fuzzy
 msgid "Reminder Date"
 msgstr "Rappel"
 
-#: templates/ayarlar/defter.html:114 templates/ayarlar/defter.html:307
-#: templates/ayarlar/firmalar.html:39 templates/ayarlar/gorev_durumlar.html:143
-#: templates/ayarlar/kullanicilar.html:85 templates/ayarlar/referanslar.html:31
-#: templates/randevular.html:549 templates/todos.html:321
-msgid "Save"
-msgstr "Enregistrer"
-
-#: templates/randevular.html:686
-#, fuzzy
 msgid "Loading available times"
 msgstr "Loading available time slots..."
 
-#: templates/randevular.html:706
-#, fuzzy
 msgid "No available times for this date. Please select another date."
 msgstr "No available time slots for this date. Please choose another date."
 
-#: templates/randevular.html:723
 msgid "Available"
 msgstr "Available"
 
-#: templates/randevular.html:723 templates/randevular.html:734
-#, fuzzy
 msgid "Closed/Busy"
 msgstr "Closed/Full"
 
-#: templates/randevular.html:756
-msgid "Failed to load slots"
-msgstr "Failed to load slots"
-
-#: templates/rapor_musteriler.html:39
 msgid "Import from Excel"
 msgstr "Importer depuis Excel"
 
-#: templates/rapor_musteriler.html:63
 msgid "Total Customers"
 msgstr "Total Clients"
 
-#: templates/rapor_musteriler.html:71
 msgid "Active Customers"
 msgstr "Clients Actifs"
 
-#: templates/rapor_musteriler.html:79
 msgid "New Customers"
 msgstr "Nouveaux Clients"
 
-#: templates/rapor_musteriler.html:91
 msgid "Customer Distribution by Gender"
 msgstr "Répartition des Clients par Sexe"
 
-#: templates/rapor_musteriler.html:101
 msgid "Customer Distribution by Age"
 msgstr "Répartition des Clients par Âge"
 
-#: templates/rapor_musteriler.html:114
 msgid "Customer Distribution by Category"
 msgstr "Répartition des Clients par Catégorie"
 
-#: templates/rapor_musteriler.html:124
 msgid "Customer Distribution by City"
 msgstr "Répartition des Clients par Ville"
 
-#: templates/rapor_musteriler.html:138
 msgid "Monthly Customer Growth"
 msgstr "Croissance Mensuelle des Clients"
 
-#: templates/rapor_musteriler.html:148
 msgid "Weekly Customer Growth (Last 12 Weeks)"
 msgstr "Croissance Hebdomadaire des Clients (12 Dernières Semaines)"
 
-#: templates/rapor_musteriler.html:162
 msgid "Appointment Frequency Distribution"
 msgstr "Répartition de la Fréquence des Rendez-vous"
 
-#: templates/rapor_musteriler.html:172
 msgid "Top 10 Customers by Appointment Count"
 msgstr "Top 10 des Clients par Nombre de Rendez-vous"
 
-#: templates/rapor_musteriler.html:183
 msgid "Filters"
 msgstr "Filtres"
 
-#: templates/rapor_musteriler.html:190
 msgid "Basic Filters"
 msgstr "Filtres de Base"
 
-#: templates/rapor_musteriler.html:203
 msgid "All Categories"
 msgstr "Toutes les Catégories"
 
-#: templates/rapor_musteriler.html:210
 msgid "Contact Information"
 msgstr "Informations de Contact"
 
-#: templates/rapor_musteriler.html:212
 msgid "Doesn't Matter"
 msgstr "Peu Importe"
 
-# Additional translations
-#: templates/rapor_musteriler.html:213
-msgid "Has Phone"
-msgstr "A un Téléphone"
+msgid ""
+"Has\n"
+"                            Phone"
+msgstr ""
 
-#: templates/rapor_musteriler.html:214
-msgid "Has Email"
-msgstr "A un E-mail"
+msgid ""
+"Has\n"
+"                            Email"
+msgstr ""
 
-#: templates/rapor_musteriler.html:215
 msgid "Has Both"
 msgstr "A les Deux"
 
-#: templates/rapor_musteriler.html:223
 msgid "Demographic Filters"
 msgstr "Filtres Démographiques"
 
-#: templates/rapor_musteriler.html:226
 msgid "Min Age"
 msgstr "Âge Minimum"
 
-#: templates/rapor_musteriler.html:230
 msgid "Max Age"
 msgstr "Âge Maximum"
 
-#: templates/rapor_musteriler.html:250
 msgid "Geographic Filters"
 msgstr "Filtres Géographiques"
 
-#: templates/rapor_musteriler.html:255
 msgid "All Cities"
 msgstr "Toutes les villes"
 
-#: templates/rapor_musteriler.html:264
 msgid "All Districts"
 msgstr "Tous les Arrondissements"
 
-#: templates/ayarlar/kullanici_duzenle.html:237
-#: templates/ayarlar/kullanicilar.html:190 templates/rapor_musteriler.html:273
-#: templates/raporlar.html:91
 msgid "Apply"
 msgstr "Appliquer"
 
-#: templates/rapor_musteriler.html:276
-msgid "Clear"
-msgstr "Effacer"
-
-#: templates/rapor_musteriler.html:293
 msgid "Customer List"
 msgstr "Liste des Clients"
 
-#: templates/rapor_musteriler.html:301
 msgid "ID"
 msgstr "ID"
 
-#: templates/rapor_musteriler.html:306 templates/rapor_musteriler.html:1280
 msgid "Appointment Count"
 msgstr "Nombre de Rendez-vous"
 
-#: templates/rapor_musteriler.html:307
 msgid "Created Date"
 msgstr "Date de Création"
 
-#: templates/rapor_musteriler.html:326
 msgid "No records found."
 msgstr "Aucun enregistrement trouvé."
 
-#: templates/rapor_musteriler.html:334
 msgid "Top 10 Customers with Most Appointments"
 msgstr "Top 10 des Clients avec le Plus de Rendez-vous"
 
-#: templates/rapor_musteriler.html:347
 msgid "No data found."
 msgstr "Aucune donnée trouvée."
 
-#: templates/rapor_musteriler.html:365 templates/rapor_musteriler.html:587
 msgid "Search Customer"
 msgstr "Rechercher un Client"
 
-#: templates/rapor_musteriler.html:366 templates/rapor_musteriler.html:588
 msgid "Enter customer name or phone number"
 msgstr "Entrez le nom ou le numéro de téléphone du client"
 
-#: templates/rapor_musteriler.html:370 templates/rapor_musteriler.html:592
 msgid "Selected Customer"
 msgstr "Client Sélectionné"
 
-#: templates/rapor_musteriler.html:380
 msgid "Close"
 msgstr "Fermer"
 
-#: templates/rapor_musteriler.html:705 templates/rapor_musteriler.html:745
 msgid "No Data"
 msgstr "Aucune Donnée"
 
-#: templates/rapor_musteriler.html:857 templates/rapor_musteriler.html:1057
-#: templates/rapor_musteriler.html:1110 templates/rapor_musteriler.html:1171
 msgid "Customer Count"
 msgstr "Nombre de Clients"
 
-#: templates/rapor_musteriler.html:901
 msgid "VIP"
 msgstr "VIP"
 
-#: templates/rapor_musteriler.html:901
 msgid "Normal"
 msgstr "Normal"
 
-#: templates/rapor_musteriler.html:1224
 msgid "0 Appointments"
 msgstr "0 Rendez-vous"
 
-#: templates/rapor_musteriler.html:1225
 msgid "1 Appointment"
 msgstr "1 Rendez-vous"
 
-#: templates/rapor_musteriler.html:1226
 msgid "2-5 Appointments"
 msgstr "2-5 Rendez-vous"
 
-#: templates/rapor_musteriler.html:1227
 msgid "6-10 Appointments"
 msgstr "6-10 Rendez-vous"
 
-#: templates/rapor_musteriler.html:1228
 msgid "10+ Appointments"
 msgstr "10+ Rendez-vous"
 
-#: templates/rapor_musteriler.html:1445 templates/rapor_musteriler.html:1450
-msgid "Error loading customer data"
-msgstr "Erreur lors du chargement des données client"
-
-#: templates/rapor_musteriler.html:1497
 msgid "Customer ID not found"
 msgstr "ID client introuvable"
 
-#: templates/rapor_musteriler.html:1513
 msgid "Customer updated successfully"
 msgstr "Client mis à jour avec succès"
 
-#: templates/rapor_musteriler.html:1526 templates/rapor_musteriler.html:1532
 msgid "Error updating customer"
 msgstr "Erreur lors de la mise à jour du client"
 
-#: templates/rapor_musteriler.html:1593
 msgid "Select Gender"
 msgstr "Sélectionner le Sexe"
 
-#: templates/rapor_musteriler.html:1612
-#, fuzzy
-msgid "Select City"
-msgstr "Select Country"
-
-#: templates/rapor_musteriler.html:1640
 msgid "Save Changes"
 msgstr "Enregistrer les Modifications"
 
-#: templates/raporlar.html:74
 msgid "Max Daily Capacity"
 msgstr "Capacité Quotidienne Maximale"
 
-#: templates/raporlar.html:108
+msgid "Selected Period"
+msgstr "Période Sélectionnée"
+
 msgid "Peak Hour"
 msgstr "Heure de Pointe"
 
-#: templates/raporlar.html:110
 msgid "Most Active Hour"
 msgstr "Heure la Plus Active"
 
-#: templates/raporlar.html:117 templates/raporlar.html:174
 msgid "Capacity Usage"
 msgstr "Utilisation de la Capacité"
 
-#: templates/raporlar.html:119
 msgid "Average Daily Usage"
 msgstr "Utilisation Quotidienne Moyenne"
 
-#: templates/raporlar.html:126
 msgid "Efficiency Rate"
 msgstr "Taux d'Efficacité"
 
-#: templates/raporlar.html:128
 msgid "Peak Hours Efficiency"
 msgstr "Efficacité aux Heures de Pointe"
 
-#: templates/raporlar.html:145
 msgid "By Status"
 msgstr "Par Statut"
 
-#: templates/raporlar.html:153
 msgid "By Reference"
 msgstr "Par Référence"
 
-#: templates/raporlar.html:165
 msgid "Detailed Hour Analysis"
 msgstr "Analyse Horaire Détaillée"
 
-#: templates/raporlar.html:172
 msgid "Hour"
 msgstr "Heure"
 
-#: templates/raporlar.html:175
 msgid "Efficiency"
 msgstr "Efficacité"
 
-#: templates/raporlar.html:227
 msgid "Report could not be loaded"
 msgstr "Le rapport n'a pas pu être chargé"
 
-#: templates/raporlar.html:280
 msgid "Very Busy"
 msgstr "Très Occupé"
 
-#: templates/raporlar.html:283
 msgid "Busy"
 msgstr "Occupé"
 
-#: templates/raporlar.html:286
 msgid "Moderate"
 msgstr "Modéré"
 
-#: templates/raporlar.html:289
 msgid "Quiet"
 msgstr "Calme"
 
-#: templates/raporlar.html:311
 msgid "By Hours"
 msgstr "Par Heures"
 
-#: templates/raporlar.html:365
 msgid "Count"
 msgstr "Nombre"
 
 # User edit reset password
-#: templates/ayarlar/kullanici_duzenle.html:139 templates/reset_password.html:3
-#: templates/reset_password.html:12 templates/reset_password.html:39
 msgid "Reset Password"
 msgstr "Réinitialiser le mot de passe"
 
-#: templates/reset_password.html:13
-#, fuzzy
 msgid "Enter your new password"
 msgstr "Enter new password to change"
 
-#: templates/reset_password.html:20
-#, fuzzy
 msgid "New Password"
 msgstr "Password"
 
-#: templates/reset_password.html:25
 msgid "Password must be at least 6 characters long"
 msgstr ""
 
 # User edit reset password
-#: templates/reset_password.html:29
-#, fuzzy
 msgid "Confirm New Password"
 msgstr "Reset Password"
 
-#: templates/reset_password.html:47
-#, fuzzy
 msgid "Back to Login"
 msgstr "Customer"
 
-#: templates/reset_password.html:62
 msgid "Passwords do not match"
 msgstr ""
 
-#: templates/takvim.html:185
-msgid "Monthly"
-msgstr "Mensuel"
-
-#: templates/takvim.html:189
-msgid "Weekly"
-msgstr "Hebdomadaire"
-
-#: templates/takvim.html:234
-msgid "Weekly View"
-msgstr "Vue Hebdomadaire"
-
-#: templates/takvim.html:277
-msgid "Mon"
-msgstr "Lun"
-
-#: templates/takvim.html:278
-msgid "Tue"
-msgstr "Mar"
-
-#: templates/takvim.html:279
-msgid "Wed"
-msgstr "Mer"
-
-#: templates/takvim.html:280
-msgid "Thu"
-msgstr "Jeu"
-
-#: templates/takvim.html:281
-msgid "Fri"
-msgstr "Ven"
-
-#: templates/takvim.html:282
-msgid "Sat"
-msgstr "Sam"
-
-#: templates/takvim.html:283
-msgid "Sun"
-msgstr "Dim"
-
-#: templates/takvim.html:306 templates/takvim.html:349
-#: templates/takvim.html:439
 msgid "Social Media"
 msgstr "Social Media"
 
-#: templates/takvim.html:499
 msgid "New appointments"
 msgstr "New appointments"
 
-#: templates/takvim.html:558
-msgid "Invalid operation"
-msgstr "Invalid operation"
-
-#: templates/takvim.html:575
-msgid "Are you sure you want to move the appointment to"
-msgstr "Are you sure you want to move the appointment to"
-
-#: templates/takvim.html:608
-msgid "Appointment moved successfully!"
-msgstr "Appointment moved successfully!"
-
-#: templates/takvim.html:611
-msgid "Unknown error"
-msgstr "Unknown error"
-
-#: templates/takvim.html:616
-msgid "An error occurred while moving the appointment"
-msgstr "Une erreur s'est produite lors du déplacement du rendez-vous"
-
-#: templates/todos.html:3 templates/todos.html:93
 msgid "Yapılacaklar Listesi"
 msgstr "Liste des Tâches"
 
-#: templates/todos.html:97 templates/todos.html:251
 msgid "Yapılacak"
 msgstr "Tâche"
 
-#: templates/todos.html:108
 msgid "Toplam Yapılacak"
 msgstr "Total des Tâches"
 
-#: templates/todos.html:141
-#, fuzzy
 msgid "Upcoming Reminders"
 msgstr "Appointment Reminder"
 
-#: templates/todos.html:215
 msgid "Reminder"
 msgstr "Rappel"
 
-#: templates/todos.html:248
 msgid "Yapılacak bulunamadı"
 msgstr "Aucune tâche trouvée"
 
-#: templates/todos.html:249
 msgid "Başlamak için ilk yapılacakınızı oluşturun!"
 msgstr "Créez votre première tâche pour commencer !"
 
-#: templates/todos.html:261 templates/todos.html:483 templates/todos.html:538
 msgid "Yeni Yapılacak"
 msgstr "Nouvelle Tâche"
 
-#: templates/todos.html:336
-#, fuzzy
 msgid "Are you sure you want to delete this todo?"
 msgstr "Are you sure you want to delete this category?"
 
-#: templates/todos.html:419
-#, fuzzy
 msgid "Title is required"
 msgstr "Category name is required"
 
-#: templates/ayarlar/gorev_durumlar.html:217
-#: templates/ayarlar/gorev_durumlar.html:239
-#: templates/ayarlar/gorev_durumlar.html:291 templates/todos.html:468
 msgid "An error occurred"
 msgstr ""
 
-#: templates/todos.html:505
 msgid "Yapılacak Düzenle"
 msgstr "Modifier la Tâche"
 
 # Appointment Book Settings translations
-#: templates/ayarlar/defter.html:3 templates/ayarlar/defter.html:21
 msgid "Appointment Book Settings"
 msgstr "Paramètres du Carnet de Rendez-vous"
 
-#: templates/ayarlar/defter.html:28
 msgid "New / Edit"
 msgstr "New / Edit"
 
-#: templates/ayarlar/defter.html:33
 msgid "Book Name"
 msgstr "Nom du Carnet"
 
-#: templates/ayarlar/defter.html:34
 msgid "Default Book"
 msgstr "Carnet par Défaut"
 
-#: templates/ayarlar/defter.html:37 templates/ayarlar/defter.html:129
-#: templates/ayarlar/kullanici_duzenle.html:55
-#: templates/ayarlar/kullanici_duzenle.html:171
-#: templates/ayarlar/kullanicilar.html:35
-#: templates/ayarlar/kullanicilar.html:101
-#: templates/ayarlar/referanslar.html:18 templates/ayarlar/referanslar.html:46
 msgid "Company"
 msgstr "Entreprise"
 
-#: templates/ayarlar/defter.html:46
 msgid "Working Days"
 msgstr "Working Days"
 
-#: templates/ayarlar/defter.html:49
 msgid "Monday"
 msgstr "Monday"
 
-#: templates/ayarlar/defter.html:49
 msgid "Tuesday"
 msgstr "Tuesday"
 
-#: templates/ayarlar/defter.html:49
 msgid "Wednesday"
 msgstr "Wednesday"
 
-#: templates/ayarlar/defter.html:49
 msgid "Thursday"
 msgstr "Thursday"
 
-#: templates/ayarlar/defter.html:49
 msgid "Friday"
 msgstr "Friday"
 
-#: templates/ayarlar/defter.html:49
 msgid "Saturday"
 msgstr "Saturday"
 
-#: templates/ayarlar/defter.html:49
 msgid "Sunday"
 msgstr "Sunday"
 
-#: templates/ayarlar/defter.html:64 templates/ayarlar/defter.html:99
 msgid "Start Time"
 msgstr "Start Time"
 
-#: templates/ayarlar/defter.html:70 templates/ayarlar/defter.html:103
 msgid "End Time"
 msgstr "End Time"
 
-#: templates/ayarlar/defter.html:76
 msgid "Slot (min)"
 msgstr "Slot (min)"
 
-#: templates/ayarlar/defter.html:85
 msgid "Time Block"
 msgstr "Time Block"
 
-#: templates/ayarlar/defter.html:86 templates/ayarlar/defter.html:351
 msgid "If you fill this field, the block will be added together with Save."
 msgstr "If you fill this field, the block will be added together with Save."
 
-#: templates/ayarlar/defter.html:108
 msgid "e.g. lunch break, event etc."
 msgstr "e.g. lunch break, event etc."
 
-#: templates/ayarlar/defter.html:122
 msgid "Registered Settings"
 msgstr "Registered Settings"
 
-#: templates/ayarlar/defter.html:130
 msgid "Days"
 msgstr "Days"
 
-#: templates/ayarlar/defter.html:170
 msgid "Current Blocks"
 msgstr "Current Blocks"
 
-#: templates/ayarlar/defter.html:189
 msgid "All Day"
 msgstr "All Day"
 
-#: templates/ayarlar/defter.html:212
 msgid "Customer Categories"
 msgstr "Customer Categories"
 
-#: templates/ayarlar/defter.html:214 templates/ayarlar/defter.html:275
-#: templates/ayarlar/defter.html:403
 msgid "New Category"
 msgstr "New Category"
 
-#: templates/ayarlar/defter.html:222 templates/ayarlar/defter.html:282
 msgid "Category Name"
 msgstr "Category Name"
 
-#: templates/ayarlar/defter.html:223 templates/ayarlar/defter.html:286
-#: templates/ayarlar/gorev_durumlar.html:29
-#: templates/ayarlar/gorev_durumlar.html:120
 msgid "Color"
 msgstr "Couleur"
 
-#: templates/ayarlar/defter.html:354
 msgid "First save the book, then fill the block field."
 msgstr "First save the book, then fill the block field."
 
-#: templates/ayarlar/defter.html:377
 msgid "Edit Category"
 msgstr "Edit Category"
 
-#: templates/ayarlar/defter.html:391
 msgid "Are you sure you want to delete this category?"
 msgstr "Are you sure you want to delete this category?"
 
-#: templates/ayarlar/email.html:3 templates/ayarlar/email.html:8
-#: templates/ayarlar/index.html:63 templates/ayarlar/index.html:65
 msgid "Email Settings"
 msgstr "Paramètres E-mail"
 
-#: templates/ayarlar/email.html:11 templates/ayarlar/sms.html:11
 msgid "Select Company:"
 msgstr "Select Company:"
 
-#: templates/ayarlar/email.html:39
 msgid "SMTP Settings"
 msgstr "Paramètres SMTP"
 
-#: templates/ayarlar/email.html:51 templates/ayarlar/email.html:139
 msgid "SMTP Server"
 msgstr "Serveur SMTP"
 
-#: templates/ayarlar/email.html:58 templates/ayarlar/email.html:146
 msgid "SMTP Port"
 msgstr "Port SMTP"
 
-#: templates/ayarlar/email.html:83 templates/ayarlar/email.html:171
 msgid "Default Sender Name"
 msgstr "Nom de l'Expéditeur par Défaut"
 
-#: templates/ayarlar/email.html:90 templates/ayarlar/email.html:178
 msgid "Default Sender Email"
 msgstr "E-mail de l'Expéditeur par Défaut"
 
-#: templates/ayarlar/email.html:97 templates/ayarlar/email.html:185
 msgid "Default Subject"
 msgstr "Objet par Défaut"
 
-#: templates/ayarlar/email.html:98 templates/ayarlar/email.html:186
 msgid "Appointment Reminder"
 msgstr "Rappel de Rendez-vous"
 
-#: templates/ayarlar/email.html:101 templates/ayarlar/email.html:189
 msgid "Default Email Text"
 msgstr "Texte d'E-mail par Défaut"
 
-#: templates/ayarlar/email.html:102 templates/ayarlar/email.html:190
-#: templates/ayarlar/sms.html:190 templates/ayarlar/sms.html:363
-#, python-brace-format
 msgid ""
-"Hello {CUSTOMER_NAME}, we remind you of your appointment on "
-"{APPOINTMENT_DATE}."
+"Hello {CUSTOMER_NAME}, we remind you of"
+" your appointment on {APPOINTMENT_DATE}."
 msgstr ""
-"Bonjour {MUSTERI_ADI}, nous vous rappelons votre rendez-vous du "
-"{RANDEVU_TARIH}."
+"Bonjour {MUSTERI_ADI}, nous vous rappelons "
+"votre rendez-vous du {RANDEVU_TARIH}."
 
-#: templates/ayarlar/email.html:103 templates/ayarlar/email.html:191
-#: templates/ayarlar/sms.html:191 templates/ayarlar/sms.html:364
-#, python-brace-format
 msgid "Variables: {CUSTOMER_NAME}, {APPOINTMENT_DATE}, {BOOK_NAME}"
 msgstr "Variables : {MUSTERI_ADI}, {RANDEVU_TARIH}, {DEFTER_ADI}"
 
-#: templates/ayarlar/email.html:110 templates/ayarlar/email.html:197
-#: templates/ayarlar/email.html:237
 msgid "Use SSL/TLS"
 msgstr "Utiliser SSL/TLS"
 
-#: templates/ayarlar/email.html:164
 msgid "Application password"
 msgstr "Application password"
 
-#: templates/ayarlar/email.html:173 templates/ayarlar/firmalar.html:19
-#: templates/ayarlar/firmalar.html:98
 msgid "Company Name"
 msgstr "Nom de l'Entreprise"
 
-#: templates/ayarlar/email.html:210
 msgid "Add Email Setting"
 msgstr "Ajouter un Paramètre E-mail"
 
-#: templates/ayarlar/email.html:221
 msgid "Help"
 msgstr "Aide"
 
-#: templates/ayarlar/email.html:225
 msgid "For Gmail:"
 msgstr "Pour Gmail :"
 
-#: templates/ayarlar/email.html:227
 msgid "SMTP Server: smtp.gmail.com"
 msgstr "Serveur SMTP : smtp.gmail.com"
 
-#: templates/ayarlar/email.html:228
 msgid "Port: 587 (TLS) or 465 (SSL)"
 msgstr "Port : 587 (TLS) ou 465 (SSL)"
 
-#: templates/ayarlar/email.html:229
 msgid "2-factor authentication must be active"
 msgstr "L'authentification à 2 facteurs doit être active"
 
-#: templates/ayarlar/email.html:230
 msgid "Use application password"
 msgstr "Utiliser le mot de passe d'application"
 
-#: templates/ayarlar/email.html:233
 msgid "For Outlook:"
 msgstr "Pour Outlook :"
 
-#: templates/ayarlar/email.html:235
 msgid "SMTP Server: smtp-mail.outlook.com"
 msgstr "Serveur SMTP : smtp-mail.outlook.com"
 
-#: templates/ayarlar/email.html:236
 msgid "Port: 587"
 msgstr "Port : 587"
 
-#: templates/ayarlar/email.html:240
 msgid "For Yahoo:"
 msgstr "For Yahoo:"
 
-#: templates/ayarlar/email.html:242
 msgid "SMTP Server: smtp.mail.yahoo.com"
 msgstr "SMTP Server: smtp.mail.yahoo.com"
 
-#: templates/ayarlar/email.html:243
 msgid "Port: 587 or 465"
 msgstr "Port: 587 or 465"
 
-#: templates/ayarlar/email.html:244
 msgid "Application password required"
 msgstr "Application password required"
 
-#: templates/ayarlar/firmalar.html:3 templates/ayarlar/firmalar.html:7
-#: templates/ayarlar/index.html:15
 msgid "Company Settings"
 msgstr "Paramètres de l'Entreprise"
 
-#: templates/ayarlar/firmalar.html:15
 msgid "Add New Company"
 msgstr "Ajouter une Nouvelle Entreprise"
 
-#: templates/ayarlar/firmalar.html:23 templates/ayarlar/firmalar.html:102
 msgid "Company Code"
 msgstr "Code Entreprise"
 
-#: templates/ayarlar/firmalar.html:47 templates/ayarlar/index.html:17
 msgid "Companies"
 msgstr "Entreprises"
 
-#: templates/ayarlar/firmalar.html:54
 msgid "Code"
 msgstr "Code"
 
-#: templates/ayarlar/firmalar.html:71 templates/ayarlar/kullanicilar.html:131
 msgid "Are you sure you want to delete?"
 msgstr "Êtes-vous sûr de vouloir supprimer ?"
 
-#: templates/ayarlar/firmalar.html:91
 msgid "Edit Company"
 msgstr "Modifier l'Entreprise"
 
-#: templates/ayarlar/gorev_durumlar.html:3
-#: templates/ayarlar/gorev_durumlar.html:7 templates/ayarlar/index.html:90
 msgid "Task Status Settings"
 msgstr "Paramètres des Statuts de Tâche"
 
-#: templates/ayarlar/gorev_durumlar.html:10
-#: templates/ayarlar/gorev_durumlar.html:86
 msgid "Add Status"
 msgstr "Ajouter un Statut"
 
-#: templates/ayarlar/gorev_durumlar.html:19 templates/ayarlar/index.html:92
 msgid "Task Statuses"
 msgstr "Statuts de Tâche"
 
-#: templates/ayarlar/gorev_durumlar.html:26
-#: templates/ayarlar/gorev_durumlar.html:128
 msgid "Order"
 msgstr "Ordre"
 
-#: templates/ayarlar/gorev_durumlar.html:27
-#: templates/ayarlar/gorev_durumlar.html:110
 msgid "Status Name"
 msgstr "Nom du Statut"
 
-#: templates/ayarlar/gorev_durumlar.html:210
-#, fuzzy
 msgid "Edit Status"
 msgstr "Statut"
 
-#: templates/ayarlar/gorev_durumlar.html:212
-#, fuzzy
 msgid "Error loading status data"
 msgstr "Erreur lors du chargement des données de journal"
 
-#: templates/ayarlar/gorev_durumlar.html:222
-#, fuzzy
 msgid "Are you sure you want to delete this status?"
 msgstr "Are you sure you want to delete this category?"
 
-#: templates/ayarlar/gorev_durumlar.html:234
-#, fuzzy
 msgid "Error deleting status"
 msgstr "Erreur lors de la mise à jour du client"
 
-#: templates/ayarlar/gorev_durumlar.html:247
-#, fuzzy
 msgid "Form not found"
 msgstr "Utilisateur non trouvé."
 
-#: templates/ayarlar/gorev_durumlar.html:286
-#, fuzzy
 msgid "Error saving status"
 msgstr "Erreur lors du chargement des données de journal"
 
-#: templates/ayarlar/index.html:16
 msgid "List companies, add new companies or delete them."
-msgstr "Lister les entreprises, ajouter de nouvelles entreprises ou les supprimer."
+msgstr ""
+"Lister les entreprises, ajouter de "
+"nouvelles entreprises ou les supprimer."
 
-#: templates/ayarlar/index.html:25 templates/ayarlar/kullanicilar.html:3
-#: templates/ayarlar/kullanicilar.html:7
 msgid "User Settings"
 msgstr "Paramètres Utilisateur"
 
-#: templates/ayarlar/index.html:26
 msgid "Manage users, add new users or delete them."
-msgstr "Gérer les utilisateurs, ajouter de nouveaux utilisateurs ou les supprimer."
+msgstr ""
+"Gérer les utilisateurs, ajouter de "
+"nouveaux utilisateurs ou les supprimer."
 
-#: templates/ayarlar/index.html:27 templates/ayarlar/kullanici_duzenle.html:9
-#: templates/ayarlar/kullanicilar.html:93
 msgid "Users"
 msgstr "Utilisateurs"
 
-#: templates/ayarlar/index.html:36
 msgid "Set working days, hours and slots."
 msgstr "Set working days, hours and slots."
 
-#: templates/ayarlar/index.html:37
 msgid "Book Settings"
 msgstr "Paramètres du Carnet"
 
 # Appointment References translations
-#: templates/ayarlar/index.html:45 templates/ayarlar/referanslar.html:3
-#: templates/ayarlar/referanslar.html:7
 msgid "Appointment References"
 msgstr "Références de Rendez-vous"
 
-#: templates/ayarlar/index.html:46
 msgid "Manage references to be used instead of appointment titles."
 msgstr "Gérer les références à utiliser à la place des titres de rendez-vous."
 
-#: templates/ayarlar/index.html:47
 msgid "References"
 msgstr "Références"
 
-#: templates/ayarlar/index.html:54 templates/ayarlar/islemler.html:3
-#: templates/ayarlar/islemler.html:7
 msgid "Appointment Operations"
 msgstr "Opérations de Rendez-vous"
 
-#: templates/ayarlar/index.html:55
 msgid "Manage operations to be used in appointments."
 msgstr "Gérer les opérations à utiliser dans les rendez-vous."
 
-#: templates/ayarlar/index.html:56
 msgid "Operations"
 msgstr "Opérations"
 
-#: templates/ayarlar/index.html:64
 msgid "Configure SMTP settings and set up email sending."
 msgstr "Configurer les paramètres SMTP et configurer l'envoi d'e-mails."
 
-#: templates/ayarlar/index.html:72 templates/ayarlar/index.html:74
-#: templates/ayarlar/sms.html:3 templates/ayarlar/sms.html:8
 msgid "SMS Settings"
 msgstr "Paramètres SMS"
 
-#: templates/ayarlar/index.html:73
 msgid "Configure SMS sending settings and select SMS provider."
-msgstr "Configurer les paramètres d'envoi SMS et sélectionner le fournisseur SMS."
+msgstr ""
+"Configurer les paramètres d'envoi SMS et"
+" sélectionner le fournisseur SMS."
 
-#: templates/ayarlar/index.html:81 templates/ayarlar/index.html:83
-#: templates/ayarlar/whatsapp.html:3 templates/ayarlar/whatsapp.html:7
 msgid "WhatsApp Settings"
 msgstr "Paramètres WhatsApp"
 
-#: templates/ayarlar/index.html:82
 msgid "Configure WhatsApp Business API settings and create message templates."
 msgstr ""
-"Configurer les paramètres de l'API WhatsApp Business et créer des modèles"
+"Configurer les paramètres de l'API "
+"WhatsApp Business et créer des modèles"
 " de messages."
 
-#: templates/ayarlar/index.html:91
 msgid "Manage task statuses and customize their colors and order."
-msgstr "Gérez les statuts des tâches et personnalisez leurs couleurs et leur ordre."
-
-# Appointment Operations translations
-#: templates/ayarlar/islemler.html:21
-msgid "Add New Operation"
-msgstr "Ajouter une Nouvelle Opération"
-
-#: templates/ayarlar/islemler.html:38
-msgid "Operation Name"
-msgstr "Nom de l'Opération"
-
-#: templates/ayarlar/islemler.html:44
-msgid "Add Operation"
-msgstr "Ajouter l'Opération"
-
-#: templates/ayarlar/islemler.html:53
-msgid "Operations List"
-msgstr "Liste des Opérations"
-
-#: templates/ayarlar/islemler.html:82
-msgid "Are you sure you want to delete this operation?"
-msgstr "Êtes-vous sûr de vouloir supprimer cette opération ?"
-
-#: templates/ayarlar/islemler.html:93
-msgid "No operations found."
-msgstr "Aucune opération trouvée."
-
-#: templates/ayarlar/kullanici_duzenle.html:3
-#: templates/ayarlar/kullanici_duzenle.html:7
-msgid "Edit User"
-msgstr "Edit User"
-
-#: templates/ayarlar/kullanici_duzenle.html:17
-#: templates/ayarlar/kullanici_duzenle.html:154
-msgid "User Information"
-msgstr "User Information"
-
-#: templates/ayarlar/kullanici_duzenle.html:70
-msgid "Enter new password to change"
-msgstr "Enter new password to change"
-
-#: templates/ayarlar/kullanici_duzenle.html:71
-msgid "Leave blank to keep current password"
-msgstr "Leave blank to keep current password"
-
-# User edit reset password
-#: templates/ayarlar/kullanici_duzenle.html:76
-#, fuzzy
-msgid "Confirm Password"
-msgstr "Reset Password"
-
-# User edit reset password
-#: templates/ayarlar/kullanici_duzenle.html:77
-#, fuzzy
-msgid "Re-enter new password"
-msgstr "Reset Password"
-
-#: templates/ayarlar/kullanici_duzenle.html:85
-#, fuzzy
-msgid "Profile Photo"
-msgstr "Profil"
-
-#: templates/ayarlar/kullanici_duzenle.html:88
-#, fuzzy
-msgid "Max 512KB. Will be cropped to square (256x256)."
-msgstr "Max. 512KB, will be cropped to square and resized."
-
-#: templates/ayarlar/kullanici_duzenle.html:98
-msgid "Crop"
 msgstr ""
-
-#: templates/ayarlar/kullanici_duzenle.html:105
-#: templates/ayarlar/kullanici_duzenle.html:185
-#: templates/ayarlar/kullanicilar.html:62
-#: templates/ayarlar/kullanicilar.html:102
-msgid "Module Permissions"
-msgstr "Permissions du Module"
-
-#: templates/ayarlar/kullanici_duzenle.html:109
-#: templates/ayarlar/kullanicilar.html:66
-msgid "Reports Module"
-msgstr "Module Rapports"
-
-#: templates/ayarlar/kullanici_duzenle.html:116
-#: templates/ayarlar/kullanicilar.html:73
-msgid "Settings Module"
-msgstr "Module Paramètres"
-
-#: templates/ayarlar/kullanici_duzenle.html:123
-#: templates/ayarlar/kullanicilar.html:80
-msgid "Logs Module"
-msgstr "Module Journaux"
-
-#: templates/ayarlar/kullanici_duzenle.html:226
-#: templates/ayarlar/kullanicilar.html:179
-msgid "Adjust Photo"
-msgstr "Adjust Photo"
-
-#: templates/ayarlar/kullanici_duzenle.html:233
-#: templates/ayarlar/kullanicilar.html:186
-msgid "Drag to position, use wheel to zoom."
-msgstr "Drag to position, use wheel to zoom."
-
-#: templates/ayarlar/kullanici_duzenle.html:260
-#: templates/ayarlar/kullanici_duzenle.html:352
-#, fuzzy
-msgid "File size exceeds 512KB. Please choose a smaller image."
-msgstr "File size exceeds 512KB. Please select a smaller image."
-
-#: templates/ayarlar/kullanici_duzenle.html:333
-msgid "Are you sure you want to reset the password to 123?"
-msgstr "Are you sure you want to reset the password to 123?"
-
-#: templates/ayarlar/kullanici_duzenle.html:338
-msgid "Password reset to 123. User will be forced to change on next login."
-msgstr ""
-
-#: templates/ayarlar/kullanici_duzenle.html:341
-msgid "Password reset failed"
-msgstr ""
-
-#: templates/ayarlar/kullanicilar.html:14
-msgid "Add New User"
-msgstr "Ajouter un Nouvel Utilisateur"
-
-#: templates/ayarlar/kullanicilar.html:48
-msgid "User Photo (optional)"
-msgstr "Photo de l'Utilisateur (facultatif)"
-
-#: templates/ayarlar/kullanicilar.html:51
-msgid "Choose file..."
-msgstr "Choisir un fichier..."
-
-#: templates/ayarlar/kullanicilar.html:52
-msgid "Browse"
-msgstr "Parcourir"
-
-#: templates/ayarlar/kullanicilar.html:55
-msgid "Max. 512KB, will be cropped to square and resized."
-msgstr "Max. 512Ko, sera recadré en carré et redimensionné."
-
-#: templates/ayarlar/kullanicilar.html:58
-msgid "Adjust"
-msgstr "Ajuster"
-
-#: templates/ayarlar/kullanicilar.html:246
-msgid "File size exceeds 512KB. Please select a smaller image."
-msgstr "File size exceeds 512KB. Please select a smaller image."
-
-#: templates/ayarlar/referanslar.html:14
-msgid "Add New Reference"
-msgstr "Ajouter une Nouvelle Référence"
-
-#: templates/ayarlar/referanslar.html:27
-msgid "Reference Name"
-msgstr "Nom de la Référence"
-
-#: templates/ayarlar/referanslar.html:39
-msgid "Registered References"
-msgstr "Références Enregistrées"
-
-#: templates/ayarlar/referanslar.html:58
-msgid "Are you sure you want to delete this reference?"
-msgstr "Êtes-vous sûr de vouloir supprimer cette référence ?"
-
-# SMS Settings translations
-#: templates/ayarlar/sms.html:39
-msgid "SMS Provider Settings"
-msgstr "Paramètres du Fournisseur SMS"
-
-#: templates/ayarlar/sms.html:49 templates/ayarlar/sms.html:236
-msgid "SMS Provider"
-msgstr "Fournisseur SMS"
-
-#: templates/ayarlar/sms.html:55 templates/ayarlar/sms.html:243
-msgid "Custom API"
-msgstr "Custom API"
-
-#: templates/ayarlar/sms.html:59 templates/ayarlar/sms.html:161
-#: templates/ayarlar/sms.html:247 templates/ayarlar/sms.html:337
-msgid "API URL"
-msgstr "API URL"
-
-#: templates/ayarlar/sms.html:66 templates/ayarlar/sms.html:115
-#: templates/ayarlar/sms.html:168 templates/ayarlar/sms.html:254
-#: templates/ayarlar/sms.html:297 templates/ayarlar/sms.html:344
-msgid "API Key"
-msgstr "API Key"
-
-#: templates/ayarlar/sms.html:73 templates/ayarlar/sms.html:122
-#: templates/ayarlar/sms.html:175 templates/ayarlar/sms.html:260
-#: templates/ayarlar/sms.html:303 templates/ayarlar/sms.html:350
-msgid "API Secret"
-msgstr "API Secret"
-
-#: templates/ayarlar/sms.html:80 templates/ayarlar/sms.html:105
-#: templates/ayarlar/sms.html:129 templates/ayarlar/sms.html:153
-#: templates/ayarlar/sms.html:182 templates/ayarlar/sms.html:266
-#: templates/ayarlar/sms.html:288 templates/ayarlar/sms.html:309
-#: templates/ayarlar/sms.html:330 templates/ayarlar/sms.html:356
-msgid "Sender Name"
-msgstr "Sender Name"
-
-#: templates/ayarlar/sms.html:189 templates/ayarlar/sms.html:362
-msgid "Default SMS Text"
-msgstr "Default SMS Text"
-
-#: templates/ayarlar/sms.html:195 templates/ayarlar/sms.html:368
-msgid "Send Time"
-msgstr "Heure d'Envoi"
-
-#: templates/ayarlar/sms.html:199 templates/ayarlar/sms.html:371
-msgid "Send when appointment is created"
-msgstr "Envoyer lors de la création du rendez-vous"
-
-#: templates/ayarlar/sms.html:204 templates/ayarlar/sms.html:375
-msgid "Send 24 hours before appointment"
-msgstr "Envoyer 24 heures avant le rendez-vous"
-
-#: templates/ayarlar/sms.html:226
-msgid "Are you sure you want to delete SMS settings?"
-msgstr "Are you sure you want to delete SMS settings?"
-
-#: templates/ayarlar/sms.html:238
-#, fuzzy
-msgid "Select SMS Provider"
-msgstr "SMS Provider"
-
-#: templates/ayarlar/sms.html:389
-msgid "Add SMS Setting"
-msgstr "Add SMS Setting"
-
-#: templates/ayarlar/sms.html:400
-msgid "SMS Providers"
-msgstr "Fournisseurs SMS"
-
-#: templates/ayarlar/sms.html:406 templates/ayarlar/sms.html:420
-msgid "Username and password required"
-msgstr "Nom d'utilisateur et mot de passe requis"
-
-#: templates/ayarlar/sms.html:407
-msgid "Sender name: 11 characters max"
-msgstr "Nom de l'expéditeur : 11 caractères max"
-
-#: templates/ayarlar/sms.html:408
-msgid "API: XML based"
-msgstr "API : basée sur XML"
-
-#: templates/ayarlar/sms.html:413
-msgid "API Key and Secret required"
-msgstr "Clé API et Secret requis"
-
-#: templates/ayarlar/sms.html:414
-msgid "Uses REST API"
-msgstr "Utilise l'API REST"
-
-#: templates/ayarlar/sms.html:415
-msgid "JSON response format"
-msgstr "Format de réponse JSON"
-
-#: templates/ayarlar/sms.html:421
-msgid "Uses HTTP API"
-msgstr "Utilise l'API HTTP"
-
-#: templates/ayarlar/sms.html:422
-msgid "XML/JSON formats"
-msgstr "Formats XML/JSON"
-
-#: templates/ayarlar/sms.html:425
-msgid "Custom API:"
-msgstr "API Personnalisée :"
-
-#: templates/ayarlar/sms.html:427
-msgid "Enter your own API URL"
-msgstr "Entrez votre propre URL d'API"
-
-#: templates/ayarlar/sms.html:428
-msgid "API Key/Secret optional"
-msgstr "Clé API/Secret optionnel"
-
-#: templates/ayarlar/sms.html:429
-msgid "Flexible configuration"
-msgstr "Configuration flexible"
-
-#: templates/ayarlar/whatsapp.html:16 templates/ayarlar/whatsapp.html:18
-#, fuzzy
-msgid "Select Company"
-msgstr "Select Company:"
-
-#: templates/ayarlar/whatsapp.html:33
-msgid "WhatsApp Business API Settings"
-msgstr "Paramètres de l'API WhatsApp Business"
-
-#: templates/ayarlar/whatsapp.html:51
-msgid "Access Token"
-msgstr "Jeton d'Accès"
-
-#: templates/ayarlar/whatsapp.html:55
-msgid "WhatsApp Business API Access Token"
-msgstr "Jeton d'Accès de l'API WhatsApp Business"
-
-#: templates/ayarlar/whatsapp.html:60
-msgid "Phone Number ID"
-msgstr "ID de Numéro de Téléphone"
-
-#: templates/ayarlar/whatsapp.html:64
-msgid "WhatsApp Business Phone Number ID"
-msgstr "ID de Numéro de Téléphone WhatsApp Business"
-
-#: templates/ayarlar/whatsapp.html:72
-msgid "Business Account ID"
-msgstr "ID de Compte Professionnel"
-
-#: templates/ayarlar/whatsapp.html:76
-msgid "WhatsApp Business Account ID (Optional)"
-msgstr "ID de Compte WhatsApp Business (Facultatif)"
-
-#: templates/ayarlar/whatsapp.html:81
-msgid "Webhook Verify Token"
-msgstr "Jeton de Vérification Webhook"
-
-#: templates/ayarlar/whatsapp.html:85
-msgid "Webhook verification token (Optional)"
-msgstr ""
-
-#: templates/ayarlar/whatsapp.html:91
-msgid "Message Templates"
-msgstr "Modèles de Messages"
-
-#: templates/ayarlar/whatsapp.html:94
-msgid "Appointment Creation Message"
-msgstr "Message de Création de Rendez-vous"
-
-#: templates/ayarlar/whatsapp.html:96 templates/ayarlar/whatsapp.html:103
-#: templates/ayarlar/whatsapp.html:110
-msgid "Hello"
-msgstr "Bonjour"
-
-#: templates/ayarlar/whatsapp.html:96
-msgid "your appointment has been created for"
-msgstr "votre rendez-vous a été créé pour"
-
-#: templates/ayarlar/whatsapp.html:97 templates/ayarlar/whatsapp.html:104
-#: templates/ayarlar/whatsapp.html:111
-#, python-brace-format
-msgid "Variables: {musteri_adi}, {tarih}, {saat}, {defter}"
-msgstr ""
-
-#: templates/ayarlar/whatsapp.html:101
-msgid "Appointment Reminder Message"
-msgstr "Message de Rappel de Rendez-vous"
-
-#: templates/ayarlar/whatsapp.html:103
-msgid "you have an appointment tomorrow at"
-msgstr "vous avez un rendez-vous demain à"
-
-#: templates/ayarlar/whatsapp.html:108
-msgid "Appointment Cancellation Message"
-msgstr "Message d'Annulation de Rendez-vous"
-
-#: templates/ayarlar/whatsapp.html:110
-msgid "your appointment on"
-msgstr "votre rendez-vous du"
-
-#: templates/ayarlar/whatsapp.html:110
-msgid "has been cancelled"
-msgstr "a été annulé"
-
-#: templates/ayarlar/whatsapp.html:115
-msgid "Message Sending Options"
-msgstr "Options d'Envoi de Messages"
-
-#: templates/ayarlar/whatsapp.html:123
-msgid "Send message when appointment is created"
-msgstr "Envoyer un message lors de la création du rendez-vous"
-
-#: templates/ayarlar/whatsapp.html:132
-msgid "Send reminder 24 hours before"
-msgstr "Envoyer un rappel 24 heures avant"
-
-#: templates/ayarlar/whatsapp.html:141
-msgid "Send reminder 1 hour before"
-msgstr ""
-
-#: templates/ayarlar/whatsapp.html:151
-#, fuzzy
-msgid "Are you sure you want to delete WhatsApp settings?"
-msgstr "Are you sure you want to delete SMS settings?"
-
-#: templates/ayarlar/whatsapp.html:157
-msgid "Add"
-msgstr "Ajouter"
-
-#: templates/ayarlar/whatsapp.html:173
-msgid "WhatsApp Business API setup is required for sending messages."
-msgstr ""
-"La configuration de l'API WhatsApp Business est requise pour envoyer des "
-"messages."
-
-#: templates/ayarlar/whatsapp.html:176
-msgid "Setup Steps"
-msgstr "Étapes de Configuration"
-
-#: templates/ayarlar/whatsapp.html:178
-msgid "Create a WhatsApp Business Account"
-msgstr "Créer un compte WhatsApp Business"
-
-#: templates/ayarlar/whatsapp.html:179
-msgid "Get your Access Token from Meta for Developers"
-msgstr "Obtenez votre jeton d'accès depuis Meta for Developers"
-
-#: templates/ayarlar/whatsapp.html:180
-msgid "Get your Phone Number ID"
-msgstr "Obtenez votre ID de numéro de téléphone"
-
-#: templates/ayarlar/whatsapp.html:181
-msgid "Configure webhook (optional)"
-msgstr "Configurer le webhook (facultatif)"
-
-#: templates/ayarlar/whatsapp.html:184
-msgid "Message Variables"
-msgstr "Variables de Message"
-
-#~ msgid "Customers"
-#~ msgstr "Customers"
-
-#~ msgid "Login to your account"
-#~ msgstr "Login to your account"
-
-#~ msgid "Select appointment book..."
-#~ msgstr "Select appointment book..."
-
-#~ msgid "Select date"
-#~ msgstr "Select date"
-
-#~ msgid "Available time slots"
-#~ msgstr "Available time slots"
-
-#~ msgid "Select time slot"
-#~ msgstr "Select time slot"
-
-#~ msgid "Notes"
-#~ msgstr "Notes"
-
-#~ msgid "Save Appointment"
-#~ msgstr "Save Appointment"
-
-# Common
-#~ msgid "Save"
-#~ msgstr "Save"
-
-#~ msgid "Search"
-#~ msgstr "Search"
-
-#~ msgid "Filter"
-#~ msgstr "Filter"
-
-#~ msgid "Clear"
-#~ msgstr "Clear"
-
-#~ msgid "Export CSV"
-#~ msgstr "Rapports"
-
-#~ msgid "Active Only"
-#~ msgstr "Actions"
-
-#~ msgid ""
-#~ "You cannot make an appointment for "
-#~ "a past time. Please select a "
-#~ "future time."
-#~ msgstr ""
-#~ "You cannot make an appointment for "
-#~ "a past time. Please select a "
-#~ "future time."
-
-#~ msgid "appointment created for"
-#~ msgstr "appointment created for"
-
-#~ msgid "Appointment moved from"
-#~ msgstr "Appointment moved from"
-
-#~ msgid "Selected date"
-#~ msgstr "Selected date"
-
-#~ msgid "Default Admin"
-#~ msgstr "Default Admin"
-
-#~ msgid "min"
-#~ msgstr "Mon"
-
-#~ msgid "Clear Filters"
-#~ msgstr "Clear Filters"
-
-#~ msgid "January"
-#~ msgstr "January"
-
-#~ msgid "February"
-#~ msgstr "February"
-
-#~ msgid "March"
-#~ msgstr "March"
-
-#~ msgid "April"
-#~ msgstr "April"
-
-#~ msgid "May"
-#~ msgstr "May"
-
-#~ msgid "June"
-#~ msgstr "June"
-
-#~ msgid "July"
-#~ msgstr "July"
-
-#~ msgid "August"
-#~ msgstr "August"
-
-#~ msgid "September"
-#~ msgstr "September"
-
-#~ msgid "October"
-#~ msgstr "October"
-
-#~ msgid "November"
-#~ msgstr "November"
-
-#~ msgid "December"
-#~ msgstr "December"
-
-#~ msgid "Drag to move"
-#~ msgstr "Drag to move"
-
-#~ msgid "Price"
-#~ msgstr "Price"
-
-#~ msgid "Select City"
-#~ msgstr "Select City"
-
-#~ msgid "Enter district"
-#~ msgstr "Enter district"
-
-#~ msgid "Generate Report"
-#~ msgstr "Generate Report"
-
-#~ msgid "Peak Hours Report"
-#~ msgstr "Peak Hours Report"
-
-#~ msgid "Hourly Appointment Distribution"
-#~ msgstr "Hourly Appointment Distribution"
-
-#~ msgid "Capacity Utilization"
-#~ msgstr "Capacity Utilization"
-
-#~ msgid "Weekly Heatmap"
-#~ msgstr "Weekly Heatmap"
-
-#~ msgid "Used"
-#~ msgstr "Used"
-
-#~ msgid "Appointment density by day and hour"
-#~ msgstr "Appointment density by day and hour"
-
-#~ msgid "Empty"
-#~ msgstr "Empty"
-
-#~ msgid "Very High"
-#~ msgstr "Very High"
-
-# WhatsApp Chat
-#~ msgid "WhatsApp Chat"
-#~ msgstr "WhatsApp Chat"
-
-#~ msgid "Refresh"
-#~ msgstr "Refresh"
-
-#~ msgid "Loading WhatsApp Web..."
-#~ msgstr "Loading WhatsApp Web..."
-
-#~ msgid "Please wait while WhatsApp Web loads"
-#~ msgstr "Please wait while WhatsApp Web loads"
-
-#~ msgid "Common WhatsApp operations"
-#~ msgstr "Common WhatsApp operations"
-
-#~ msgid "Customer Support"
-#~ msgstr "Customer Support"
-
-#~ msgid "Contact customers directly"
-#~ msgstr "Contact customers directly"
-
-#~ msgid "View Customers"
-#~ msgstr "View Customers"
-
-#~ msgid "View Appointments"
-#~ msgstr "View Appointments"
-
-#~ msgid "Configure WhatsApp settings"
-#~ msgstr "Configure WhatsApp settings"
-
-#~ msgid "All Settings"
-#~ msgstr "All Settings"
-
-#~ msgid "Please use the new chat button in WhatsApp Web interface"
-#~ msgstr "Please use the new chat button in WhatsApp Web interface"
-
-#~ msgid "Manage your WhatsApp conversations directly from CRM"
-#~ msgstr "Manage your WhatsApp conversations directly from CRM"
-
-#~ msgid ""
-#~ "WhatsApp Web requires you to scan "
-#~ "the QR code with your phone to "
-#~ "connect. Make sure your phone has "
-#~ "internet connection."
-#~ msgstr ""
-#~ "WhatsApp Web requires you to scan "
-#~ "the QR code with your phone to "
-#~ "connect. Make sure your phone has "
-#~ "internet connection."
-
-#~ msgid "Connected"
-#~ msgstr "Connected"
-
-#~ msgid "Using your company WhatsApp Business API settings"
-#~ msgstr "Using your company WhatsApp Business API settings"
-
-#~ msgid "Test Connection"
-#~ msgstr "Test Connection"
-
-#~ msgid "Send WhatsApp Message"
-#~ msgstr "Send WhatsApp Message"
-
-#~ msgid "Send messages using your WhatsApp Business API"
-#~ msgstr "Send messages using your WhatsApp Business API"
-
-#~ msgid "Select Customer"
-#~ msgstr "Select Customer"
-
-#~ msgid "Message"
-#~ msgstr "Message"
-
-#~ msgid "Type your message here..."
-#~ msgstr "Type your message here..."
-
-#~ msgid "Cancellation"
-#~ msgstr "Cancellation"
-
-#~ msgid "Send Message"
-#~ msgstr "Send Message"
-
-#~ msgid "API Information"
-#~ msgstr "API Information"
-
-#~ msgid "Please fill in all fields"
-#~ msgstr "Please fill in all fields"
-
-#~ msgid "Sending..."
-#~ msgstr "Sending..."
-
-#~ msgid "Message sent successfully!"
-#~ msgstr "Message sent successfully!"
-
-#~ msgid "Error sending message:"
-#~ msgstr "Error sending message:"
-
-#~ msgid "Testing..."
-#~ msgstr "Testing..."
-
-#~ msgid "Connection test successful!"
-#~ msgstr "Connection test successful!"
-
-#~ msgid "Connection test failed:"
-#~ msgstr "Connection test failed:"
-
-#~ msgid "Todos"
-#~ msgstr "Tâches"
-
-#~ msgid "No reminders for today!"
-#~ msgstr ""
-
-#~ msgid "All your tasks are up to date."
-#~ msgstr ""
-
-#~ msgid "An error occurred while loading reminders."
-#~ msgstr "An error occurred while moving the appointment"
-
-#~ msgid "Loading reminders..."
-#~ msgstr "Appointment Reminder"
-
-#~ msgid "Mark All as Read"
-#~ msgstr "Tout marquer comme lu"
-
-# Excel Import Log Operations
-#~ msgid "musteri_excel_import_summary"
-#~ msgstr "Résumé d'Import Excel"
-
-#~ msgid "musteri_excel_import_add"
-#~ msgstr "Ajout par Import Excel"
-
-#~ msgid "musteri_excel_import_update"
-#~ msgstr "Mise à jour par Import Excel"
-
-# Log Operation Types
-#~ msgid "CREATE"
-#~ msgstr "Créer"
-
-#~ msgid "UPDATE"
-#~ msgstr "Mettre à jour"
-
-#~ msgid "VIEW"
-#~ msgstr "Voir"
-
-#~ msgid "LOGIN"
-#~ msgstr "Connexion"
-
-#~ msgid "LOGOUT"
-#~ msgstr "Déconnexion"
-
-# Calendar days
-#~ msgid "Pzt"
-#~ msgstr "Lun"
-
-#~ msgid "Çar"
-#~ msgstr "Mer"
-
-#~ msgid "Per"
-#~ msgstr "Jeu"
-
-#~ msgid "Cum"
-#~ msgstr "Ven"
-
-#~ msgid "Cmt"
-#~ msgstr "Sam"
-
-#~ msgid "Paz"
-#~ msgstr "Dim"
-
-#~ msgid "Todo List"
-#~ msgstr "Liste des Tâches"
-
-#~ msgid "Edit Todo"
-#~ msgstr "Edit Category"
-
-#~ msgid "No todos found"
-#~ msgstr "No appointments found"
-
-#~ msgid "Create your first todo to get started!"
-#~ msgstr ""
-
-#~ msgid "Create Todo"
-#~ msgstr "Créé par"
-
-# Excel Import Log Messages
-#~ msgid "Excel import ile müşteri eklendi: {name} {surname} (Telefon: {phone})"
-#~ msgstr "Client ajouté via import Excel : {name} {surname} (Téléphone : {phone})"
-
-#~ msgid ""
-#~ "Excel import ile müşteri güncellendi: "
-#~ "{name} {surname} (Telefon: {phone})"
-#~ msgstr ""
-#~ "Client mis à jour via import Excel"
-#~ " : {name} {surname} (Téléphone : "
-#~ "{phone})"
-
-#~ msgid ""
-#~ "Excel import tamamlandı: {success} müşteri "
-#~ "eklendi, {updated} müşteri güncellendi, "
-#~ "{skipped} kayıt atlandı, {errors} hata "
-#~ "oluştu"
-#~ msgstr ""
-#~ "Import Excel terminé : {success} clients"
-#~ " ajoutés, {updated} clients mis à "
-#~ "jour, {skipped} enregistrements ignorés, "
-#~ "{errors} erreurs survenues"
-
-#~ msgid "Surname"
-#~ msgstr "Nom"
-
-#~ msgid ""
-#~ "Appointment duration must be multiples "
-#~ "of the selected book's slot minutes"
-#~ msgstr ""
-#~ "La durée du rendez-vous doit être"
-#~ " un multiple des minutes de créneau"
-#~ " du livre sélectionné"
+"Gérez les statuts des tâches et "
+"personnalisez leurs couleurs et leur "
+"ordre."
 
 msgid "Database Settings"
 msgstr "Paramètres de Base de Données"
 
-msgid "Configure database connection. Select MSSQL or MySQL and enter connection details."
-msgstr "Configurer la connexion à la base de données. Sélectionnez MSSQL ou MySQL et entrez les détails de connexion."
+msgid "Configure database connection (MSSQL or MySQL)."
+msgstr "Configurer la connexion à la base de données (MSSQL ou MySQL)."
+
+# Appointment Operations translations
+msgid "Add New Operation"
+msgstr "Ajouter une Nouvelle Opération"
+
+msgid "Operation Name"
+msgstr "Nom de l'Opération"
+
+msgid "Add Operation"
+msgstr "Ajouter l'Opération"
+
+msgid "Operations List"
+msgstr "Liste des Opérations"
+
+msgid "Are you sure you want to delete this operation?"
+msgstr "Êtes-vous sûr de vouloir supprimer cette opération ?"
+
+msgid "No operations found."
+msgstr "Aucune opération trouvée."
+
+msgid "Edit User"
+msgstr "Edit User"
+
+msgid "User Information"
+msgstr "User Information"
+
+msgid "Enter new password to change"
+msgstr "Enter new password to change"
+
+msgid "Leave blank to keep current password"
+msgstr "Leave blank to keep current password"
+
+# User edit reset password
+msgid "Confirm Password"
+msgstr "Reset Password"
+
+# User edit reset password
+msgid "Re-enter new password"
+msgstr "Reset Password"
+
+msgid "Profile Photo"
+msgstr "Profil"
+
+msgid "Max 512KB. Will be cropped to square (256x256)."
+msgstr "Max. 512KB, will be cropped to square and resized."
+
+msgid "Crop"
+msgstr ""
+
+msgid "Module Permissions"
+msgstr "Permissions du Module"
+
+msgid "Reports Module"
+msgstr "Module Rapports"
+
+msgid "Settings Module"
+msgstr "Module Paramètres"
+
+msgid "Logs Module"
+msgstr "Module Journaux"
+
+msgid "WhatsApp Module"
+msgstr "WhatsApp"
+
+msgid "Adjust Photo"
+msgstr "Adjust Photo"
+
+msgid "Drag to position, use wheel to zoom."
+msgstr "Drag to position, use wheel to zoom."
+
+msgid "File size exceeds 512KB. Please choose a smaller image."
+msgstr "File size exceeds 512KB. Please select a smaller image."
+
+msgid "Are you sure you want to reset the password to 123?"
+msgstr "Etes-vous sur de vouloir reinitialiser le mot de passe a 123?"
+
+msgid "Password reset to 123. User will be forced to change on next login."
+msgstr ""
+"Mot de passe reinitialise a 123. "
+"L'utilisateur sera oblige de le changer"
+" lors de la prochaine connexion."
+
+msgid "Password reset failed"
+msgstr "Échec de la réinitialisation du mot de passe"
+
+msgid "Add New User"
+msgstr "Ajouter un Nouvel Utilisateur"
+
+msgid "User Photo (optional)"
+msgstr "Photo de l'Utilisateur (facultatif)"
+
+msgid "Choose file..."
+msgstr "Choisir un fichier..."
+
+msgid "Browse"
+msgstr "Parcourir"
+
+msgid "Max. 512KB, will be cropped to square and resized."
+msgstr "Max. 512Ko, sera recadré en carré et redimensionné."
+
+msgid "Adjust"
+msgstr "Ajuster"
+
+msgid "File size exceeds 512KB. Please select a smaller image."
+msgstr "File size exceeds 512KB. Please select a smaller image."
+
+msgid "Add New Reference"
+msgstr "Ajouter une Nouvelle Référence"
+
+msgid "Reference Name"
+msgstr "Nom de la Référence"
+
+msgid "Registered References"
+msgstr "Références Enregistrées"
+
+msgid "Are you sure you want to delete this reference?"
+msgstr "Êtes-vous sûr de vouloir supprimer cette référence ?"
+
+# SMS Settings translations
+msgid "SMS Provider Settings"
+msgstr "Paramètres du Fournisseur SMS"
+
+msgid "SMS Provider"
+msgstr "Fournisseur SMS"
+
+msgid "Custom API"
+msgstr "Custom API"
+
+msgid "API URL"
+msgstr "API URL"
+
+msgid "API Key"
+msgstr "API Key"
+
+msgid "API Secret"
+msgstr "API Secret"
+
+msgid "Sender Name"
+msgstr "Sender Name"
+
+msgid "Default SMS Text"
+msgstr "Default SMS Text"
+
+msgid "Send Time"
+msgstr "Heure d'Envoi"
+
+msgid "Send when appointment is created"
+msgstr "Envoyer lors de la création du rendez-vous"
+
+msgid "Send 24 hours before appointment"
+msgstr "Envoyer 24 heures avant le rendez-vous"
+
+msgid "Are you sure you want to delete SMS settings?"
+msgstr "Are you sure you want to delete SMS settings?"
+
+msgid "Select SMS Provider"
+msgstr "SMS Provider"
+
+msgid "Add SMS Setting"
+msgstr "Add SMS Setting"
+
+msgid "SMS Providers"
+msgstr "Fournisseurs SMS"
+
+msgid "Username and password required"
+msgstr "Nom d'utilisateur et mot de passe requis"
+
+msgid "Sender name: 11 characters max"
+msgstr "Nom de l'expéditeur : 11 caractères max"
+
+msgid "API: XML based"
+msgstr "API : basée sur XML"
+
+msgid "API Key and Secret required"
+msgstr "Clé API et Secret requis"
+
+msgid "Uses REST API"
+msgstr "Utilise l'API REST"
+
+msgid "JSON response format"
+msgstr "Format de réponse JSON"
+
+msgid "Uses HTTP API"
+msgstr "Utilise l'API HTTP"
+
+msgid "XML/JSON formats"
+msgstr "Formats XML/JSON"
+
+msgid "Custom API:"
+msgstr "API Personnalisée :"
+
+msgid "Enter your own API URL"
+msgstr "Entrez votre propre URL d'API"
+
+msgid "API Key/Secret optional"
+msgstr "Clé API/Secret optionnel"
+
+msgid "Flexible configuration"
+msgstr "Configuration flexible"
+
+msgid ""
+"Configure database connection. Select MSSQL"
+" or MySQL and enter connection "
+"details."
+msgstr ""
+"Configurer la connexion à la base "
+"de données. Sélectionnez MSSQL ou MySQL"
+" et entrez les détails de connexion."
 
 msgid "Database Configuration"
 msgstr "Configuration de la Base de Données"
@@ -3803,17 +2256,14 @@ msgstr "Nom de la Base de Données"
 msgid "ODBC Driver"
 msgstr "Pilote ODBC"
 
-msgid "Username"
-msgstr "Nom d'utilisateur"
-
-msgid "Password"
-msgstr "Mot de passe"
-
 msgid "Enter database password"
 msgstr "Entrez le mot de passe de la base de données"
 
 msgid "Enter the database user password. Required for connection."
-msgstr "Entrez le mot de passe de l'utilisateur de la base de données. Requis pour la connexion."
+msgstr ""
+"Entrez le mot de passe de "
+"l'utilisateur de la base de données. "
+"Requis pour la connexion."
 
 msgid "MySQL Connection Settings"
 msgstr "Paramètres de Connexion MySQL"
@@ -3833,6 +2283,9 @@ msgstr "Jeu de Caractères"
 msgid "Current Database Connection Status"
 msgstr "Statut Actuel de la Connexion à la Base de Données"
 
+msgid "Loading..."
+msgstr "Téléchargement en cours..."
+
 msgid "Checking connection status..."
 msgstr "Vérification du statut de la connexion..."
 
@@ -3846,25 +2299,42 @@ msgid "Click \"Test Connection\" to verify your settings"
 msgstr "Cliquez sur \"Tester la Connexion\" pour vérifier vos paramètres"
 
 msgid "If test is successful, click \"Save Settings\" to save"
-msgstr "Si le test est réussi, cliquez sur \"Enregistrer les Paramètres\" pour sauvegarder"
+msgstr ""
+"Si le test est réussi, cliquez sur"
+" \"Enregistrer les Paramètres\" pour "
+"sauvegarder"
 
 msgid "Restart the application after saving for changes to take effect"
-msgstr "Redémarrez l'application après l'enregistrement pour que les modifications prennent effet"
+msgstr ""
+"Redémarrez l'application après l'enregistrement "
+"pour que les modifications prennent "
+"effet"
 
 msgid "Also export settings to .env file"
 msgstr "Exporter également les paramètres vers le fichier .env"
 
-msgid "This will update the .env file with your current database settings. A backup will be created automatically."
-msgstr "Cela mettra à jour le fichier .env avec vos paramètres de base de données actuels. Une sauvegarde sera créée automatiquement."
-
-msgid "Test Connection"
-msgstr "Tester la Connexion"
+msgid ""
+"This will update the .env file "
+"with your current database settings. A"
+" backup will be created automatically."
+msgstr ""
+"Cela mettra à jour le fichier .env"
+" avec vos paramètres de base de "
+"données actuels. Une sauvegarde sera "
+"créée automatiquement."
 
 msgid "Save Settings"
 msgstr "Enregistrer les Paramètres"
 
-msgid "You can save settings even without testing, but testing is recommended to ensure the connection works."
-msgstr "Vous pouvez enregistrer les paramètres sans tester, mais il est recommandé de tester pour s'assurer que la connexion fonctionne."
+msgid ""
+"You can save settings even without "
+"testing, but testing is recommended to"
+" ensure the connection works."
+msgstr ""
+"Vous pouvez enregistrer les paramètres "
+"sans tester, mais il est recommandé "
+"de tester pour s'assurer que la "
+"connexion fonctionne."
 
 msgid "Active Connection:"
 msgstr "Connexion Active:"
@@ -3905,45 +2375,673 @@ msgstr "Veuillez remplir tous les champs MySQL obligatoires"
 msgid "Please fill in all required fields"
 msgstr "Veuillez remplir tous les champs obligatoires"
 
-msgid "Testing..."
-msgstr "Test en cours..."
+msgid "Server returned an error. Please check your connection and try again."
+msgstr ""
 
 msgid "Connection successful! Database connection is working correctly."
-msgstr "Connexion réussie! La connexion à la base de données fonctionne correctement."
+msgstr ""
+"Connexion réussie! La connexion à la "
+"base de données fonctionne correctement."
 
 msgid "Connection failed:"
 msgstr "Connexion échouée:"
 
-msgid "Unknown error"
-msgstr "Erreur inconnue"
-
 msgid "Error:"
 msgstr "Erreur:"
 
-msgid "Database settings saved and exported to .env file"
-msgstr "Paramètres de base de données enregistrés et exportés vers le fichier .env"
+msgid "Unknown error occurred"
+msgstr "Unknown error"
 
-msgid "Database settings saved, but failed to export to .env file"
-msgstr "Paramètres de base de données enregistrés, mais échec de l'exportation vers le fichier .env"
+msgid "Select Company"
+msgstr "Select Company:"
 
-msgid "Database changed. All sessions have been terminated. Please log in again with the new database."
-msgstr "Base de données modifiée. Toutes les sessions ont été terminées. Veuillez vous reconnecter avec la nouvelle base de données."
+msgid "WhatsApp Business API Settings"
+msgstr "Paramètres de l'API WhatsApp Business"
 
-msgid "Database settings saved successfully"
-msgstr "Paramètres de base de données enregistrés avec succès"
+msgid "Access Token"
+msgstr "Jeton d'Accès"
 
-msgid "Error saving database settings:"
-msgstr "Erreur lors de l'enregistrement des paramètres de base de données:"
+msgid "WhatsApp Business API Access Token"
+msgstr "Jeton d'Accès de l'API WhatsApp Business"
 
-msgid "Error loading database settings:"
-msgstr "Erreur lors du chargement des paramètres de base de données:"
+msgid "Phone Number ID"
+msgstr "ID de Numéro de Téléphone"
 
-msgid "Missing required fields"
-msgstr "Champs obligatoires manquants"
+msgid "WhatsApp Business Phone Number ID"
+msgstr "ID de Numéro de Téléphone WhatsApp Business"
 
-msgid "Invalid database type"
-msgstr "Type de base de données invalide"
+msgid "Business Account ID"
+msgstr "ID de Compte Professionnel"
 
-msgid "Configure database connection (MSSQL or MySQL)."
-msgstr "Configurer la connexion à la base de données (MSSQL ou MySQL)."
+msgid "WhatsApp Business Account ID (Optional)"
+msgstr "ID de Compte WhatsApp Business (Facultatif)"
 
+msgid "Webhook Verify Token"
+msgstr "Jeton de Vérification Webhook"
+
+msgid "Webhook verification token (Optional)"
+msgstr ""
+
+msgid "Message Templates"
+msgstr "Modèles de Messages"
+
+msgid "Appointment Creation Message"
+msgstr "Message de Création de Rendez-vous"
+
+msgid "Hello"
+msgstr "Bonjour"
+
+msgid "your appointment has been created for"
+msgstr "votre rendez-vous a été créé pour"
+
+msgid "Variables: {musteri_adi}, {tarih}, {saat}, {defter}"
+msgstr ""
+
+msgid "Appointment Reminder Message"
+msgstr "Message de Rappel de Rendez-vous"
+
+msgid "you have an appointment tomorrow at"
+msgstr "vous avez un rendez-vous demain à"
+
+msgid "Appointment Cancellation Message"
+msgstr "Message d'Annulation de Rendez-vous"
+
+msgid "your appointment on"
+msgstr "votre rendez-vous du"
+
+msgid "has been cancelled"
+msgstr "a été annulé"
+
+msgid "Message Sending Options"
+msgstr "Options d'Envoi de Messages"
+
+msgid "Send message when appointment is created"
+msgstr "Envoyer un message lors de la création du rendez-vous"
+
+msgid "Send reminder 24 hours before"
+msgstr "Envoyer un rappel 24 heures avant"
+
+msgid "Send reminder 1 hour before"
+msgstr ""
+
+msgid "Are you sure you want to delete WhatsApp settings?"
+msgstr "Are you sure you want to delete SMS settings?"
+
+msgid "Add"
+msgstr "Ajouter"
+
+msgid "WhatsApp Business API setup is required for sending messages."
+msgstr ""
+"La configuration de l'API WhatsApp "
+"Business est requise pour envoyer des"
+" messages."
+
+msgid "Setup Steps"
+msgstr "Étapes de Configuration"
+
+msgid "Create a WhatsApp Business Account"
+msgstr "Créer un compte WhatsApp Business"
+
+msgid "Get your Access Token from Meta for Developers"
+msgstr "Obtenez votre jeton d'accès depuis Meta for Developers"
+
+msgid "Get your Phone Number ID"
+msgstr "Obtenez votre ID de numéro de téléphone"
+
+msgid "Configure webhook (optional)"
+msgstr "Configurer le webhook (facultatif)"
+
+msgid "Message Variables"
+msgstr "Variables de Message"
+
+# Activity Module Translations
+msgid "Activity Timeline"
+msgstr "Chronologie des activités"
+
+msgid "Communication History"
+msgstr "Historique de communication"
+
+msgid "Add Activity"
+msgstr "Ajouter une activité"
+
+msgid "Activity Type"
+msgstr "Type d'activité"
+
+msgid "Phone Call"
+msgstr "Appel téléphonique"
+
+msgid "WhatsApp Call"
+msgstr "Appel WhatsApp"
+
+msgid "Instagram Message"
+msgstr "Message Instagram"
+
+msgid "Meeting"
+msgstr "Réunion"
+
+msgid "Other"
+msgstr "Autre"
+
+msgid "Activity Date & Time"
+msgstr "Date et heure de l'activité"
+
+msgid "No activities found for this customer."
+msgstr "Aucune activité trouvée pour ce client."
+
+msgid "Add First Activity"
+msgstr "Ajouter la première activité"
+
+msgid "View Appointment"
+msgstr "Voir le rendez-vous"
+
+msgid "View Task"
+msgstr "Voir la tâche"
+
+msgid "Additional Info"
+msgstr "Informations supplémentaires"
+
+msgid "by"
+msgstr "par"
+
+msgid "Are you sure you want to delete this activity?"
+msgstr "Êtes-vous sûr de vouloir supprimer cette activité ?"
+
+msgid "Please fill in all required fields."
+msgstr "Veuillez remplir tous les champs obligatoires."
+
+msgid "Form elements not found"
+msgstr "Éléments de formulaire introuvables"
+
+msgid "Modal not found"
+msgstr "Modal introuvable"
+
+msgid "User Messages"
+msgstr "Messages Utilisateurs"
+
+msgid "Search users..."
+msgstr "Rechercher des utilisateurs..."
+
+msgid "No messages yet"
+msgstr "Aucun message pour le moment"
+
+msgid "Select a user to start messaging"
+msgstr "Sélectionnez un utilisateur pour commencer à discuter"
+
+msgid "Select a user from the list to start messaging."
+msgstr "Sélectionnez un utilisateur dans la liste pour commencer à discuter."
+
+msgid "Type a message..."
+msgstr "Tapez un message..."
+
+msgid "Instagram Messages"
+msgstr "Messages Instagram"
+
+msgid "Instagram Direct Messages"
+msgstr "Messages Directs Instagram"
+
+msgid "No customers with Instagram account found."
+msgstr "Aucun client avec compte Instagram trouvé."
+
+msgid "Start a conversation"
+msgstr "Démarrer une conversation"
+
+msgid "Unknown User"
+msgstr "Utilisateur Inconnu"
+
+msgid "Select a conversation"
+msgstr "Sélectionnez une conversation"
+
+msgid "No message history available."
+msgstr "Aucun historique de message disponible."
+
+msgid "Customer has not contacted us yet."
+msgstr "Le client ne nous a pas encore contactés."
+
+msgid "No messages yet."
+msgstr "Pas encore de messages."
+
+msgid ""
+"Cannot send message: This customer has"
+" no linked Instagram ID (PSID). They"
+" must contact you first."
+msgstr ""
+"Impossible d'envoyer le message : Ce "
+"client n'a pas d'ID Instagram lié "
+"(PSID). Il doit d'abord vous contacter."
+
+msgid "Select appointment book..."
+msgstr "Sélectionner le carnet..."
+
+msgid "Save Appointment"
+msgstr "Enregistrer le rendez-vous"
+
+# Navigation
+msgid "Dashboard"
+msgstr "Tableau de bord"
+
+msgid "Appointments"
+msgstr "Rendez-vous"
+
+msgid "New Appointment"
+msgstr "Nouveau Rendez-vous"
+
+msgid "Calendar"
+msgstr "Calendrier"
+
+msgid "WhatsApp"
+msgstr "WhatsApp"
+
+msgid "Reports"
+msgstr "Rapports"
+
+msgid "Appointment Report"
+msgstr "Rapport de Rendez-vous"
+
+msgid "Customer Report"
+msgstr "Rapport Client"
+
+msgid "Yapılacaklar"
+msgstr "Liste de tâches"
+
+msgid "Görevler"
+msgstr "Tâches"
+
+# Reports page translations
+msgid "Görev Raporları"
+msgstr "Rapports de tâches"
+
+msgid "Today's Reminders"
+msgstr "Rappel"
+
+# Login
+msgid "Logs"
+msgstr "Journaux"
+
+# Settings page translations
+msgid "Settings"
+msgstr "Paramètres"
+
+msgid "Language"
+msgstr "Langue"
+
+msgid "Notifications"
+msgstr "Notifications"
+
+msgid "Mark all as read"
+msgstr "Tout marquer comme lu"
+
+msgid "Clear all"
+msgstr "Tout effacer"
+
+msgid "Profile"
+msgstr "Profil"
+
+msgid "Logout"
+msgstr "Déconnexion"
+
+# Dashboard
+msgid "Total Appointments"
+msgstr "Rendez-vous totaux"
+
+msgid "This Week"
+msgstr "Cette semaine"
+
+msgid "Pending"
+msgstr "En attente"
+
+msgid "Confirmed"
+msgstr "Confirmé"
+
+# Dashboard translations
+msgid "My Todos"
+msgstr "Mes Todos"
+
+msgid "View All"
+msgstr "Voir tout"
+
+msgid "Mark as Completed"
+msgstr "Marquer comme terminé"
+
+msgid "Edit"
+msgstr "Modifier"
+
+msgid "Delete"
+msgstr "Supprimer"
+
+msgid "Todo Statistics"
+msgstr "Statistiques Todo"
+
+msgid "Total"
+msgstr "Total"
+
+msgid "Completed"
+msgstr "Terminé"
+
+msgid "In Progress"
+msgstr "En cours"
+
+# Dashboard translations
+msgid "My Tasks"
+msgstr "Mes Tâches"
+
+msgid "Title"
+msgstr "Titre"
+
+msgid "Cancel"
+msgstr "Annuler"
+
+msgid "Recent Appointments"
+msgstr "Rendez-vous récents"
+
+msgid "Customer"
+msgstr "Client"
+
+msgid "Date"
+msgstr "Date"
+
+msgid "Book"
+msgstr "Livre"
+
+msgid "Status"
+msgstr "Statut"
+
+msgid "Actions"
+msgstr "Actions"
+
+msgid "Cancelled"
+msgstr "Annulé"
+
+msgid "No appointments found"
+msgstr "Aucun rendez-vous trouvé"
+
+msgid "Use the button above to create your first appointment."
+msgstr "Utilisez le bouton ci-dessus pour créer votre premier rendez-vous."
+
+msgid "Create New Appointment"
+msgstr "Créer un nouveau rendez-vous"
+
+msgid "Appointment Book"
+msgstr "Carnet de rendez-vous"
+
+msgid "Select Book"
+msgstr "Sélectionner le carnet"
+
+msgid "Duration"
+msgstr "Durée"
+
+msgid "Customer Name"
+msgstr "Nom du client"
+
+msgid "Customer Surname"
+msgstr "Prénom du client"
+
+# Additional translations
+msgid "Phone"
+msgstr "Téléphone"
+
+msgid "Email"
+msgstr "Email"
+
+msgid "Description"
+msgstr "Description"
+
+msgid "All Users"
+msgstr "Tous les utilisateurs"
+
+msgid "Start Date"
+msgstr "Date de début"
+
+msgid "End Date"
+msgstr "Date de fin"
+
+msgid "Customer Information"
+msgstr "Informations client"
+
+msgid "Gender"
+msgstr "Genre"
+
+msgid "Birth Date"
+msgstr "Date de naissance"
+
+msgid "District"
+msgstr "Quartier"
+
+msgid "Address"
+msgstr "Adresse"
+
+msgid "Reference"
+msgstr "Référence"
+
+msgid "Back"
+msgstr "Retour"
+
+msgid "All"
+msgstr "Tout"
+
+msgid "Messages"
+msgstr "Messages"
+
+msgid "Appointment Details"
+msgstr "Détails du rendez-vous"
+
+# Appointment
+msgid "Appointment Book Selection"
+msgstr "Sélection du carnet de rendez-vous"
+
+msgid "Date and Time Selection"
+msgstr "Sélection de la date et lheure"
+
+msgid "Loading available time slots..."
+msgstr "Chargement des créneaux..."
+
+msgid "None"
+msgstr "Aucun"
+
+msgid "Operation"
+msgstr "Opération"
+
+msgid "Select Operation"
+msgstr "Sélectionner lopération"
+
+msgid "Duration (minutes)"
+msgstr "Durée (minutes)"
+
+msgid "Assign to User"
+msgstr "Assigner à"
+
+msgid "Select user (optional)"
+msgstr "Sélectionner un utilisateur"
+
+msgid "Seçilen kullanıcıya bu randevu için otomatik görev oluşturulacak"
+msgstr ""
+"Une tâche automatique sera créée pour"
+" cet utilisateurUne tâche automatique sera"
+" créée pour ce rendez-vous pour "
+"l'utilisateur sélectionné"
+
+msgid "Type name, existing customers will appear..."
+msgstr "Saisir le nom..."
+
+msgid "Phone Number"
+msgstr "Numéro de téléphone"
+
+msgid "Enter a valid phone number (e.g.: 536 555 66 44)"
+msgstr "Saisissez un numéro de téléphone"
+
+msgid "username"
+msgstr "utilisateur"
+
+msgid "Enter a valid email address"
+msgstr "Saisissez un email valide"
+
+msgid "Select"
+msgstr "Sélectionner"
+
+msgid "Male"
+msgstr "Homme"
+
+msgid "Female"
+msgstr "Femme"
+
+msgid "Category"
+msgstr "Catégorie"
+
+msgid "Select Category"
+msgstr "Sélectionner la catégorie"
+
+msgid "Country"
+msgstr "Pays"
+
+msgid "Select Country"
+msgstr "Sélectionner le pays"
+
+msgid "State/City"
+msgstr "Région/Ville"
+
+msgid "Select State/City"
+msgstr "Sélectionner la région"
+
+msgid "Select District"
+msgstr "Sélectionner le quartier"
+
+msgid "Street, building, apartment..."
+msgstr "Rue, bâtiment..."
+
+msgid "Customer Notes"
+msgstr "Notes client"
+
+msgid "Allergies, preferences, important information..."
+msgstr "Allergies, infos importantes..."
+
+msgid "Information"
+msgstr "Information"
+
+msgid "Note"
+msgstr "Note"
+
+msgid "Appointment Statuses"
+msgstr "Statuts de rendez-vous"
+
+msgid "Newly created appointments"
+msgstr "Rendez-vous nouvellement créés"
+
+msgid "Confirmed appointments"
+msgstr "Rendez-vous confirmés"
+
+msgid "Cancelled appointments"
+msgstr "Rendez-vous annulés"
+
+msgid "Completed appointments"
+msgstr "Rendez-vous terminés"
+
+msgid "Session expired. Please login again."
+msgstr "Session expirée. Veuillez vous reconnecter."
+
+msgid "No available time slots for this date. Please choose another date."
+msgstr ""
+"Aucun créneau disponible pour cette "
+"date. Veuillez choisir une autre date."
+
+# Appointments List
+msgid "All References"
+msgstr "Toutes les références"
+
+msgid "All Books"
+msgstr "Tous les carnets"
+
+msgid "All Statuses"
+msgstr "Tous les statuts"
+
+msgid "Custom"
+msgstr "Personnalisé"
+
+msgid "Today"
+msgstr "Aujourdhui"
+
+msgid "This Month"
+msgstr "Ce mois-ci"
+
+msgid "This Year"
+msgstr "Cette année"
+
+msgid "Quick Date"
+msgstr "Date rapide"
+
+msgid "Created By"
+msgstr "Créé par"
+
+msgid "Appointment List"
+msgstr "Liste des rendez-vous"
+
+msgid "Failed to load slots"
+msgstr "Échec du chargement des créneaux"
+
+msgid "Monthly"
+msgstr "Mensuel"
+
+msgid "Weekly"
+msgstr "Hebdomadaire"
+
+msgid "Weekly View"
+msgstr "Vue de semaine"
+
+msgid "Mon"
+msgstr "Lun"
+
+msgid "Tue"
+msgstr "Mar"
+
+msgid "Wed"
+msgstr "Mer"
+
+msgid "Thu"
+msgstr "Jeu"
+
+msgid "Fri"
+msgstr "Ven"
+
+msgid "Sat"
+msgstr "Sam"
+
+msgid "Sun"
+msgstr "Dim"
+
+msgid "Invalid operation"
+msgstr "Opération invalide"
+
+msgid "Are you sure you want to move the appointment to"
+msgstr "Êtes-vous sûr de vouloir déplacer le rendez-vous à"
+
+msgid "Appointment moved successfully!"
+msgstr "Rendez-vous déplacé avec succès!"
+
+msgid "Error"
+msgstr "Erreur"
+
+msgid "Unknown error"
+msgstr "Erreur inconnue"
+
+msgid "An error occurred while moving the appointment"
+msgstr "Une erreur est survenue lors du déplacement du rendez-vous"
+
+msgid "Henüz Yok"
+msgstr "Aucun pour le moment"
+
+msgid "Oluştur"
+msgstr "Créer"
+
+
+msgid "Full permissions will be automatically granted to the appointment you create."
+msgstr "Des autorisations complètes seront automatiquement accordées pour le rendez-vous créé."
+
+
+msgid "Select a customer to start chatting"
+msgstr "Sélectionnez un client pour discuter"
+
+
+msgid "Select a customer from the list to view messages"
+msgstr "Sélectionnez un client dans la liste pour voir les messages"
+
+
+msgid "New Customer"
+msgstr "Nouveau Client"
