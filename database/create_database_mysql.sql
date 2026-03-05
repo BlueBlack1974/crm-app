@@ -2,9 +2,9 @@
 -- MySQL için
 
 -- Veritabanı oluştur
-CREATE DATABASE IF NOT EXISTS Crandyx_CRM_DB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS httpdtjs_Crandyx_CRM_DB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-USE Crandyx_CRM_DB;
+USE httpdtjs_Crandyx_CRM_DB;
 
 -- Firmalar tablosu
 CREATE TABLE IF NOT EXISTS Firmalar (
@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS Kullanicilar (
     RaporlarModulu TINYINT(1) DEFAULT 1,
     AyarlarModulu TINYINT(1) DEFAULT 0,
     LogModulu TINYINT(1) DEFAULT 0,
+    WhatsAppModulu TINYINT(1) DEFAULT 0,
     OlusturmaTarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
     GuncellemeTarihi DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (FirmaID) REFERENCES Firmalar(FirmaID) ON DELETE CASCADE,

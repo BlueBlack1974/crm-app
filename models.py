@@ -41,6 +41,7 @@ class Kullanici(db.Model):
     FirmaID = db.Column(db.Integer, db.ForeignKey('Firmalar.FirmaID'), nullable=False)
     Admin = db.Column(db.Boolean, default=False)
     Aktif = db.Column(db.Boolean, default=True)
+    ProfilFotografi = db.Column(db.NVARCHAR(500))  # Profil fotoğrafı dosya yolu
     OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
     GuncellemeTarihi = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

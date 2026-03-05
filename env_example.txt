@@ -15,6 +15,15 @@ driver=ODBC+Driver+17+for+SQL+Server
 # Gelistirme ortami icin
 DEV_DATABASE_URL=mssql+pyodbc://intermedia:intermedia@localhost/Crandyx_CRM_DB?
 
+# İlk kurulum için varsayılan MySQL bağlantı bilgileri
+# SistemAyarlar tablosuna erişmek için kullanılır
+# ÖNEMLİ: Bu bilgileri .env dosyasına ekleyin (güvenlik için)
+DEFAULT_MYSQL_HOST=localhost
+DEFAULT_MYSQL_PORT=3306
+DEFAULT_MYSQL_DATABASE=crandyx_crm_db
+DEFAULT_MYSQL_USERNAME=root
+DEFAULT_MYSQL_PASSWORD=your_mysql_password_here
+
 SMTP_HOST=
 SMTP_PORT=587
 SMTP_USER=
@@ -22,5 +31,6 @@ SMTP_PASS=
 SMTP_USE_TLS=1
 FROM_EMAIL=
 CSC_API_KEY=
+GEONAMES_USERNAME=blueblack
 
 

@@ -23,6 +23,9 @@ class Config:
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
         'pool_recycle': 300,
+        'pool_size': 10,
+        'max_overflow': 20,
+        'pool_timeout': 60,
     }
     
     # Uygulama ayarlari
@@ -38,6 +41,13 @@ class Config:
     # Sayfalama ayarlari
     RANDEVULAR_PER_PAGE = 20
     KULLANICILAR_PER_PAGE = 20
+    
+    import os
+    # Babel (Çeviri) ayarlari
+    LANGUAGES = ['tr', 'en', 'fr', 'de']
+    BABEL_DEFAULT_LOCALE = 'tr'
+    BABEL_DEFAULT_TIMEZONE = 'Europe/Istanbul'
+    BABEL_TRANSLATION_DIRECTORIES = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'translations')
 
 class DevelopmentConfig(Config):
     """Gelistirme ortami konfigurasyonu"""
