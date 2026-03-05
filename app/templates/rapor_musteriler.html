@@ -1,0 +1,2331 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Customer Report') }} - Crandyx CRM{% endblock %}
+{% block head %}
+<!-- Chart.js base.html'de yüklendi -->
+<style>
+    /* Modal stilleri artık base.html'de global olarak tanımland */
+    /* Modal stilleri artık base.html'de global olarak tanımland */
+    #customerDetailModal .modal-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px 10px 0 0;
+    }
+
+    #customerDetailModal .modal-header .btn-close {
+        filter: invert(1);
+    }
+
+    #customerDetailModal .modal-body {
+        background-color: #f8f9fa;
+    }
+
+    #customerDetailModal .modal-footer {
+        background-color: #f8f9fa;
+        border-radius: 0 0 10px 10px;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ _('Customer Report') }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('musteri.musteriler_import') }}" class="btn btn-sm btn-success">
+                <i class="bi bi-file-earmark-excel me-1"></i>{{ _('Import from Excel') }}
+            </a>
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                data-bs-target="#addCustomerModal">
+                <i class="fas fa-plus me-1"></i>{{ _('New Customer') }}
+            </button>
+        </div>
+        <div class="btn-group me-2">
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="exportDropdown"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-download me-1"></i>{{ _('Export') }}
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+                    <li><a class="dropdown-item" href="#" onclick="exportReport('csv')"><i
+                                class="fas fa-file-csv me-2"></i>{{ _('CSV Format') }}</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportReport('excel')"><i
+                                class="fas fa-file-excel me-2"></i>{{ _('Excel Format') }}</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportReport('pdf')"><i
+                                class="fas fa-file-pdf me-2"></i>{{ _('PDF Format') }}</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="text-muted">{{ _('Total Customers') }}</div>
+                <div class="h4 mb-0">{{ toplam_musteri }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="text-muted">{{ _('Active Customers') }}</div>
+                <div class="h4 mb-0">{{ aktif_musteri }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="text-muted">{{ _('New Customers') }}</div>
+                <div class="h4 mb-0">{{ yeni_musteri }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Grafikler Bölüm -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Customer Distribution by Gender') }}</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="genderChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Customer Distribution by Age') }}</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="ageChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Customer Distribution by Category') }}</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="categoryChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Customer Distribution by City') }}</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="cityChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Zaman Serisi Analizi -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Monthly Customer Growth') }}</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="monthlyChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Weekly Customer Growth (Last 12 Weeks)') }}</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="weeklyChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Randevu Trendleri -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Appointment Frequency Distribution') }}</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="appointmentFrequencyChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Top 10 Customers by Appointment Count') }}</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="topCustomersChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">{{ _('Filters') }}</h6>
+    </div>
+    <div class="card-body">
+        <form method="GET">
+            <!-- Temel Filtreler -->
+            <div class="row g-3 mb-3">
+                <div class="col-12">
+                    <h6 class="text-primary mb-2">{{ _('Basic Filters') }}</h6>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ _('Status') }}</label>
+                    <select class="form-select" name="aktif">
+                        <option value="">{{ _('All') }}</option>
+                        <option value="1" {% if filtreler.aktif=='1' %}selected{% endif %}>{{ _('Active') }}</option>
+                        <option value="0" {% if filtreler.aktif=='0' %}selected{% endif %}>{{ _('Inactive') }}</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ _('Category') }}</label>
+                    <select class="form-select" name="kategori_id">
+                        <option value="">{{ _('All Categories') }}</option>
+                        {% for k in kategoriler %}
+                        <option value="{{ k.KategoriID }}" {% if filtreler.kategori_id==k.KategoriID %}selected{% endif
+                            %}>{{ k.KategoriAdi }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ _('Contact Information') }}</label>
+                    <select class="form-select" name="iletisim_var">
+                        <option value="">{{ _('Doesn\'t Matter') }}</option>
+                        <option value="telefon" {% if filtreler.iletisim_var=='telefon' %}selected{% endif %}>{{ _('Has
+                            Phone') }}</option>
+                        <option value="email" {% if filtreler.iletisim_var=='email' %}selected{% endif %}>{{ _('Has
+                            Email') }}</option>
+                        <option value="herikisi" {% if filtreler.iletisim_var=='herikisi' %}selected{% endif %}>{{
+                            _('Has Both') }}</option>
+                    </select>
+                </div>
+            </div>
+            <!-- Demografik Filtreler -->
+            <div class="row g-3 mb-3">
+                <div class="col-12">
+                    <h6 class="text-primary mb-2">{{ _('Demographic Filters') }}</h6>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ _('Min Age') }}</label>
+                    <input type="number" class="form-control" name="yas_min" value="{{ filtreler.yas_min }}" min="0"
+                        max="120" placeholder="0">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ _('Max Age') }}</label>
+                    <input type="number" class="form-control" name="yas_max" value="{{ filtreler.yas_max }}" min="0"
+                        max="120" placeholder="100">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ _('Gender') }}</label>
+                    <select class="form-select" name="cinsiyet">
+                        <option value="">{{ _('All') }}</option>
+                        <option value="Erkek" {% if filtreler.cinsiyet=='Erkek' %}selected{% endif %}>{{ _('Male') }}
+                        </option>
+                        <option value="Kadın" {% if filtreler.cinsiyet=='Kadın' %}selected{% endif %}>{{ _('Female') }}
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ _('Birth Date') }}</label>
+                    <input type="date" class="form-control" name="dogum_tarihi" value="{{ filtreler.dogum_tarihi }}">
+                </div>
+            </div>
+            <!-- Coğrafi Filtreler -->
+            <div class="row g-3 mb-3">
+                <div class="col-12">
+                    <h6 class="text-primary mb-2">{{ _('Geographic Filters') }}</h6>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ _('City') }}</label>
+                    <select class="form-select" name="sehir">
+                        <option value="">{{ _('All Cities') }}</option>
+                        {% for sehir in sehir_listesi %}
+                        <option value="{{ sehir }}" {% if filtreler.sehir==sehir %}selected{% endif %}>{{ sehir }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ _('District') }}</label>
+                    <select class="form-select" name="ilce">
+                        <option value="">{{ _('All Districts') }}</option>
+                        {% for ilce in ilce_listesi %}
+                        <option value="{{ ilce }}" {% if filtreler.ilce==ilce %}selected{% endif %}>{{ ilce }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter me-1"></i> {{ _('Apply') }}
+                </button>
+                <a href="{{ url_for('musteri.rapor_musteriler') }}" class="btn btn-outline-secondary ms-2">
+                    {{ _('Clear') }}
+                </a>
+                <button type="button" class="btn btn-info ms-2 d-none d-md-inline-block" data-bs-toggle="modal"
+                    data-bs-target="#customerDetailModal" id="customerDetailBtn">
+                    <i class="fas fa-user me-1"></i> {{ _('Customer Detail Report') }}
+                </button>
+                <button type="button" class="btn btn-info btn-sm w-100 d-md-none mt-2" data-bs-toggle="modal"
+                    data-bs-target="#customerDetailModal" id="customerDetailBtnMobile"
+                    style="margin-left: 0 !important;">
+                    <i class="fas fa-user me-1"></i> {{ _('Customer Detail Report') }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Customer List') }}</h6>
+            </div>
+            <div class="card-body">
+                {% if rows %}
+                <div class="table-responsive">
+                    <table class="table table-bordered" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>{{ _('ID') }}</th>
+                                <th>{{ _('Full Name') }}</th>
+                                <th>{{ _('Phone') }}</th>
+                                <th>{{ _('Email') }}</th>
+                                <th>{{ _('Category') }}</th>
+                                <th>{{ _('Appointment Count') }}</th>
+                                <th>{{ _('Created Date') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in rows %}
+                            <tr>
+                                <td>{{ r.id }}</td>
+                                <td>{{ r.tam_ad }}</td>
+                                <td>{{ r.telefon or '-' }}</td>
+                                <td>{{ r.email or '-' }}</td>
+                                <td>{{ r.kategori or '-' }}</td>
+                                <td><span class="badge bg-info">{{ r.randevu_sayisi }}</span></td>
+                                <td>{{ r.olusturma.strftime('%d.%m.%Y %H:%M') if r.olusturma else '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-muted">{{ _('No records found.') }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Top 10 Customers with Most Appointments') }}</h6>
+            </div>
+            <div class="card-body">
+                {% if top_musteriler %}
+                <ol class="mb-0">
+                    {% for m in top_musteriler %}
+                    <li class="mb-2 d-flex justify-content-between align-items-center">
+                        <span>{{ m.ad }} {{ m.soyad }}</span>
+                        <span class="badge bg-primary">{{ m.randevu_sayisi }}</span>
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% else %}
+                <div class="text-muted">{{ _('No data found.') }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Musteri Detay Raporu Modal -->
+<div class="modal fade" id="customerDetailModal" tabindex="-1" aria-labelledby="customerDetailModalLabel"
+    aria-hidden="true" data-bs-backdrop="false" data-bs-keyboard="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customerDetailModalLabel">{{ _('Customer Detail Report') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
+                <form id="customerDetailForm">
+                    <div class="mb-3">
+                        <label for="customerSearch" class="form-label">{{ _('Search Customer') }}</label>
+                        <input type="text" class="form-control" id="customerSearch"
+                            placeholder="{{ _('Enter customer name or phone number') }}" autocomplete="off">
+                        <div id="customerSuggestions" class="list-group mt-2"
+                            style="display: none; max-height: 200px; overflow-y: auto;"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="selectedCustomer" class="form-label">{{ _('Selected Customer') }}</label>
+                        <div id="selectedCustomerInfo" class="alert alert-info" style="display: none;">
+                            <strong id="selectedCustomerName"></strong><br>
+                            <small id="selectedCustomerDetails"></small>
+                        </div>
+                        <input type="hidden" id="selectedCustomerId" name="customer_id">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Close') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Global Activity Functions - En üste ekle -->
+<script>
+    // showAddActivityModal fonksiyonunu hemen tanımla
+    window.showAddActivityModal = function (musteriId) {
+        try {
+            console.log('showAddActivityModal çağrıldı, müşteri ID:', musteriId);
+            const musteriIdField = document.getElementById('activity_musteri_id');
+            const activityDateField = document.getElementById('activity_date');
+            const activityForm = document.getElementById('addActivityForm');
+            if (!musteriIdField || !activityDateField || !activityForm) {
+                console.error('Activity modal form elements not found');
+                alert('{{ _("Error") }}: {{ _("Form elements not found") }}');
+                return;
+            }
+            musteriIdField.value = musteriId;
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            activityDateField.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            activityForm.reset();
+            musteriIdField.value = musteriId;
+            activityDateField.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            const modalElement = document.getElementById('addActivityModal');
+            if (modalElement) {
+                modalElement.dataset.musteriId = musteriId;
+            }
+            if (!modalElement) {
+                console.error('Activity modal element not found');
+                alert('{{ _("Error") }}: {{ _("Modal not found") }}');
+                return;
+            }
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const existingModal = bootstrap.Modal.getInstance(modalElement);
+                if (existingModal) existingModal.dispose();
+                if (modalElement.parentElement !== document.body) {
+                    document.body.appendChild(modalElement);
+                }
+                const modal = new bootstrap.Modal(modalElement, {
+                    backdrop: true,
+                    keyboard: true,
+                    focus: true
+                });
+                modalElement.addEventListener('shown.bs.modal', function () {
+                    modalElement.style.zIndex = '1060';
+                    const backdrop = document.querySelector('.modal-backdrop:last-of-type');
+                    if (backdrop) backdrop.style.zIndex = '1059';
+                });
+                modal.show();
+            } else {
+                if (typeof $ !== 'undefined') {
+                    $(modalElement).modal('show');
+                } else {
+                    console.error('Bootstrap modal kütüphanesi bulunamadı!');
+                    alert('{{ _("Error") }}: Modal kütüphanesi bulunamadı.');
+                }
+            }
+        } catch (error) {
+            console.error('Error showing activity modal:', error);
+            alert('{{ _("Error") }}: ' + error.message);
+        }
+    };
+    console.log('showAddActivityModal fonksiyonu tanımlandı');
+
+    // saveActivity fonksiyonunu burada tanımla (erken yükleme için)
+    // Bu fonksiyon aşağıda da tanımlanacak, burada sadece erken yükleme için
+    // Aşağıdaki tanım çalıştığında bu tanım override edilecek
+    if (typeof window.saveActivity === 'undefined') {
+        // Ana fonksiyonun yüklenmesini bekle ve ata
+        const waitForMainFunction = () => {
+            // Ana fonksiyonun tanımlandığı script bloğu çalıştı mı kontrol et
+            if (typeof window._saveActivityMain === 'function') {
+                console.log('saveActivity fonksiyonu yüklendi (_saveActivityMain)');
+            } else if (typeof window.saveActivity === 'function') {
+                const funcString = window.saveActivity.toString();
+                if (funcString.indexOf('placeholder') === -1 &&
+                    (funcString.indexOf('saveActivity fonksiyonu çağrıldı') !== -1 ||
+                        funcString.indexOf('Form bulundu') !== -1)) {
+                    console.log('saveActivity fonksiyonu yüklendi (window.saveActivity)');
+                } else {
+                    // Henüz yüklenmemiş, tekrar dene
+                    setTimeout(waitForMainFunction, 100);
+                }
+            } else {
+                // Henüz yüklenmemiş, tekrar dene
+                setTimeout(waitForMainFunction, 100);
+            }
+        };
+        waitForMainFunction();
+    }
+</script>
+<!-- Data for Charts -->
+<script id="data-gender" type="application/json">{{ gender_data | tojson | safe }}</script>
+<script id="data-age" type="application/json">{{ age_groups | tojson | safe }}</script>
+<script id="data-category" type="application/json">{{ category_data | tojson | safe }}</script>
+<script id="data-city" type="application/json">{{ city_data | tojson | safe }}</script>
+<script id="data-monthly" type="application/json">{{ monthly_data | tojson | safe }}</script>
+<script id="data-weekly" type="application/json">{{ weekly_data | tojson | safe }}</script>
+<script id="data-frequency" type="application/json">{{ randevu_siklik_dagilimi | tojson | safe }}</script>
+<script id="data-top-customers" type="application/json">{{ en_cok_randevu_alan | tojson | safe }}</script>
+<script id="data-i18n" type="application/json">
+{
+    "no_data": {{ _('No Data') | tojson | safe }},
+    "appointment_book_distribution": {{ _('Appointment Book Distribution') | tojson | safe }},
+    "appointments": {{ _('Appointments') | tojson | safe }},
+    "customer_count": {{ _('Customer Count') | tojson | safe }},
+    "vip": {{ _('VIP') | tojson | safe }},
+    "normal": {{ _('Normal') | tojson | safe }},
+    "male": {{ _('Male') | tojson | safe }},
+    "female": {{ _('Female') | tojson | safe }},
+    "appointment_count": {{ _('Appointment Count') | tojson | safe }},
+    "app_0": {{ _('0 Appointments') | tojson | safe }},
+    "app_1": {{ _('1 Appointment') | tojson | safe }},
+    "app_2_5": {{ _('2-5 Appointments') | tojson | safe }},
+    "app_6_10": {{ _('6-10 Appointments') | tojson | safe }},
+    "app_10_plus": {{ _('10+ Appointments') | tojson | safe }}
+}
+</script>
+<script>
+    // Sayfa yüklendiğinde grafikleri oluştur
+    // Genel normalize fonksiyonu (TR karakterler ve boluklar iin)
+    function normalize(s) {
+        return (s || '').toString().trim().toLowerCase()
+            .replace(/İ/g, 'i').replace(/Ğ/g, 'g').replace(/Ü/g, 'u')
+            .replace(/Ş/g, 's').replace(/Ö/g, 'o').replace(/Ç/g, 'c')
+            .replace(/\s+/g, ' ');
+    }
+    function getChartData(id) {
+        try {
+            const el = document.getElementById(id);
+            if (!el) {
+                console.warn('Chart data element not found: ' + id);
+                return {};
+            }
+            return JSON.parse(el.textContent);
+        } catch (e) {
+            console.error('Error parsing chart data for ' + id, e);
+            return {};
+        }
+    }
+
+    // Load translations
+    const i18n = getChartData('data-i18n');
+
+    // Global müşteri ID saklama - müşteri raporu açıldığında saklanır, modal kapanana kadar tutulur
+    window.currentCustomerId = null;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('DOMContentLoaded - Chart.js kontrol ediliyor...');
+
+        // Chart.js yüklendiğini kontrol et ve bekle
+        const initCharts = () => {
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js henüz yüklenmedi, bekleniyor...');
+                setTimeout(initCharts, 100);
+                return;
+            }
+
+            console.log('Chart.js yüklendi, grafikler başlatılıyor...');
+
+            // Grafikleri oluştur
+            try {
+                if (typeof createCharts === 'function') {
+                    createCharts();
+                } else {
+                    console.error('createCharts fonksiyonu bulunamadı');
+                }
+
+                if (typeof createTimeSeriesCharts === 'function') {
+                    createTimeSeriesCharts();
+                } else {
+                    console.warn('createTimeSeriesCharts fonksiyonu bulunamadı');
+                }
+
+                if (typeof createAppointmentTrendCharts === 'function') {
+                    createAppointmentTrendCharts();
+                } else {
+                    console.warn('createAppointmentTrendCharts fonksiyonu bulunamadı');
+                }
+            } catch (error) {
+                console.error('Grafik oluşturma hatası:', error);
+                console.error('Hata detayı:', error.stack);
+            }
+        };
+
+        // Kısa bir gecikme ile başlat (Chart.js'in yüklenmesi için)
+        setTimeout(initCharts, 100);
+        // Müşteri arama fonksiyonlarını
+        setupCustomerSearch();
+        // Modal açıldnda arama kutusuna odaklan
+        const modalElement = document.getElementById('customerDetailModal');
+        modalElement.addEventListener('shown.bs.modal', function () {
+            const customerSearch = document.getElementById('customerSearch');
+            if (customerSearch) {
+                customerSearch.focus();
+            }
+            // Scroll pozisyonunu kaydet
+            const scrollY = window.scrollY;
+            document.body.style.top = `-${scrollY}px`;
+        });
+        // Modal kapatldnda orijinal içeriği geri yükle
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            // Modal içeriğini tamamen sıfrla
+            const modalBody = document.querySelector('#customerDetailModal .modal-body');
+            modalBody.innerHTML = originalModalContent;
+            // Form elemanların temizle
+            const customerSearch = document.getElementById('customerSearch');
+            const selectedCustomerInfo = document.getElementById('selectedCustomerInfo');
+            const selectedCustomerId = document.getElementById('selectedCustomerId');
+            if (customerSearch) customerSearch.value = '';
+            if (selectedCustomerInfo) selectedCustomerInfo.style.display = 'none';
+            if (selectedCustomerId) selectedCustomerId.value = '';
+            // Müşteri ID'yi temizle (modal kapandığında)
+            window.currentCustomerId = null;
+            console.log('Müşteri ID temizlendi (modal kapandı)');
+            // Müşteri arama fonksiyonlarının yeniden başlat
+            setTimeout(() => {
+                setupCustomerSearch();
+            }, 100);
+            // Modal instance'ını temizle
+            const existingInstance = bootstrap.Modal.getInstance(modalElement);
+            if (existingInstance) {
+                existingInstance.dispose();
+            }
+            // Body scroll'unu geri aç
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+            // Sayfa scroll pozisyonunu koru
+            const scrollY = document.body.style.top;
+            if (scrollY) {
+                document.body.style.top = '';
+                window.scrollTo(0, parseInt(scrollY || '0') * -1);
+            }
+        });
+    });
+    function setupCustomerSearch() {
+        const customerSearch = document.getElementById('customerSearch');
+        const customerSuggestions = document.getElementById('customerSuggestions');
+        const selectedCustomerInfo = document.getElementById('selectedCustomerInfo');
+        const selectedCustomerName = document.getElementById('selectedCustomerName');
+        const selectedCustomerDetails = document.getElementById('selectedCustomerDetails');
+        const selectedCustomerId = document.getElementById('selectedCustomerId');
+        // Elementler bulunamazsa çıkk
+        if (!customerSearch || !customerSuggestions || !selectedCustomerInfo ||
+            !selectedCustomerName || !selectedCustomerDetails || !selectedCustomerId) {
+            console.log('Modal elemanlar bulunamadıı, setupCustomerSearch atlanıyor');
+            return;
+        }
+        let searchTimeout;
+        // önceki event listener'larını temizle
+        customerSearch.removeEventListener('input', customerSearch._inputHandler);
+        customerSearch._inputHandler = function () {
+            const query = this.value.trim();
+            clearTimeout(searchTimeout);
+            if (query.length < 1) {
+                customerSuggestions.style.display = 'none';
+                return;
+            }
+            searchTimeout = setTimeout(() => {
+                searchCustomers(query);
+            }, 150);
+        };
+        customerSearch.addEventListener('input', customerSearch._inputHandler);
+        function searchCustomers(query) {
+            fetch(`{{ url_for('api.api_musteri_ara') }}?q=${encodeURIComponent(query)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => Promise.reject(err));
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Verinin yapısını kontrol et ve diziyi çıkar
+                    let customers = [];
+                    if (Array.isArray(data)) {
+                        customers = data;
+                    } else if (data && data.results && Array.isArray(data.results)) {
+                        customers = data.results;
+                    } else if (data && typeof data === 'object') {
+                        // Belki dictionary olarak geliyordur (id: name)
+                        customers = Object.keys(data).map(key => ({
+                            id: key,
+                            tam_ad: data[key],
+                            ad: data[key],
+                            soyad: ''
+                        }));
+                    }
+
+                    displaySuggestions(customers);
+                })
+                .catch(error => {
+                    console.error('Müşteri arama hatası:', error);
+                    displaySuggestions([]);
+                });
+        }
+        function displaySuggestions(customers) {
+            customerSuggestions.innerHTML = '';
+            if (customers.length === 0) {
+                customerSuggestions.innerHTML = '<div class="list-group-item text-muted">Müşteri bulunamadı</div>';
+            } else {
+                customers.forEach(customer => {
+                    const item = document.createElement('div');
+                    item.className = 'list-group-item list-group-item-action';
+                    item.innerHTML = `
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">${customer.ad} ${customer.soyad}</h6>
+                        <small>${customer.telefon || 'Telefon yok'}</small>
+                    </div>
+                    <p class="mb-1">${customer.email || 'E-posta yok'}</p>
+                    <small>${customer.sehir || 'Şehir bilgisi yok'}</small>
+                `;
+                    item.addEventListener('click', () => selectCustomer(customer));
+                    customerSuggestions.appendChild(item);
+                });
+            }
+            customerSuggestions.style.display = 'block';
+        }
+        function selectCustomer(customer) {
+            selectedCustomerId.value = customer.id;
+            selectedCustomerName.textContent = `${customer.ad} ${customer.soyad}`;
+            selectedCustomerDetails.textContent = `Telefon: ${customer.telefon || 'Yok'} | E-posta: ${customer.email || 'Yok'} | Şehir: ${customer.sehir || 'Yok'}`;
+            selectedCustomerInfo.style.display = 'block';
+            customerSuggestions.style.display = 'none';
+            customerSearch.value = '';
+            // Müşteri seçilince otomatik rapor oluştur
+            // Müşteri ID'yi global değişkende sakla
+            window.currentCustomerId = customer.id;
+            console.log('Müşteri ID saklandı (selectCustomer):', window.currentCustomerId);
+            loadCustomerDetailReport(customer.id);
+        }
+        // Modal dna tıklandnda önerileri gizle
+        document.addEventListener('click', function (e) {
+            if (!customerSearch.contains(e.target) && !customerSuggestions.contains(e.target)) {
+                customerSuggestions.style.display = 'none';
+            }
+        });
+    }
+    // Orijinal modal içeriği
+    const originalModalContent = `
+<form id="customerDetailForm">
+    <div class="mb-3">
+        <label for="customerSearch" class="form-label">{{ _('Search Customer') }}</label>
+        <input type="text" class="form-control" id="customerSearch" placeholder="{{ _('Enter customer name or phone number') }}" autocomplete="off">
+        <div id="customerSuggestions" class="list-group mt-2" style="display: none; max-height: 200px; overflow-y: auto;"></div>
+    </div>
+    <div class="mb-3">
+        <label for="selectedCustomer" class="form-label">{{ _('Selected Customer') }}</label>
+        <div id="selectedCustomerInfo" class="alert alert-info" style="display: none;">
+            <strong id="selectedCustomerName"></strong><br>
+            <small id="selectedCustomerDetails"></small>
+        </div>
+        <input type="hidden" id="selectedCustomerId" name="customer_id">
+    </div>
+</form>`;
+    // Müşteri detay raporunu modal içinde yükle
+    function loadCustomerDetailReport(customerId) {
+        // Müşteri ID'yi global değişkende sakla
+        window.currentCustomerId = customerId;
+        console.log('Müşteri ID saklandı (loadCustomerDetailReport):', window.currentCustomerId);
+
+        const modalEl = document.getElementById('customerDetailModal');
+        // Müşteri ID'yi modal'a da data attribute olarak sakla (yedek için)
+        if (modalEl) {
+            modalEl.dataset.currentCustomerId = customerId;
+        }
+        // Mevcut modal instance'ını temizle
+        const existingInstance = bootstrap.Modal.getInstance(modalEl);
+        if (existingInstance) {
+            existingInstance.dispose();
+        }
+        // Yeni modal instance'ı oluştur (backdrop kapalıııııı, sadece modal gölgeli)
+        const modalInstance = new bootstrap.Modal(modalEl, {
+            backdrop: false,
+            keyboard: true,
+            focus: true
+        });
+        const url = "{{ url_for('musteri.musteri_detay_modal', musteri_id=0) }}".replace('/0', '/' + customerId);
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.text();
+            })
+            .then(html => {
+                // Modal içeriğini göncelle
+                const modalBody = document.querySelector('#customerDetailModal .modal-body');
+                modalBody.innerHTML = html;
+                // Modal içindeki script tag'lerini çalıştır
+                const scripts = modalBody.querySelectorAll('script');
+                scripts.forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    if (oldScript.src) {
+                        newScript.src = oldScript.src;
+                    } else {
+                        newScript.textContent = oldScript.textContent;
+                    }
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+                // Modal'ı gösterter
+                modalInstance.show();
+                // Grafikleri başlat - Chart.js yüklenmesini bekle
+                setTimeout(() => {
+                    try {
+                        // Chart.js yüklenene kadar bekle
+                        const waitForChart = () => {
+                            if (typeof Chart !== 'undefined') {
+                                console.log('Chart.js yüklendi, grafikler başlatlyor...');
+                                initializeCustomerDetailCharts();
+                            } else {
+                                console.log('Chart.js bekleniyor...');
+                                setTimeout(waitForChart, 100);
+                            }
+                        };
+                        waitForChart();
+                    } catch (error) {
+                        console.error('Modal grafik başlatma hatası:', error);
+                    }
+                }, 200);
+            })
+            .catch(error => {
+                console.error('Müşteri detay raporu yüklenirken hata:', error);
+                const currentLang = document.documentElement.lang || 'tr';
+                const errorMessage = currentLang === 'en'
+                    ? 'An error occurred while loading the report.'
+                    : 'Rapor yüklenirken bir hata oluştu.';
+                alert(errorMessage);
+            });
+    }
+    // Müşteri detay raporu grafiklerini başlat
+    // Müşteri detay raporu grafiklerini başlat
+
+    // Helper to get chart data safely
+    function getChartData(attrName) {
+        const el = document.getElementById('chartData');
+        if (!el) return {};
+        try {
+            const val = el.getAttribute(attrName);
+            return val ? JSON.parse(val) : {};
+        } catch (e) {
+            console.error('JSON parse error for ' + attrName, e);
+            return {};
+        }
+    }
+
+    // Müşteri detay raporu grafiklerini başlat (Modal için)
+    function initializeCustomerDetailCharts() {
+        console.log('initializeCustomerDetailCharts çağrıldı');
+
+        // Modal body'yi bul
+        const modalBody = document.querySelector('#customerDetailModal .modal-body');
+        if (!modalBody) {
+            console.error('Modal body bulunamadı!');
+            return;
+        }
+
+        // Modal içindeki veri elementini bul
+        const modalDetailData = modalBody.querySelector('#modalDetailData');
+        console.log('Modal veri elementi durumu:', modalDetailData ? 'Bulundu' : 'Bulunamadı');
+
+        if (!modalDetailData) {
+            console.error('Modal veri elementi (modalDetailData) bulunamadı! HTML içeriği:', modalBody.innerHTML.substring(0, 500) + '...');
+            return;
+        }
+
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js kütüphanesi yüklenemedi!');
+            return;
+        }
+
+        // Aylık Randevu Grafiği
+        const monthlyCanvas = modalBody.querySelector('#monthlyAppointmentChart');
+        if (monthlyCanvas) {
+            console.log('Aylık grafik canvas bulundu');
+            const existingChart = Chart.getChart(monthlyCanvas);
+            if (existingChart) existingChart.destroy();
+
+            try {
+                const rawMonthly = modalDetailData.getAttribute('data-monthly');
+                console.log('Raw monthly data:', rawMonthly);
+                const monthlyData = JSON.parse(rawMonthly || '{}');
+
+                if (Object.keys(monthlyData).length > 0) {
+                    new Chart(monthlyCanvas, {
+                        type: 'line',
+                        data: {
+                            labels: Object.keys(monthlyData),
+                            datasets: [{
+                                label: '{{ _("Appointments") }}',
+                                data: Object.values(monthlyData),
+                                borderColor: 'rgb(75, 192, 192)',
+                                tension: 0.1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false
+                        }
+                    });
+                } else {
+                    console.log('Aylık veri boş');
+                }
+            } catch (e) {
+                console.error('Aylık grafik verisi hatası:', e);
+            }
+        } else {
+            console.error('Aylık grafik canvas bulunamadı (#monthlyAppointmentChart)');
+        }
+
+        // Randevu Defteri Dağılımı Grafiği
+        const bookCanvas = modalBody.querySelector('#bookDistributionChart');
+        if (bookCanvas) {
+            console.log('Defter grafik canvas bulundu');
+            const existingChart = Chart.getChart(bookCanvas);
+            if (existingChart) existingChart.destroy();
+
+            try {
+                const rawBook = modalDetailData.getAttribute('data-book');
+                console.log('Raw book data:', rawBook);
+                const bookData = JSON.parse(rawBook || '{}');
+
+                if (Object.keys(bookData).length > 0) {
+                    new Chart(bookCanvas, {
+                        type: 'pie',
+                        data: {
+                            labels: Object.keys(bookData),
+                            datasets: [{
+                                data: Object.values(bookData),
+                                backgroundColor: [
+                                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'
+                                ]
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false
+                        }
+                    });
+                } else {
+                    console.log('Defter verisi boş');
+                }
+            } catch (e) {
+                console.error('Randevu defteri grafik verisi hatası:', e);
+            }
+        } else {
+            console.error('Defter grafik canvas bulunamadı (#bookDistributionChart)');
+        }
+    }
+
+    function createCharts() {
+        // Cinsiyet dağılımı grafiği
+        const genderCtx = document.getElementById('genderChart');
+        if (genderCtx) {
+            const existingChart = Chart.getChart(genderCtx);
+            if (existingChart) existingChart.destroy();
+        }
+        if (!genderCtx) {
+            console.error('genderChart elementi bulunamadı');
+        } else {
+            const genderData = getChartData('data-gender');
+            if (Object.keys(genderData).length === 0) {
+                const ctx = genderCtx.getContext('2d');
+                ctx.font = '16px Arial';
+                ctx.fillStyle = '#666';
+                ctx.textAlign = 'center';
+                ctx.fillText('Cinsiyet bilgisi bulunamadıı', ctx.canvas.width / 2, ctx.canvas.height / 2);
+            } else {
+                // Etiketlere göre renkleri doğru ata (Kadın=pembe, Erkek=mavi)
+                const genderLabelsRaw = Object.keys(genderData);
+                const genderValues = Object.values(genderData);
+                const normalize = (s) => (s || '').toString().trim().toLowerCase()
+                    .replace(/İ/g, 'i').replace(/Ğ/g, 'g').replace(/Ü/g, 'u')
+                    .replace(/Ş/g, 's').replace(/Ö/g, 'o').replace(/Ç/g, 'c');
+                const genderColors = genderLabelsRaw.map(label => {
+                    const k = normalize(label);
+                    if (k === 'kadin' || k === 'female') return '#FF6384'; // pink for female
+                    if (k === 'erkek' || k === 'male') return '#36A2EB';   // blue for male
+                    return '#FFCE56'; // neutral for others/unknown
+                });
+                // Etiket çevirileri (i18n)
+                const G = { male: i18n.male, female: i18n.female };
+                const genderLabels = genderLabelsRaw.map(label => {
+                    const k = normalize(label);
+                    if (k === 'kadin' || k === 'female') return G.female;
+                    if (k === 'erkek' || k === 'male') return G.male;
+                    return label;
+                });
+                new Chart(genderCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: genderLabels,
+                        datasets: [{
+                            data: genderValues,
+                            backgroundColor: genderColors,
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+            // Yaş dağılımı grafiği
+            const ageCtx = document.getElementById('ageChart');
+            if (ageCtx) {
+                const existingChart = Chart.getChart(ageCtx);
+                if (existingChart) existingChart.destroy();
+                const ageData = getChartData('data-age');
+                if (Object.values(ageData).every(val => val === 0)) {
+                    const ctx = ageCtx.getContext('2d');
+                    ctx.font = '16px Arial';
+                    ctx.fillStyle = '#666';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Yaş bilgisi bulunamadıı', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                } else {
+                    new Chart(ageCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: Object.keys(ageData),
+                            datasets: [{
+                                label: i18n.customer_count,
+                                data: Object.values(ageData),
+                                backgroundColor: '#36A2EB',
+                                borderColor: '#36A2EB',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        stepSize: 1,
+                                        callback: function (value) {
+                                            return Number.isInteger(value) ? value : null;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+                // Kategori dağılımı grafiği
+                const categoryCtx = document.getElementById('categoryChart');
+                if (categoryCtx) {
+                    const existingChart = Chart.getChart(categoryCtx);
+                    if (existingChart) existingChart.destroy();
+                    const categoryData = getChartData('data-category');
+                    if (Object.keys(categoryData).length === 0) {
+                        const ctx = categoryCtx.getContext('2d');
+                        ctx.font = '16px Arial';
+                        ctx.fillStyle = '#666';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Kategori bilgisi bulunamadıı', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                    } else {
+                        const categoryLabelsRaw = Object.keys(categoryData);
+                        const categoryValues = Object.values(categoryData);
+                        const C = { vip: i18n.vip, normal: i18n.normal };
+                        const normalize = (s) => (s || '').toString().trim().toLowerCase();
+                        const categoryLabels = categoryLabelsRaw.map(label => {
+                            const k = normalize(label);
+                            if (k === 'vip' || k.includes('vip')) return C.vip;
+                            if (k === 'normal' || k.includes('normal')) return C.normal;
+                            return label;
+                        });
+                        new Chart(categoryCtx, {
+                            type: 'pie',
+                            data: {
+                                labels: categoryLabels,
+                                datasets: [{
+                                    data: categoryValues,
+                                    backgroundColor: [
+                                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                                        '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                                    ],
+                                    borderWidth: 2
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom'
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+
+            // Şehir dağılımı grafiği
+            const cityCtx = document.getElementById('cityChart');
+            if (cityCtx) {
+                const existingChart = Chart.getChart(cityCtx);
+                if (existingChart) existingChart.destroy();
+                const cityData = getChartData('data-city');
+                if (Object.keys(cityData).length === 0) {
+                    const ctx = cityCtx.getContext('2d');
+                    ctx.font = '16px Arial';
+                    ctx.fillStyle = '#666';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Şehir bilgisi bulunamadıı', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                } else {
+                    const plakaToSŞehir = {
+                        '01': 'Adana', '02': 'Adıyaman', '03': 'Afyonkarahisar', '04': 'Ağrı', '05': 'Amasya',
+                        '06': 'Ankara', '07': 'Antalya', '08': 'Artvin', '09': 'Aydın', '10': 'Balıkesir',
+                        '11': 'Bilecik', '12': 'Bingöl', '13': 'Bitlis', '14': 'Bolu', '15': 'Burdur',
+                        '16': 'Bursa', '17': 'Çanakkale', '18': 'Çankırı', '19': 'Çorum', '20': 'Denizli',
+                        '21': 'Diyarbakır', '22': 'Edirne', '23': 'Elazığ', '24': 'Erzincan', '25': 'Erzurum',
+                        '26': 'EskişŞehir', '27': 'Gaziantep', '28': 'Giresun', '29': 'Gümüşhane', '30': 'Hakkari',
+                        '31': 'Hatay', '32': 'Isparta', '33': 'Mersin', '34': 'İstanbul', '35': 'İzmir',
+                        '36': 'Kars', '37': 'Kastamonu', '38': 'Kayseri', '39': 'Kırklareli', '40': 'KırşŞehir',
+                        '41': 'Kocaeli', '42': 'Konya', '43': 'Kütahya', '44': 'Malatya', '45': 'Manisa',
+                        '46': 'Kahramanmaraş', '47': 'Mardin', '48': 'Muğla', '49': 'Muş', '50': 'NevşŞehir',
+                        '51': 'Niğde', '52': 'Ordu', '53': 'Rize', '54': 'Sakarya', '55': 'Samsun',
+                        '56': 'Siirt', '57': 'Sinop', '58': 'Sivas', '59': 'Tekirdağ', '60': 'Tokat',
+                        '61': 'Trabzon', '62': 'Tunceli', '63': 'Şanlıurfa', '64': 'Uşak', '65': 'Van',
+                        '66': 'Yozgat', '67': 'Zonguldak', '68': 'Aksaray', '69': 'Bayburt', '70': 'Karaman',
+                        '71': 'Kırıkkale', '72': 'Batman', '73': 'Şırnak', '74': 'Bartın', '75': 'Ardahan',
+                        '76': 'Iğdır', '77': 'Yalova', '78': 'Karabük', '79': 'Kilis', '80': 'Osmaniye',
+                        '81': 'Düzce'
+                    };
+                    const convertedCityData = {};
+                    for (const [plaka, count] of Object.entries(cityData)) {
+                        const sehirAdi = plakaToSŞehir[plaka] || plaka;
+                        convertedCityData[sehirAdi] = count;
+                    }
+                    const sortedCities = Object.keys(convertedCityData).sort();
+                    const cityLabels = sortedCities;
+                    const cityValues = sortedCities.map(city => convertedCityData[city]);
+                    new Chart(cityCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: cityLabels,
+                            datasets: [{
+                                label: i18n.customer_count,
+                                data: cityValues,
+                                backgroundColor: '#4BC0C0',
+                                borderColor: '#4BC0C0',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            indexAxis: 'y',
+                            scales: {
+                                x: {
+                                    beginAtZero: true
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    display: true
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }
+    }
+
+    function createTimeSeriesCharts() {
+        // Aylık müşteri artışı grafiği
+        const monthlyCtx = document.getElementById('monthlyChart');
+        if (monthlyCtx) {
+            const existingChart = Chart.getChart(monthlyCtx);
+            if (existingChart) existingChart.destroy();
+            const monthlyData = getChartData('data-monthly');
+            if (Object.keys(monthlyData).length === 0) {
+                const ctx = monthlyCtx.getContext('2d');
+                ctx.font = '16px Arial';
+                ctx.fillStyle = '#666';
+                ctx.textAlign = 'center';
+                ctx.fillText('Aylık veri bulunamadıı', ctx.canvas.width / 2, ctx.canvas.height / 2);
+            } else {
+                const sortedMonthlyData = Object.keys(monthlyData).sort();
+                const monthlyLabels = sortedMonthlyData;
+                const monthlyValues = sortedMonthlyData.map(key => monthlyData[key]);
+                new Chart(monthlyCtx, {
+                    type: 'line',
+                    data: {
+                        labels: monthlyLabels.length > 0 ? monthlyLabels : [i18n.no_data],
+                        datasets: [{
+                            label: i18n.appointments,
+                            data: monthlyValues.length > 0 ? monthlyValues : [0],
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1,
+                                    callback: function (value) {
+                                        return Number.isInteger(value) ? value : null;
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        // Haftalık müşteri artışı grafiği
+        const weeklyCtx = document.getElementById('weeklyChart');
+        if (weeklyCtx) {
+            const existingChart = Chart.getChart(weeklyCtx);
+            if (existingChart) existingChart.destroy();
+            const weeklyData = getChartData('data-weekly');
+            if (Object.keys(weeklyData).length === 0) {
+                const ctx = weeklyCtx.getContext('2d');
+                ctx.font = '16px Arial';
+                ctx.fillStyle = '#666';
+                ctx.textAlign = 'center';
+                ctx.fillText('Haftalık veri bulunamadıı', ctx.canvas.width / 2, ctx.canvas.height / 2);
+            } else {
+                const sortedWeeklyData = Object.keys(weeklyData).sort();
+                const weeklyLabels = sortedWeeklyData.map(label => {
+                    const parts = label.split(' - ');
+                    return parts[0].substring(5);
+                });
+                const weeklyValues = sortedWeeklyData.map(key => weeklyData[key]);
+                new Chart(weeklyCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: weeklyLabels,
+                        datasets: [{
+                            label: i18n.customer_count,
+                            data: weeklyValues,
+                            backgroundColor: '#4BC0C0',
+                            borderColor: '#4BC0C0',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1,
+                                    callback: function (value) {
+                                        return Number.isInteger(value) ? value : null;
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    }
+    function createAppointmentTrendCharts() {
+        // Randevu sıklığı dağılımı grafiği
+        const frequencyCtx = document.getElementById('appointmentFrequencyChart');
+        if (frequencyCtx) {
+            const existingChart = Chart.getChart(frequencyCtx);
+            if (existingChart) existingChart.destroy();
+        }
+        if (!frequencyCtx) {
+            console.error('appointmentFrequencyChart elementi bulunamadıı');
+            return;
+        }
+        const frequencyData = getChartData('data-frequency');
+        if (Object.keys(frequencyData).length === 0) {
+            const ctx = frequencyCtx.getContext('2d');
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#666';
+            ctx.textAlign = 'center';
+            ctx.fillText('Randevu verisi bulunamadıı', ctx.canvas.width / 2, ctx.canvas.height / 2);
+        } else {
+            const freqLabelsRaw = Object.keys(frequencyData);
+            const freqValues = Object.values(frequencyData);
+            const normalize = (s) => (s || '').toString().trim().toLowerCase();
+            const freqLabels = freqLabelsRaw.map(label => {
+                const k = normalize(label);
+                if (k === '0 randevu' || k === '0 appointment' || k === '0 appointments') return i18n.app_0 || '0 Appointments';
+                if (k === '1 randevu' || k === '1 appointment') return i18n.app_1 || '1 Appointment';
+                if (k === '2-5 randevu' || k === '2-5 appointments') return i18n.app_2_5 || '2-5 Appointments';
+                if (k === '6-10 randevu' || k === '6-10 appointments') return i18n.app_6_10 || '6-10 Appointments';
+                if (k === '10+ randevu' || k === '10+ appointments') return i18n.app_10_plus || '10+ Appointments';
+                return label;
+            });
+            new Chart(frequencyCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: freqLabels,
+                    datasets: [{
+                        data: freqValues,
+                        backgroundColor: [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    function createTopCustomersChart() {
+        // En çok randevu alan 10 müşteri grafiği
+        const topCtx = document.getElementById('topCustomersChart');
+        if (topCtx) {
+            const existingChart = Chart.getChart(topCtx);
+            if (existingChart) existingChart.destroy();
+
+            const topData = getChartData('data-top-customers');
+            if (!Array.isArray(topData) || topData.length === 0) {
+                const ctx = topCtx.getContext('2d');
+                ctx.font = '16px Arial';
+                ctx.fillStyle = '#666';
+                ctx.textAlign = 'center';
+                ctx.fillText('Müşteri verisi bulunamadıı', ctx.canvas.width / 2, ctx.canvas.height / 2);
+            } else {
+                const labels = topData.map(item => item.musteri_adi);
+                const values = topData.map(item => item.randevu_sayisi);
+
+                new Chart(topCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: '{{ _("Appointment Count") }}',
+                            data: values,
+                            backgroundColor: '#FF9F40',
+                            borderColor: '#FF9F40',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1,
+                                    callback: function (value) {
+                                        return Number.isInteger(value) ? value : null;
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        return context.parsed.x + ' {{ _("Appointments") }}';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+    // Yaş hesaplama fonksiyonu
+    function calculateAge(event) {
+        const dogumTarihi = event.target.value;
+        const yasInput = document.getElementById('edit_yas');
+
+        if (!dogumTarihi || !yasInput) {
+            return;
+        }
+
+        const bugun = new Date();
+        const dogum = new Date(dogumTarihi);
+
+        if (isNaN(dogum.getTime())) {
+            yasInput.value = '';
+            return;
+        }
+
+        let yas = bugun.getFullYear() - dogum.getFullYear();
+        const ayFarki = bugun.getMonth() - dogum.getMonth();
+
+        if (ayFarki < 0 || (ayFarki === 0 && bugun.getDate() < dogum.getDate())) {
+            yas--;
+        }
+
+        if (yas >= 0 && yas <= 120) {
+            yasInput.value = yas;
+        } else {
+            yasInput.value = '';
+        }
+    }
+
+    // Doğum tarihi event listener'ı
+    const dogumTarihiElement = document.getElementById('edit_dogum_tarihi');
+    if (dogumTarihiElement) {
+        dogumTarihiElement.addEventListener('change', calculateAge);
+    }
+
+    // Form submit handler
+    const editForm = document.getElementById('editCustomerForm');
+    if (editForm) {
+        editForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const formData = new FormData(editForm);
+            const data = Object.fromEntries(formData);
+            // Müşteri ID'yi formdan al (hidden input olarak eklenmeli)
+            const musteriId = document.getElementById('edit_musteri_id')?.value;
+            if (!musteriId) {
+                alert('{{ _("Customer ID not found") }}');
+                return;
+                return;
+            }
+            // API'ye gönder
+            const url = "{{ url_for('musteri.api_musteri_update', musteri_id=0) }}".replace('/0', '/' + musteriId);
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        // Başarılı mesajı göster
+                        alert('{{ _("Customer updated successfully") }}');
+
+
+                        // Modalı kapat
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('editCustomerModal'));
+                        if (modal) {
+                            modal.hide();
+                        }
+                        // Sayfayı yenile
+                        location.reload();
+                    } else {
+                        if (result.redirect) {
+                            alert(result.message + ' Sayfa yenileniyor...');
+                            location.reload();
+                        } else {
+                            alert(result.message || '{{ _("Error updating customer") }}');
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('{{ _("Error updating customer") }}');
+                });
+        });
+    }
+
+    // Grafikleri oluştur
+
+    function initAppCharts() {
+        console.log('DOM Loaded, initializing charts...');
+
+        // Check chart data existence
+        const dataEl = document.getElementById('chartData');
+        console.log('Chart Data Element:', dataEl ? 'Found' : 'Missing');
+        if (dataEl) {
+            console.log('Data Content:', {
+                gender: dataEl.getAttribute('data-gender'),
+                monthly: dataEl.getAttribute('data-monthly')
+            });
+        }
+
+        createCharts();
+        createTimeSeriesCharts();
+        createAppointmentTrendCharts();
+        createTopCustomersChart();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAppCharts);
+    } else {
+        initAppCharts();
+    }
+
+
+
+
+</script>
+<div class="modal fade" id="editCustomerModal" tabindex="-1" aria-labelledby="editCustomerModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editCustomerModalLabel">
+                    <i class="fas fa-edit me-2"></i>{{ _('Edit Customer') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editCustomerForm">
+                <input type="hidden" id="edit_musteri_id" name="musteri_id">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_musteri_adi" class="form-label">{{ _('First Name') }} <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="edit_musteri_adi" name="musteri_adi"
+                                    required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_musteri_soyadi" class="form-label">{{ _('Last Name') }} <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="edit_musteri_soyadi" name="musteri_soyadi"
+                                    required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_telefon" class="form-label">{{ _('Phone') }}</label>
+                                <input type="tel" class="form-control" id="edit_telefon" name="telefon"
+                                    placeholder="5XXXXXXXXX">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="edit_email" class="form-label">{{ _('Email') }}</label>
+                            <input type="email" class="form-control" id="edit_email" name="email">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="edit_instagram" class="form-label">{{ _('Instagram Username') }}</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fab fa-instagram"></i></span>
+                                <input type="text" class="form-control" id="edit_instagram"
+                                    name="instagram_kullanici_adi" placeholder="username">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="edit_yas" class="form-label">{{ _('Age') }}</label>
+                            <input type="number" class="form-control" id="edit_yas" name="yas" min="0" max="120">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="edit_cinsiyet" class="form-label">{{ _('Gender') }}</label>
+                            <select class="form-select" id="edit_cinsiyet" name="cinsiyet">
+                                <option value="">{{ _('Select Gender') }}</option>
+                                <option value="Erkek">{{ _('Male') }}</option>
+                                <option value="Kadın">{{ _('Female') }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="edit_dogum_tarihi" class="form-label">{{ _('Birth Date') }}</label>
+                            <input type="date" class="form-control" id="edit_dogum_tarihi" name="dogum_tarihi">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="edit_il" class="form-label">{{ _('City') }}</label>
+                            <select class="form-select" id="edit_il" name="sehir">
+                                <option value="">{{ _('Select City') }}</option>
+                                {% for sehir in sehir_listesi %}
+                                <option value="{{ sehir }}">{{ sehir }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="edit_ilce" class="form-label">{{ _('District') }}</label>
+                            <input type="text" class="form-control" id="edit_ilce" name="ilce">
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="edit_adres" class="form-label">{{ _('Address') }}</label>
+                    <textarea class="form-control" id="edit_adres" name="adres" rows="2"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="edit_notlar" class="form-label">{{ _('Notes') }}</label>
+                    <textarea class="form-control" id="edit_notlar" name="notlar" rows="3"></textarea>
+                </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-1"></i>{{ _('Save Changes') }}
+            </button>
+        </div>
+        </form>
+    </div>
+</div>
+</div>
+<div id="chartData" style="display:none;" data-gender="{{ gender_data | tojson | forceescape }}"
+    data-age="{{ age_groups | tojson | forceescape }}" data-category="{{ category_data | tojson | forceescape }}"
+    data-city="{{ city_data | tojson | forceescape }}" data-monthly="{{ monthly_data | tojson | forceescape }}"
+    data-weekly="{{ weekly_data | tojson | forceescape }}"
+    data-frequency="{{ randevu_siklik_dagilimi | tojson | forceescape }}"
+    data-top-customers="{{ en_cok_randevu_alan | tojson | forceescape }}">
+</div>
+
+
+<script>
+    // Global scope'a ekle - Activity CRUD Functions
+    // showAddActivityModal fonksiyonu yukarıda tanımlandı, burada tekrar tanımlamaya gerek yok
+    // Eğer yukarıdaki tanım çalışmazsa, burada tekrar tanımlanabilir
+    if (typeof window.showAddActivityModal === 'undefined') {
+        window.showAddActivityModal = function (musteriId) {
+            console.warn('showAddActivityModal yukarıda tanımlı değil, burada tanımlanıyor');
+            // Yukarıdaki tanımın aynısı
+            try {
+                const musteriIdField = document.getElementById('activity_musteri_id');
+                const activityDateField = document.getElementById('activity_date');
+                const activityForm = document.getElementById('addActivityForm');
+                if (!musteriIdField || !activityDateField || !activityForm) {
+                    console.error('Activity modal form elements not found');
+                    alert('{{ _("Error") }}: {{ _("Form elements not found") }}');
+                    return;
+                }
+                musteriIdField.value = musteriId;
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                activityDateField.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+                activityForm.reset();
+                musteriIdField.value = musteriId;
+                activityDateField.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+                const modalElement = document.getElementById('addActivityModal');
+                if (modalElement) {
+                    modalElement.dataset.musteriId = musteriId;
+                }
+                if (!modalElement) {
+                    console.error('Activity modal element not found');
+                    alert('{{ _("Error") }}: {{ _("Modal not found") }}');
+                    return;
+                }
+                if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    const existingModal = bootstrap.Modal.getInstance(modalElement);
+                    if (existingModal) existingModal.dispose();
+                    if (modalElement.parentElement !== document.body) {
+                        document.body.appendChild(modalElement);
+                    }
+                    const modal = new bootstrap.Modal(modalElement, {
+                        backdrop: true,
+                        keyboard: true,
+                        focus: true
+                    });
+                    modalElement.addEventListener('shown.bs.modal', function () {
+                        modalElement.style.zIndex = '1060';
+                        const backdrop = document.querySelector('.modal-backdrop:last-of-type');
+                        if (backdrop) backdrop.style.zIndex = '1059';
+                    });
+                    modal.show();
+                } else {
+                    if (typeof $ !== 'undefined') {
+                        $(modalElement).modal('show');
+                    } else {
+                        console.error('Bootstrap modal kütüphanesi bulunamadı!');
+                        alert('{{ _("Error") }}: Modal kütüphanesi bulunamadı.');
+                    }
+                }
+            } catch (error) {
+                console.error('Error showing activity modal:', error);
+                alert('{{ _("Error") }}: ' + error.message);
+            }
+        };
+    }
+
+    // saveActivity fonksiyonunu hem window.saveActivity hem de saveActivity olarak tanımla
+    function saveActivity() {
+        console.log('saveActivity fonksiyonu çağrıldı');
+        const form = document.getElementById('addActivityForm');
+        if (!form) {
+            console.error('addActivityForm bulunamadı!');
+            alert('{{ _("Error") }}: Form bulunamadı.');
+            return;
+        }
+        console.log('Form bulundu, işlem devam ediyor...');
+
+        const formData = new FormData(form);
+
+        // Aktivite tarihini ISO formatına çevir (daha sonra DOM'dan alınacak)
+        let aktiviteTarihiISO = null;
+
+        // Müşteri ID'yi bul - önce global değişkenden, sonra formdan, sonra alternatif kaynaklardan
+        let musteriId = null;
+
+        // Önce global değişkenden al (en güvenilir kaynak)
+        if (window.currentCustomerId) {
+            musteriId = parseInt(window.currentCustomerId, 10);
+            console.log('Müşteri ID global değişkenden alındı:', musteriId);
+        }
+
+        // Eğer global değişkende yoksa, formdan al
+        if (!musteriId || isNaN(musteriId)) {
+            let musteriIdStr = formData.get('musteri_id');
+            musteriId = musteriIdStr ? parseInt(musteriIdStr, 10) : null;
+            if (musteriId && !isNaN(musteriId)) {
+                console.log('Müşteri ID formdan alındı:', musteriId);
+            }
+        }
+
+        // Eğer formdan bulunamazsa, modal içindeki selectedCustomerId'den al
+        if (!musteriId || isNaN(musteriId)) {
+            const modalBody = document.querySelector('#customerDetailModal .modal-body');
+            const selectedCustomerIdInput = modalBody ? modalBody.querySelector('#selectedCustomerId') : null;
+            if (selectedCustomerIdInput && selectedCustomerIdInput.value) {
+                musteriId = parseInt(selectedCustomerIdInput.value, 10);
+                console.log('Müşteri ID modal içinden alındı:', musteriId);
+            }
+        }
+
+        // Hala bulunamazsa, customerDetailModal'ın data attribute'undan al
+        if (!musteriId || isNaN(musteriId)) {
+            const customerDetailModal = document.getElementById('customerDetailModal');
+            if (customerDetailModal && customerDetailModal.dataset.currentCustomerId) {
+                musteriId = parseInt(customerDetailModal.dataset.currentCustomerId, 10);
+                console.log('Müşteri ID customerDetailModal data attribute\'undan alındı:', musteriId);
+            }
+        }
+
+        // Hala bulunamazsa, activity modal'ın data attribute'undan al
+        if (!musteriId || isNaN(musteriId)) {
+            const activityModal = document.getElementById('addActivityModal');
+            if (activityModal && activityModal.dataset.musteriId) {
+                musteriId = parseInt(activityModal.dataset.musteriId, 10);
+                console.log('Müşteri ID activity modal data attribute\'undan alındı:', musteriId);
+            }
+        }
+
+        // Hala bulunamazsa, form içindeki hidden input'u kontrol et
+        if (!musteriId || isNaN(musteriId)) {
+            const activityMusteriIdField = document.getElementById('activity_musteri_id');
+            if (activityMusteriIdField && activityMusteriIdField.value) {
+                musteriId = parseInt(activityMusteriIdField.value, 10);
+                console.log('Müşteri ID activity_musteri_id field\'dan alındı:', musteriId);
+            }
+        }
+
+        // Son çare: Modal içindeki butonlardan müşteri ID'yi al
+        if (!musteriId || isNaN(musteriId)) {
+            const modalBody = document.querySelector('#customerDetailModal .modal-body');
+            if (modalBody) {
+                const addActivityBtn = modalBody.querySelector('#addActivityBtn');
+                const addFirstActivityBtn = modalBody.querySelector('#addFirstActivityBtn');
+                const btn = addActivityBtn || addFirstActivityBtn;
+                if (btn && btn.getAttribute('data-musteri-id')) {
+                    musteriId = parseInt(btn.getAttribute('data-musteri-id'), 10);
+                    console.log('Müşteri ID buton data attribute\'undan alındı:', musteriId);
+                }
+            }
+        }
+
+        // En son çare: customerDetailModal'ın data attribute'undan al
+        if (!musteriId || isNaN(musteriId)) {
+            const customerDetailModal = document.getElementById('customerDetailModal');
+            if (customerDetailModal && customerDetailModal.dataset.currentCustomerId) {
+                musteriId = parseInt(customerDetailModal.dataset.currentCustomerId, 10);
+                console.log('Müşteri ID customerDetailModal data attribute\'undan alındı:', musteriId);
+            }
+        }
+
+        if (!musteriId || isNaN(musteriId)) {
+            console.error('Geçersiz müşteri ID:', musteriIdStr);
+            console.error('Form verileri:', {
+                form_musteri_id: formData.get('musteri_id'),
+                activity_musteri_id_field: document.getElementById('activity_musteri_id')?.value,
+                selectedCustomerId: document.querySelector('#selectedCustomerId')?.value,
+                modal_data: document.getElementById('addActivityModal')?.dataset.musteriId
+            });
+            alert('{{ _("Error") }}: {{ _("Customer ID is required") }}. Lütfen müşteri seçin ve tekrar deneyin.');
+            return;
+        }
+
+        // Form alanlarını doğrudan DOM'dan al (daha güvenilir)
+        const aktiviteTipiEl = document.getElementById('activity_type');
+        const baslikEl = document.getElementById('activity_title');
+        const aciklamaEl = document.getElementById('activity_description');
+        const aktiviteTarihiEl = document.getElementById('activity_date');
+
+        const aktiviteTipi = aktiviteTipiEl ? aktiviteTipiEl.value : formData.get('aktivite_tipi');
+        const baslik = baslikEl ? baslikEl.value : (formData.get('baslik') || '');
+        const aciklama = aciklamaEl ? aciklamaEl.value : (formData.get('aciklama') || '');
+        const aktiviteTarihi = aktiviteTarihiEl ? aktiviteTarihiEl.value : formData.get('aktivite_tarihi');
+
+        // Validasyon - daha detaylı kontrol
+        const missingFields = [];
+        if (!musteriId || isNaN(musteriId)) {
+            missingFields.push('{{ _("Customer ID") }}');
+        }
+        if (!aktiviteTipi || aktiviteTipi.trim() === '') {
+            missingFields.push('{{ _("Activity Type") }}');
+        }
+        if (!baslik || baslik.trim() === '') {
+            missingFields.push('{{ _("Title") }}');
+        }
+        if (!aktiviteTarihi || aktiviteTarihi.trim() === '') {
+            missingFields.push('{{ _("Activity Date & Time") }}');
+        }
+
+        if (missingFields.length > 0) {
+            console.error('Eksik alanlar:', missingFields);
+            console.error('Form verileri:', {
+                musteri_id: musteriId,
+                aktivite_tipi: aktiviteTipi,
+                baslik: baslik,
+                aktivite_tarihi: aktiviteTarihi,
+                baslikEl_value: baslikEl ? baslikEl.value : 'element bulunamadı',
+                formData_baslik: formData.get('baslik')
+            });
+            alert('{{ _("Please fill in all required fields.") }}\n\n{{ _("Missing fields") }}: ' + missingFields.join(', '));
+            return;
+        }
+
+        // Aktivite tarihini ISO formatına çevir (eğer daha önce çevrilmediyse)
+        if (!aktiviteTarihiISO && aktiviteTarihi) {
+            try {
+                const dateObj = new Date(aktiviteTarihi);
+                if (isNaN(dateObj.getTime())) {
+                    console.error('Geçersiz tarih formatı:', aktiviteTarihi);
+                    alert('{{ _("Error") }}: {{ _("Invalid date format") }}');
+                    return;
+                }
+                aktiviteTarihiISO = dateObj.toISOString();
+            } catch (e) {
+                console.error('Tarih dönüştürme hatası:', e);
+                alert('{{ _("Error") }}: {{ _("Invalid date format") }}');
+                return;
+            }
+        }
+
+        const data = {
+            musteri_id: musteriId,
+            aktivite_tipi: aktiviteTipi,
+            baslik: baslik.trim(),
+            aciklama: aciklama ? aciklama.trim() : '',
+            aktivite_tarihi: aktiviteTarihiISO
+        };
+
+        if (missingFields.length > 0) {
+            console.error('Eksik alanlar:', missingFields);
+            console.error('Form verileri:', {
+                musteri_id: data.musteri_id,
+                aktivite_tipi: data.aktivite_tipi,
+                baslik: data.baslik,
+                aktivite_tarihi: data.aktivite_tarihi
+            });
+            alert('{{ _("Please fill in all required fields.") }}\n\n{{ _("Missing fields") }}: ' + missingFields.join(', '));
+            return;
+        }
+
+        // CSRF token'ı al
+        const csrfTokenEl = document.querySelector('meta[name="csrf-token"]');
+        if (!csrfTokenEl) {
+            console.error('CSRF token bulunamadı!');
+            alert('{{ _("Error") }}: CSRF token bulunamadı.');
+            return;
+        }
+        const csrfToken = csrfTokenEl.getAttribute('content');
+
+        fetch('/api/aktivite-ekle', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(data)
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addActivityModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    // Formu temizle ve musteri_id'yi geri yükle
+                    form.reset();
+                    const musteriIdField = document.getElementById('activity_musteri_id');
+                    if (musteriIdField) {
+                        musteriIdField.value = musteriId;
+                    }
+
+                    // Tarih alanını tekrar şu anki zamana ayarla (kolaylık için)
+                    const now = new Date();
+                    const year = now.getFullYear();
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    const day = String(now.getDate()).padStart(2, '0');
+                    const hours = String(now.getHours()).padStart(2, '0');
+                    const minutes = String(now.getMinutes()).padStart(2, '0');
+                    document.getElementById('activity_date').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+
+                    // Yeni aktiviteyi listeye ekle
+                    const aktivite = result.data;
+                    // Modal içindeki timeline'ı bul
+                    const modalBody = document.querySelector('#customerDetailModal .modal-body');
+                    if (!modalBody) {
+                        console.error('Modal body bulunamadı!');
+                        alert('{{ _("Error") }}: Modal bulunamadı.');
+                        return;
+                    }
+
+                    let timeline = modalBody.querySelector('.timeline');
+
+                    if (!timeline) {
+                        // Activity Timeline kartını bul
+                        const cards = modalBody.querySelectorAll('.card');
+                        let activityCard = null;
+                        for (let card of cards) {
+                            const header = card.querySelector('.card-header h5');
+                            if (header) {
+                                const headerText = header.textContent || '';
+                                if (headerText.includes('Activity Timeline') || headerText.includes('İletişim Geçmişi') || headerText.includes('Communication History')) {
+                                    activityCard = card;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (activityCard) {
+                            const cardBody = activityCard.querySelector('.card-body');
+                            if (cardBody) {
+                                // Mevcut boş mesaj varsa kaldır
+                                const emptyMsg = cardBody.querySelector('p.text-center.text-muted');
+                                if (emptyMsg) emptyMsg.remove();
+
+                                const emptyDiv = cardBody.querySelector('.text-center.text-muted');
+                                if (emptyDiv) {
+                                    // Eğer emptyDiv içinde buton varsa, sadece içeriği temizle
+                                    const button = emptyDiv.querySelector('button');
+                                    if (button) {
+                                        emptyDiv.remove();
+                                    } else {
+                                        emptyDiv.remove();
+                                    }
+                                }
+
+                                timeline = document.createElement('div');
+                                timeline.className = 'timeline';
+                                cardBody.appendChild(timeline);
+                            }
+                        }
+                    } else {
+                        // Timeline varsa, boş mesajı kaldır
+                        const parent = timeline.parentElement;
+                        if (parent) {
+                            const emptyMsg = parent.querySelector('p.text-center.text-muted');
+                            if (emptyMsg) emptyMsg.remove();
+
+                            const emptyDiv = parent.querySelector('.text-center.text-muted');
+                            if (emptyDiv && emptyDiv !== timeline) {
+                                emptyDiv.remove();
+                            }
+                        }
+                    }
+
+                    if (!timeline) {
+                        console.error('Timeline bulunamadı! Modal içeriği:', modalBody.innerHTML.substring(0, 500));
+                        // Modal içeriğini yeniden yükle
+                        if (musteriId && typeof loadCustomerDetailReport === 'function') {
+                            loadCustomerDetailReport(musteriId);
+                        } else {
+                            alert('{{ _("Error") }}: Timeline bulunamadı. Lütfen sayfayı yenileyin.');
+                        }
+                        return;
+                    }
+
+                    // İkon belirle
+                    let iconHtml = '';
+                    const type = aktivite.aktivite_tipi;
+                    if (type === 'call') iconHtml = '<div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="fas fa-phone"></i></div>';
+                    else if (type === 'whatsapp') iconHtml = '<div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="fab fa-whatsapp"></i></div>';
+                    else if (type === 'instagram') iconHtml = '<div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%) !important;"><i class="fab fa-instagram"></i></div>';
+                    else if (type === 'email') iconHtml = '<div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="fas fa-envelope"></i></div>';
+                    else if (type === 'note') iconHtml = '<div class="bg-warning text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="fas fa-sticky-note"></i></div>';
+                    else if (type === 'appointment') iconHtml = '<div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="fas fa-calendar"></i></div>';
+                    else if (type === 'task') iconHtml = '<div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="fas fa-tasks"></i></div>';
+                    else iconHtml = '<div class="bg-dark text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="fas fa-circle"></i></div>';
+
+                    // Tarih formatla
+                    const dateObj = new Date(aktivite.aktivite_tarihi);
+                    const dateStr = dateObj.toLocaleDateString('tr-TR') + ' ' + dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+
+                    // Varsayılan kullanıcı adı
+                    const defaultUserName = '{{ session.get("user_name", "") }}';
+
+                    const newItemHtml = `
+                    <div class="timeline-item mb-4" id="activity-row-${aktivite.id}">
+                        <div class="d-flex">
+                            <div class="timeline-icon me-3">
+                                ${iconHtml}
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h6 class="mb-1">${aktivite.baslik}</h6>
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            ${dateStr}
+                                            • {{ _('by') }} ${aktivite.olusturan_kullanici_adi || defaultUserName}
+                                        </small>
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-danger btn-sm"
+                                            onclick="deleteActivity('${aktivite.id}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                ${aktivite.aciklama ? `<p class="mb-2 text-muted">${aktivite.aciklama}</p>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    `;
+
+                    // En başa ekle
+                    timeline.insertAdjacentHTML('afterbegin', newItemHtml);
+
+                    // Eğer timeline'da birden fazla aktivite varsa, ikinci aktiviteden sonra HR ekle
+                    const timelineItems = timeline.querySelectorAll('.timeline-item');
+                    if (timelineItems.length > 1) {
+                        // İkinci aktiviteyi bul (yeni eklenen birinci)
+                        const secondItem = timelineItems[1];
+                        // Eğer ikinci aktiviteden sonra HR yoksa ekle
+                        if (secondItem && secondItem.nextElementSibling?.tagName !== 'HR') {
+                            const hr = document.createElement('hr');
+                            hr.className = 'my-3';
+                            secondItem.insertAdjacentElement('afterend', hr);
+                        }
+                    }
+
+                } else {
+                    alert('{{ _("Error") }}: ' + (result.error || '{{ _("Unknown error") }}'));
+                }
+            })
+            .catch(error => {
+                console.error('Aktivite ekleme hatası:', error);
+                console.error('Hata detayı:', error.stack || error.message || error);
+                alert('{{ _("An error occurred") }}: ' + (error.message || '{{ _("Unknown error") }}'));
+            });
+    }
+
+    // Hemen window.saveActivity'ye ata (script bloğu çalıştığında)
+    // Bu, ana fonksiyonun tanımlandığı yerdir - ÖNEMLİ: Bu satır çalıştığında fonksiyon yüklenmiş olur
+    window.saveActivity = saveActivity;
+    window._saveActivityMain = saveActivity;
+    window._saveActivityPending = false; // Artık yüklendi
+    console.log('saveActivity fonksiyonu window.saveActivity olarak atandı (script bloğu içinde - ANA FONKSİYON)');
+    console.log('window._saveActivityMain:', typeof window._saveActivityMain);
+    console.log('window.saveActivity === saveActivity:', window.saveActivity === saveActivity);
+
+    // Hemen bir kez daha ata (güvenlik için)
+    if (typeof window !== 'undefined') {
+        window.saveActivity = saveActivity;
+        window._saveActivityMain = saveActivity;
+    }
+
+    // DOMContentLoaded'da da kontrol et ve ata (eğer henüz atanmadıysa)
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('DOMContentLoaded - saveActivity fonksiyonu atanıyor...');
+            window.saveActivity = saveActivity;
+            window._saveActivityMain = saveActivity;
+            window._saveActivityPending = false;
+            console.log('DOMContentLoaded - saveActivity fonksiyonu atandı');
+            console.log('window._saveActivityMain:', typeof window._saveActivityMain);
+        });
+    } else {
+        // DOMContentLoaded zaten çalışmış, direkt ata
+        console.log('DOMContentLoaded zaten çalışmış, saveActivity fonksiyonu atanıyor...');
+        window.saveActivity = saveActivity;
+        window._saveActivityMain = saveActivity;
+        window._saveActivityPending = false;
+        console.log('saveActivity fonksiyonu atandı (DOMContentLoaded sonrası)');
+        console.log('window._saveActivityMain:', typeof window._saveActivityMain);
+    }
+
+    // window'a da direkt ata (global scope için)
+    if (typeof window !== 'undefined') {
+        window.saveActivity = saveActivity;
+        window._saveActivityMain = saveActivity;
+    }
+
+    window.deleteActivity = function (aktiviteId) {
+        if (!confirm('{{ _("Are you sure you want to delete this activity?") }}')) {
+            return;
+        }
+
+        // CSRF token'ı al
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        fetch(`/api/aktivite-sil/${aktiviteId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    // Modal içindeki aktiviteyi bul ve kaldır
+                    const modalBody = document.querySelector('#customerDetailModal .modal-body');
+                    const row = modalBody ? modalBody.querySelector(`#activity-row-${aktiviteId}`) : document.getElementById(`activity-row-${aktiviteId}`);
+
+                    if (row) {
+                        // HR elementi varsa onu da kaldır (bir önceki aktivite ile arasındaki çizgi)
+                        const nextHR = row.nextElementSibling;
+                        if (nextHR && nextHR.tagName === 'HR') {
+                            nextHR.remove();
+                        }
+                        const prevHR = row.previousElementSibling;
+                        if (prevHR && prevHR.tagName === 'HR') {
+                            prevHR.remove();
+                        }
+
+                        row.remove();
+
+                        // Eğer hiç aktivite kalmadıysa boş mesajı göster
+                        const timeline = modalBody ? modalBody.querySelector('.timeline') : document.querySelector('.timeline');
+                        if (timeline && timeline.children.length === 0) {
+                            const cardBody = timeline.parentElement;
+                            if (cardBody) {
+                                // Müşteri ID'sini modal içinden al
+                                const customerIdInput = modalBody ? modalBody.querySelector('#selectedCustomerId') : null;
+                                const customerId = customerIdInput ? customerIdInput.value : null;
+                                const customerIdAttr = customerId || '';
+
+                                cardBody.innerHTML = `
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-history fa-3x mb-3"></i>
+                                        <p>{{ _('No activities found for this customer.') }}</p>
+                                        <button type="button" class="btn btn-primary" id="addFirstActivityBtn" data-musteri-id="${customerIdAttr}"
+                                            onclick="if(typeof window.showAddActivityModal==='function'){window.showAddActivityModal('${customerIdAttr}');}else{alert('Aktivite ekleme fonksiyonu bulunamadı. Lütfen sayfayı yenileyin.');}">
+                                            <i class="fas fa-plus me-1"></i>{{ _('Add First Activity') }}
+                                        </button>
+                                    </div>
+                                `;
+                            }
+                        }
+                    } else {
+                        console.warn(`Activity row with id activity-row-${aktiviteId} bulunamadı`);
+                        // Modal içeriğini yeniden yükle
+                        const customerIdInput = modalBody ? modalBody.querySelector('#selectedCustomerId') : null;
+                        const customerId = customerIdInput ? customerIdInput.value : null;
+                        if (customerId) {
+                            loadCustomerDetailReport(customerId);
+                        }
+                    }
+                } else {
+                    alert('{{ _("Error") }}: ' + (result.error || '{{ _("Unknown error") }}'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('{{ _("An error occurred") }}');
+            });
+    };
+</script>
+
+<!-- Add Customer Modal -->
+<div class="modal fade" id="addCustomerModal" tabindex="-1" aria-labelledby="addCustomerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addCustomerModalLabel">
+                    <i class="fas fa-user-plus me-2"></i>{{ _('New Customer') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="addCustomerForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">{{ _('First Name') }} <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="musteri_adi" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">{{ _('Last Name') }} <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="musteri_soyadi" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">{{ _('Phone') }}</label>
+                                <input type="tel" class="form-control" name="telefon" placeholder="5XXXXXXXXX">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">{{ _('Email') }}</label>
+                                <input type="email" class="form-control" name="email">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">{{ _('Instagram Username') }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fab fa-instagram"></i></span>
+                                    <input type="text" class="form-control" name="instagram_kullanici_adi"
+                                        placeholder="username">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">{{ _('Age') }}</label>
+                                <input type="number" class="form-control" name="yas" min="0" max="120">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">{{ _('Gender') }}</label>
+                                <select class="form-select" name="cinsiyet">
+                                    <option value="">{{ _('Select Gender') }}</option>
+                                    <option value="Erkek">{{ _('Male') }}</option>
+                                    <option value="Kadın">{{ _('Female') }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">{{ _('Birth Date') }}</label>
+                                <input type="date" class="form-control" name="dogum_tarihi">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('Notes') }}</label>
+                        <textarea class="form-control" name="notlar" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>{{ _('Save') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('addCustomerForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData);
+
+        // CSRF Token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        fetch("{{ url_for('musteri.api_musteri_ekle') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(data)
+        })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    alert('{{ _("Customer added successfully") }}');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addCustomerModal'));
+                    modal.hide();
+                    location.reload();
+                } else {
+                    alert(result.message || '{{ _("Error adding customer") }}');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('{{ _("An error occurred") }}');
+            });
+    });
+</script>
+{% endblock %}

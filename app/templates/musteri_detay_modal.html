@@ -1,0 +1,524 @@
+<!-- Müşteri Detay Raporu Modal İçeriği -->
+<div id="modalDetailData" data-monthly="{{ aylik_randevu | tojson | forceescape }}"
+    data-book="{{ defter_dagilimi | tojson | forceescape }}" style="display: none;"></div>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-1">{{ _('Customer Detail Report') }}</h4>
+                <p class="text-muted mb-0">{{ _('Detailed analysis for') }} {{ musteri.MusteriAdi }} {{
+                    musteri.MusteriSoyadi }}</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-primary btn-sm" onclick="editCustomer('{{ musteri.MusteriID }}')">
+                    <i class="fas fa-edit me-1"></i> {{ _('Edit Customer') }}
+                </button>
+                <a href="{{ url_for('musteri.musteri_detay_pdf', musteri_id=musteri.MusteriID) }}"
+                    class="btn btn-danger btn-sm">
+                    <i class="fas fa-file-pdf me-1"></i> {{ _('PDF Report') }}
+                </a>
+                {# Excel export henüz mevcut değil
+                <a href="{{ url_for('musteri.musteri_detay_excel', musteri_id=musteri.MusteriID) }}"
+                    class="btn btn-success btn-sm">
+                    <i class="fas fa-file-excel me-1"></i> {{ _('Excel Report') }}
+                </a>
+                #}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Müşteri Bilgileri Kartı -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user me-2"></i>{{ _('Customer Information') }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>{{ _('Name') }}:</strong></div>
+                            <div class="col-sm-8">{{ musteri.MusteriAdi }} {{ musteri.MusteriSoyadi }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>{{ _('Phone') }}:</strong></div>
+                            <div class="col-sm-8">{{ musteri.Telefon or _('Not specified') }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>{{ _('Email') }}:</strong></div>
+                            <div class="col-sm-8">{{ musteri.Email or _('Not specified') }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>{{ _('Instagram') }}:</strong></div>
+                            <div class="col-sm-8">
+                                {% if musteri.InstagramKullaniciAdi %}
+                                <a href="https://instagram.com/{{ musteri.InstagramKullaniciAdi }}" target="_blank"
+                                    class="text-decoration-none">
+                                    <i class="fab fa-instagram text-danger me-1"></i>{{ musteri.InstagramKullaniciAdi }}
+                                </a>
+                                {% else %}
+                                {{ _('Not specified') }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>{{ _('Age') }}:</strong></div>
+                            <div class="col-sm-8">{{ musteri.Yas or _('Not specified') }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>{{ _('Gender') }}:</strong></div>
+                            <div class="col-sm-8">{{ musteri.Cinsiyet or _('Not specified') }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>{{ _('Birth Date') }}:</strong></div>
+                            <div class="col-sm-8">{{ musteri.DogumTarihi.strftime('%d.%m.%Y') if musteri.DogumTarihi
+                                else _('Not specified') }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>{{ _('City') }}:</strong></div>
+                            <div class="col-sm-8">{{ sehir_adi }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>{{ _('District') }}:</strong></div>
+                            <div class="col-sm-8">{{ musteri.Ilce or _('Not specified') }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% if musteri.Adres %}
+                <div class="row mb-3">
+                    <div class="col-sm-2"><strong>{{ _('Address') }}:</strong></div>
+                    <div class="col-sm-10">{{ musteri.Adres }}</div>
+                </div>
+                {% endif %}
+                {% if musteri.Notlar %}
+                <div class="row mb-3">
+                    <div class="col-sm-2"><strong>{{ _('Notes') }}:</strong></div>
+                    <div class="col-sm-10">{{ musteri.Notlar }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Randevu İstatistikleri -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>{{ _('Appointment Statistics') }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h3 class="text-primary mb-1">{{ toplam_randevu }}</h3>
+                            <p class="text-muted mb-0">{{ _('Total Appointments') }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h3 class="text-success mb-1">{{ tamamlanan_randevu }}</h3>
+                            <p class="text-muted mb-0">{{ _('Completed') }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h3 class="text-warning mb-1">{{ bekleyen_randevu }}</h3>
+                            <p class="text-muted mb-0">{{ _('Pending') }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h3 class="text-danger mb-1">{{ iptal_randevu }}</h3>
+                            <p class="text-muted mb-0">{{ _('Cancelled') }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Grafikler -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{{ _('Monthly Appointment Distribution') }}</h5>
+            </div>
+            <div class="card-body" style="height: 200px;">
+                <canvas id="monthlyAppointmentChart" width="300" height="150"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{{ _('Appointment Book Distribution') }}</h5>
+            </div>
+            <div class="card-body" style="height: 200px;">
+                <canvas id="bookDistributionChart" width="300" height="150"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Randevu Geçmişi -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>{{ _('Appointment History') }}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if randevular %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>{{ _('Date') }}</th>
+                                <th>{{ _('Time') }}</th>
+                                <th>{{ _('Book') }}</th>
+                                <th>{{ _('Status') }}</th>
+                                <th>{{ _('Reference') }}</th>
+                                <th>{{ _('Notes') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for randevu in randevular %}
+                            <tr>
+                                <td>{{ randevu.RandevuTarihi.strftime('%d.%m.%Y') if randevu.RandevuTarihi else '-' }}
+                                </td>
+                                <td>{{ randevu.RandevuTarihi.strftime('%H:%M') if randevu.RandevuTarihi else '-' }}</td>
+                                <td>
+                                    {% if randevu.DefterID %}
+                                    {% set defter = randevu.defter %}
+                                    {% if defter %}
+                                    {{ defter.DefterAdi }}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if randevu.Durum == 'Tamamlandı' %}
+                                    <span class="badge bg-success">{{ _('Completed') }}</span>
+                                    {% elif randevu.Durum == 'İptal' %}
+                                    <span class="badge bg-danger">{{ _('Cancelled') }}</span>
+                                    {% elif randevu.Durum == 'Beklemede' %}
+                                    <span class="badge bg-warning">{{ _('Pending') }}</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ randevu.Durum }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>-</td>
+                                <td>{{ randevu.RandevuAciklamasi if randevu.RandevuAciklamasi else '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-calendar-times fa-3x mb-3"></i>
+                    <p>{{ _('No appointments found for this customer.') }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Aktivite Timeline / İletişim Geçmişi -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>{{ _('Activity Timeline') }} / {{ _('Communication History') }}
+                </h5>
+                <button type="button" class="btn btn-sm btn-primary" id="addActivityBtn"
+                    data-musteri-id="{{ musteri.MusteriID }}"
+                    onclick="if(typeof window.showAddActivityModal==='function'){window.showAddActivityModal('{{ musteri.MusteriID }}');}else{alert('Aktivite ekleme fonksiyonu bulunamadı. Lütfen sayfayı yenileyin.');}">
+                    <i class="fas fa-plus me-1"></i>{{ _('Add Activity') }}
+                </button>
+            </div>
+            <div class="card-body">
+                {% if aktiviteler %}
+                <div class="timeline">
+                    {% for aktivite in aktiviteler %}
+                    <div class="timeline-item mb-4" id="activity-row-{{ aktivite.AktiviteID }}">
+                        <div class="d-flex">
+                            <!-- Timeline Icon -->
+                            <div class="timeline-icon me-3">
+                                {% if aktivite.AktiviteTipi == 'call' %}
+                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px;">
+                                    <i class="fas fa-phone"></i>
+                                </div>
+                                {% elif aktivite.AktiviteTipi == 'whatsapp' %}
+                                <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px;">
+                                    <i class="fab fa-whatsapp"></i>
+                                </div>
+                                {% elif aktivite.AktiviteTipi == 'instagram' %}
+                                <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px; background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%) !important;">
+                                    <i class="fab fa-instagram"></i>
+                                </div>
+                                {% elif aktivite.AktiviteTipi == 'email' %}
+                                <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px;">
+                                    <i class="fas fa-envelope"></i>
+                                </div>
+                                {% elif aktivite.AktiviteTipi == 'note' %}
+                                <div class="bg-warning text-white rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px;">
+                                    <i class="fas fa-sticky-note"></i>
+                                </div>
+                                {% elif aktivite.AktiviteTipi == 'appointment' %}
+                                <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px;">
+                                    <i class="fas fa-calendar"></i>
+                                </div>
+                                {% elif aktivite.AktiviteTipi == 'task' %}
+                                <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px;">
+                                    <i class="fas fa-tasks"></i>
+                                </div>
+                                {% else %}
+                                <div class="bg-dark text-white rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px;">
+                                    <i class="fas fa-circle"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Timeline Content -->
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h6 class="mb-1">{{ aktivite.Baslik }}</h6>
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ aktivite.AktiviteTarihi.strftime('%d.%m.%Y %H:%M') if
+                                            aktivite.AktiviteTarihi else '' }}
+                                            {% if aktivite.olusturan_kullanici %}
+                                            • {{ _('by') }} {{ aktivite.olusturan_kullanici.Ad }} {{
+                                            aktivite.olusturan_kullanici.Soyad }}
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        {% if aktivite.IlgiliNesneTipi == 'appointment' and aktivite.IlgiliNesneID %}
+                                        <a href="{{ url_for('randevu.randevu_detay', randevu_id=aktivite.IlgiliNesneID) }}"
+                                            class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-external-link-alt me-1"></i>{{ _('View Appointment') }}
+                                        </a>
+                                        {% elif aktivite.IlgiliNesneTipi == 'task' and aktivite.IlgiliNesneID %}
+                                        <a href="{{ url_for('gorev.gorevler') }}?todo_id={{ aktivite.IlgiliNesneID }}"
+                                            class="btn btn-outline-secondary btn-sm">
+                                            <i class="fas fa-external-link-alt me-1"></i>{{ _('View Task') }}
+                                        </a>
+                                        {% endif %}
+                                        <button type="button" class="btn btn-outline-danger btn-sm"
+                                            onclick="deleteActivity('{{ aktivite.AktiviteID }}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% if aktivite.Aciklama %}
+                                <p class="mb-2 text-muted">{{ aktivite.Aciklama }}</p>
+                                {% endif %}
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <span class="badge bg-light text-dark">
+                                        {{ aktivite.AktiviteTipi|upper }}
+                                    </span>
+                                    {% if aktivite.EkBilgiler %}
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-info-circle me-1"></i>{{ _('Additional Info') }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% if not loop.last %}
+                    <hr class="my-3">
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-history fa-3x mb-3"></i>
+                    <p>{{ _('No activities found for this customer.') }}</p>
+                    <button type="button" class="btn btn-primary" id="addFirstActivityBtn"
+                        data-musteri-id="{{ musteri.MusteriID }}"
+                        onclick="if(typeof window.showAddActivityModal==='function'){window.showAddActivityModal('{{ musteri.MusteriID }}');}else{alert('Aktivite ekleme fonksiyonu bulunamadı. Lütfen sayfayı yenileyin.');}">
+                        <i class="fas fa-plus me-1"></i>{{ _('Add First Activity') }}
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Activity Modal -->
+<div class="modal fade" id="addActivityModal" tabindex="-1" aria-labelledby="addActivityModalLabel" aria-hidden="true"
+    data-bs-backdrop="static" data-bs-keyboard="false" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('Add Activity') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addActivityForm">
+                    <input type="hidden" name="musteri_id" id="activity_musteri_id">
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('Activity Type') }}</label>
+                        <select class="form-select" name="aktivite_tipi" id="activity_type" required>
+                            <option value="call">{{ _('Phone Call') }}</option>
+                            <option value="whatsapp">{{ _('WhatsApp Call') }}</option>
+                            <option value="instagram">{{ _('Instagram Message') }}</option>
+                            <option value="email">{{ _('Email') }}</option>
+                            <option value="note">{{ _('Note') }}</option>
+                            <option value="meeting">{{ _('Meeting') }}</option>
+                            <option value="other">{{ _('Other') }}</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('Title') }}</label>
+                        <input type="text" class="form-control" name="baslik" id="activity_title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('Description') }}</label>
+                        <textarea class="form-control" name="aciklama" id="activity_description" rows="4"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('Activity Date & Time') }}</label>
+                        <input type="datetime-local" class="form-control" name="aktivite_tarihi" id="activity_date"
+                            required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                <button type="button" class="btn btn-primary" id="saveActivityBtn">{{ _('Save') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .timeline-item {
+        position: relative;
+    }
+
+    .timeline-icon {
+        flex-shrink: 0;
+    }
+
+    /* Activity Modal z-index fix */
+    #addActivityModal {
+        z-index: 1060 !important;
+    }
+
+    #addActivityModal .modal-backdrop {
+        z-index: 1059 !important;
+    }
+
+    /* Modal içeriğinin tıklanabilir olması için */
+    #addActivityModal .modal-dialog {
+        pointer-events: auto;
+    }
+
+    #addActivityModal .modal-content {
+        pointer-events: auto;
+    }
+</style>
+<script>
+    // Modal gösterildiğinde save butonuna event listener ekle
+    (function () {
+        const addActivityModal = document.getElementById('addActivityModal');
+        if (addActivityModal) {
+            // Modal gösterildiğinde
+            addActivityModal.addEventListener('shown.bs.modal', function () {
+                console.log('Modal gösterildi, save butonu aranıyor...');
+                const saveBtn = document.getElementById('saveActivityBtn');
+                if (saveBtn) {
+                    console.log('Save butonu bulundu, event listener ekleniyor...');
+                    // Mevcut event listener'ları temizle
+                    const newSaveBtn = saveBtn.cloneNode(true);
+                    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+
+                    // Event listener'ı hemen ekle (fonksiyon kontrolü içinde)
+                    newSaveBtn.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Save butonuna tıklandı, fonksiyon kontrol ediliyor...');
+
+                        // Önce window._saveActivityMain kontrol et (en güvenilir)
+                        if (typeof window._saveActivityMain === 'function') {
+                            console.log('window._saveActivityMain bulundu, çağrılıyor...');
+                            window._saveActivityMain();
+                        } else if (typeof window.saveActivity === 'function') {
+                            // window.saveActivity'nin placeholder olmadığını kontrol et
+                            const funcString = window.saveActivity.toString();
+                            if (funcString.indexOf('placeholder') === -1 &&
+                                (funcString.indexOf('saveActivity fonksiyonu çağrıldı') !== -1 ||
+                                    funcString.indexOf('Form bulundu') !== -1)) {
+                                console.log('window.saveActivity bulundu (ana fonksiyon), çağrılıyor...');
+                                window.saveActivity();
+                            } else {
+                                console.warn('window.saveActivity placeholder görünüyor, tekrar deneniyor...');
+                                // Kısa bir gecikme ile tekrar dene
+                                setTimeout(function () {
+                                    if (typeof window._saveActivityMain === 'function') {
+                                        window._saveActivityMain();
+                                    } else if (typeof window.saveActivity === 'function') {
+                                        const funcStr = window.saveActivity.toString();
+                                        if (funcStr.indexOf('placeholder') === -1) {
+                                            window.saveActivity();
+                                        } else {
+                                            alert('{{ _("Error") }}: {{ _("Function not found. Please refresh the page.") }}');
+                                        }
+                                    } else {
+                                        alert('{{ _("Error") }}: {{ _("Function not found. Please refresh the page.") }}');
+                                    }
+                                }, 500);
+                            }
+                        } else if (typeof saveActivity === 'function') {
+                            console.log('saveActivity bulundu, çağrılıyor...');
+                            saveActivity();
+                        } else {
+                            console.error('saveActivity fonksiyonu bulunamadı');
+                            console.error('window._saveActivityMain:', typeof window._saveActivityMain);
+                            console.error('window.saveActivity:', typeof window.saveActivity);
+                            alert('{{ _("Error") }}: {{ _("Function not found. Please refresh the page.") }}');
+                        }
+                    });
+                    console.log('Event listener başarıyla eklendi');
+                } else {
+                    console.error('Save butonu bulunamadı!');
+                }
+            });
+        } else {
+            console.warn('addActivityModal elementi bulunamadı');
+        }
+    })();
+</script>
