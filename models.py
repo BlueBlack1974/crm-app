@@ -42,6 +42,11 @@ class Kullanici(db.Model):
     Admin = db.Column(db.Boolean, default=False)
     Aktif = db.Column(db.Boolean, default=True)
     ProfilFotografi = db.Column(db.NVARCHAR(500))  # Profil fotoğrafı dosya yolu
+    RaporlarModulu = db.Column(db.Boolean, default=True)
+    AyarlarModulu = db.Column(db.Boolean, default=False)
+    LogModulu = db.Column(db.Boolean, default=False)
+    WhatsAppModulu = db.Column(db.Boolean, default=False)
+    InstagramModulu = db.Column(db.Boolean, default=False)
     OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
     GuncellemeTarihi = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
