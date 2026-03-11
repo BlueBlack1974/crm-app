@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Appointment Details') }} - Crandyx CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ _('Appointment Details') }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('randevu.randevular') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>
+                {{ _('Back') }}
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Appointment Information') }}</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">{{ _('Reference') }}</h6>
+                        <p class="mb-3">{{ randevu.RandevuBaslik }}</p>
+
+                        <h6 class="text-muted">{{ _('Date') }}</h6>
+                        <p class="mb-3">
+                            <i class="fas fa-calendar me-2"></i>
+                            {{ randevu.RandevuTarihi.strftime('%d.%m.%Y') }} {{ randevu.RandevuTarihi.strftime('%H:%M')
+                            }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">{{ _('Duration') }}</h6>
+                        <p class="mb-3">{{ randevu.RandevuSuresi }} {{ _('minutes') }}</p>
+
+                        <h6 class="text-muted">{{ _('Status') }}</h6>
+                        <p class="mb-3">
+                            {% if randevu.Durum == 'Beklemede' %}
+                            <span class="badge bg-warning fs-6">{{ _('Pending') }}</span>
+                            {% elif randevu.Durum == 'Onaylandi' %}
+                            <span class="badge bg-success fs-6">{{ _('Confirmed') }}</span>
+                            {% elif randevu.Durum == 'Iptal' %}
+                            <span class="badge bg-danger fs-6">{{ _('Cancelled') }}</span>
+                            {% elif randevu.Durum == 'Tamamlandi' %}
+                            <span class="badge bg-info fs-6">{{ _('Completed') }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                {% if randevu.RandevuAciklamasi %}
+                <hr>
+                <h6 class="text-muted">{{ _('Description') }}</h6>
+                <p>{{ randevu.RandevuAciklamasi }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Customer Information') }}</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">{{ _('Full Name') }}</h6>
+                        <p class="mb-3">
+                            {% if randevu.musteri %}
+                            {{ randevu.musteri.tam_adi }}
+                            {% else %}
+                            {{ randevu.MusteriAdi or _('No Customer') }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        {% if randevu.musteri and randevu.musteri.Telefon %}
+                        <h6 class="text-muted">{{ _('Phone') }}</h6>
+                        <p class="mb-3"><a href="tel:{{ randevu.musteri.Telefon }}">{{ randevu.musteri.Telefon }}</a>
+                        </p>
+                        {% elif randevu.MusteriTelefon %}
+                        <h6 class="text-muted">{{ _('Phone') }}</h6>
+                        <p class="mb-3"><a href="tel:{{ randevu.MusteriTelefon }}">{{ randevu.MusteriTelefon }}</a></p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if randevu.musteri and randevu.musteri.Email %}
+                <h6 class="text-muted">{{ _('Email') }}</h6>
+                <p><a href="mailto:{{ randevu.musteri.Email }}">{{ randevu.musteri.Email }}</a></p>
+                {% elif randevu.MusteriEmail %}
+                <h6 class="text-muted">{{ _('Email') }}</h6>
+                <p><a href="mailto:{{ randevu.MusteriEmail }}">{{ randevu.MusteriEmail }}</a></p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Actions') }}</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a class="btn btn-secondary" href="{{ url_for('randevular') }}">{{ _('Back to List') }}</a>
+                </div>
+                <hr>
+                <small class="text-muted">{{ _('Created') }}: {{ randevu.OlusturmaTarihi.strftime('%d.%m.%Y %H:%M')
+                    }}</small><br>
+                {% if randevu.GuncellemeTarihi != randevu.OlusturmaTarihi %}
+                <small class="text-muted">{{ _('Updated') }}: {{ randevu.GuncellemeTarihi.strftime('%d.%m.%Y %H:%M')
+                    }}</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

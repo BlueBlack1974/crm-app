@@ -877,6 +877,16 @@ def initialize_database_from_settings():
                             row = result.fetchone()
                             if row and row[0] == 1:
                                 print("[OK] Veritabani baglantisi basariyla test edildi!")
+                                
+                                # YENI TABLOLARI OLUSTURMA KONTROLU
+                                try:
+                                    from app.models import SifreSifirlamaToken, FirmaEmailAyar
+                                    SifreSifirlamaToken.__table__.create(new_engine, checkfirst=True)
+                                    FirmaEmailAyar.__table__.create(new_engine, checkfirst=True)
+                                    print("[OK] Sifre/E-Posta ayarlari tablolari dinamik baglantiyla garantilendi.")
+                                except Exception as t_err:
+                                    print(f"[WARN] Yeni tablolar (Sifre/Email) islenirken hata (gormezden geliniyor): {t_err}")
+                                    
                             else:
                                 print("[WARN] Veritabani baglanti testi beklenmeyen sonuc dondurdu.")
                     except Exception as test_err:
@@ -8613,3 +8623,29 @@ if __name__ == '__main__':
 else:
     # WSGI server'lar için (Gunicorn, uWSGI, etc.)
     initialize_app()
+
+# Trigger reload for translations
+
+# Trigger reload for UI layout fix
+
+# Trigger reload for password complexity
+
+# Trigger reload for async email
+
+# dark mode global fix
+
+# pagination fix reload
+
+# randevu_ekle fix
+
+# tojson fix randevu_ekle
+
+# local cities api added
+
+# json submit fix
+
+# tojson fix final
+
+# musteri api fix
+
+# kategori fix

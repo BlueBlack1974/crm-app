@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Instagram Settings') }} - Crandyx CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ _('Instagram Settings') }}</h1>
+    <a href="{{ url_for('ayarlar') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>{{ _('Settings') }}
+    </a>
+</div>
+
+{% if is_admin %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <label for="firmaSelect" class="form-label">{{ _('Select Company') }}</label>
+        <select class="form-select" id="firmaSelect" onchange="changeFirma()">
+            <option value="">{{ _('Select Company') }}</option>
+            {% for f in firmalar %}
+            <option value="{{ f.FirmaID }}" {% if firma and f.FirmaID==firma.FirmaID %}selected{% endif %}>
+                {{ f.FirmaAdi }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Instagram Graph API Settings') }}</h6>
+            </div>
+            <div class="card-body">
+                {% if instagram_ayar %}
+                <form method="POST"
+                    action="{{ url_for('ayarlar_instagram_guncelle', ayar_id=instagram_ayar.InstagramAyarID) }}">
+                    {% if is_admin %}
+                    <input type="hidden" name="firma_id" value="{{ firma.FirmaID }}">
+                    {% endif %}
+                    {% else %}
+                    <form method="POST" action="{{ url_for('ayarlar_instagram_ekle') }}">
+                        {% if is_admin %}
+                        <input type="hidden" name="firma_id" value="{{ firma.FirmaID }}">
+                        {% endif %}
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ _('Facebook Page ID') }} *</label>
+                                    <input type="text" name="facebook_page_id" class="form-control"
+                                        value="{{ instagram_ayar.FacebookPageID if instagram_ayar else '' }}"
+                                        placeholder="123456789012345" required>
+                                    <small class="form-text text-muted">{{ _('ID of the Facebook Page connected to
+                                        Instagram.') }}</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ _('Instagram Business Account ID') }} *</label>
+                                    <input type="text" name="instagram_account_id" class="form-control"
+                                        value="{{ instagram_ayar.InstagramBusinessAccountID if instagram_ayar else '' }}"
+                                        placeholder="17841400000000000" required>
+                                    <small class="form-text text-muted">{{ _('Instagram Business Account ID') }}</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ _('Access Token') }} *</label>
+                                    <input type="text" name="access_token" class="form-control"
+                                        value="{{ instagram_ayar.AccessToken if instagram_ayar else '' }}"
+                                        placeholder="EAAxxxxxxxxxxxxxxxxxxxx" required>
+                                    <small class="form-text text-muted">{{ _('Long-lived access token from Meta for
+                                        Developers') }}</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ _('Webhook Verify Token') }}</label>
+                                    <input type="text" name="webhook_secret" class="form-control"
+                                        value="{{ instagram_ayar.WebhookSecret if instagram_ayar else '' }}"
+                                        placeholder="your_verify_token">
+                                    <small class="form-text text-muted">{{ _('Webhook verification token (Optional)')
+                                        }}</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="aktif" id="aktif" {% if
+                                    instagram_ayar and instagram_ayar.Aktif %}checked{% endif %}>
+                                <label class="form-check-label" for="aktif">
+                                    {{ _('Active') }}
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            {% if instagram_ayar %}
+                            <a href="{{ url_for('ayarlar_instagram_sil', ayar_id=instagram_ayar.InstagramAyarID) }}"
+                                class="btn btn-danger"
+                                onclick="return confirm({{ _('Are you sure you want to delete Instagram settings?')|tojson }})">
+                                <i class="fas fa-trash me-1"></i>{{ _('Delete') }}
+                            </a>
+                            {% endif %}
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>
+                                {% if instagram_ayar %}{{ _('Update') }}{% else %}{{ _('Add') }}{% endif %}
+                            </button>
+                        </div>
+                    </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Information') }}</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>{{ _('Note') }}:</strong> {{ _('Instagram Graph API setup is required for messaging.') }}
+                </div>
+
+                <h6>{{ _('Setup Steps') }}:</h6>
+                <ol class="small">
+                    <li>{{ _('Create a Facebook App at developers.facebook.com') }}</li>
+                    <li>{{ _('Add "Instagram Graph API" to your app.') }}</li>
+                    <li>{{ _('Connect your Instagram Business Account to a Facebook Page.') }}</li>
+                    <li>{{ _('Generate a Long-Lived Access Token with instagram_basic and instagram_manage_messages
+                        permissions.') }}</li>
+                    <li>{{ _('Configure Webhook URL:') }} <code>{{ request.url_root }}instagram/webhook</code></li>
+                </ol>
+
+                <h6>{{ _('Required Permissions') }}:</h6>
+                <ul class="small">
+                    <li><code>instagram_basic</code></li>
+                    <li><code>instagram_manage_messages</code></li>
+                    <li><code>pages_manage_metadata</code></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function changeFirma() {
+        const firmaId = document.getElementById('firmaSelect').value;
+        if (firmaId) {
+            window.location.href = '{{ url_for("ayarlar_instagram") }}?firma_id=' + firmaId;
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,467 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Reports') }} - Crandyx CRM{% endblock %}
+
+{% block extra_css %}
+<style>
+  .card {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, .06);
+  }
+
+  /* Grafik boyutlarını zorla */
+  #saatChart {
+    height: 200px !important;
+    max-height: 200px !important;
+    width: 100% !important;
+  }
+
+  #durumChart {
+    height: 250px !important;
+    max-height: 250px !important;
+    width: 100% !important;
+  }
+
+  #refChart {
+    height: 250px !important;
+    max-height: 250px !important;
+    width: 100% !important;
+  }
+
+  .peak-hour-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+
+  .capacity-card {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+  }
+
+  .efficiency-card {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+  }
+
+  .total-card {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">{{ _('Reports') }}</h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <div class="btn-group me-2">
+      <div class="dropdown">
+        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="exportDropdown"
+          data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="fas fa-download me-1"></i>{{ _('Export') }}
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+          <li><a class="dropdown-item" href="#" onclick="exportReport('csv')"><i class="fas fa-file-csv me-2"></i>{{
+              _('CSV Format') }}</a></li>
+          <li><a class="dropdown-item" href="#" onclick="exportReport('excel')"><i class="fas fa-file-excel me-2"></i>{{
+              _('Excel Format') }}</a></li>
+          <li><a class="dropdown-item" href="#" onclick="exportReport('pdf')"><i class="fas fa-file-pdf me-2"></i>{{
+              _('PDF Format') }}</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<form class="row g-3 mb-3" method="get">
+  <div class="col-auto">
+    <label class="form-label">{{ _('Start Date') }}</label>
+    <input type="date" class="form-control" name="baslangic" value="{{ baslangic }}">
+  </div>
+  <div class="col-auto">
+    <label class="form-label">{{ _('End Date') }}</label>
+    <input type="date" class="form-control" name="bitis" value="{{ bitis }}">
+  </div>
+  <div class="col-auto">
+    <label class="form-label">{{ _('Max Daily Capacity') }}</label>
+    <input type="number" class="form-control" name="kapasite" id="kapasiteInput" value="{{ kapasite }}" min="1"
+      max="100" placeholder="8">
+  </div>
+  <div class="col-auto">
+    <label class="form-label">{{ _('Book') }}</label>
+    <select class="form-control" name="defter_id" id="defterSelect" onchange="updateCapacityFromDefter()">
+      <option value="">{{ _('All Books') }}</option>
+      {% for defter in defterler %}
+      <option value="{{ defter.AyarID }}" data-baslangic="{{ defter.BaslangicSaati or '09:00' }}"
+        data-bitis="{{ defter.BitisSaati or '18:00' }}" data-slot="{{ defter.SlotDakika or 30 }}" {% if
+        defter_id|string==defter.AyarID|string %}selected{% endif %}>{{ defter.DefterAdi }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto align-self-end">
+    <button class="btn btn-primary" type="submit">{{ _('Apply') }}</button>
+  </div>
+</form>
+
+<!-- KPI Kartları -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card total-card">
+      <div class="card-body text-center">
+        <h5 class="card-title">{{ _('Total Appointments') }}</h5>
+        <h2 class="mb-0" id="toplam">-</h2>
+        <small>{{ _('Selected Period') }}</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card peak-hour-card">
+      <div class="card-body text-center">
+        <h5 class="card-title">{{ _('Peak Hour') }}</h5>
+        <h2 class="mb-0" id="peakHour">-</h2>
+        <small>{{ _('Most Active Hour') }}</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card capacity-card">
+      <div class="card-body text-center">
+        <h5 class="card-title">{{ _('Capacity Usage') }}</h5>
+        <h2 class="mb-0" id="capacityUsage">-</h2>
+        <small>{{ _('Average Daily Usage') }}</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card efficiency-card">
+      <div class="card-body text-center">
+        <h5 class="card-title">{{ _('Efficiency Rate') }}</h5>
+        <h2 class="mb-0" id="efficiencyRate">-</h2>
+        <small>{{ _('Peak Hours Efficiency') }}</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-9">
+    <div class="card">
+      <div class="card-body">
+        <canvas id="saatChart" style="height: 200px !important;"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <h6>{{ _('By Status') }}</h6>
+        <canvas id="durumChart" style="height: 250px !important;"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <h6>{{ _('By Reference') }}</h6>
+        <canvas id="refChart" style="height: 250px !important;"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detaylı Saat Analizi -->
+<div class="row g-3 mt-3">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">{{ _('Detailed Hour Analysis') }}</h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>{{ _('Hour') }}</th>
+                <th>{{ _('Appointments') }}</th>
+                <th>{{ _('Capacity Usage') }}</th>
+                <th>{{ _('Efficiency') }}</th>
+                <th>{{ _('Status') }}</th>
+              </tr>
+            </thead>
+            <tbody id="hourlyTable">
+              <!-- JavaScript ile doldurulacak -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js base.html'de yüklendi -->
+<script>
+  async function loadReport() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      console.log('API çağrısı parametreleri:', params.toString());
+      console.log('Defter ID:', params.get('defter_id'));
+      console.log('Mevcut dil:', "{{ session.get('language', 'tr') }}");
+
+      const res = await fetch('/api/raporlar/ozet?' + params.toString());
+      console.log('API yanıt durumu:', res.status);
+
+      // Oturum kontrolü - eğer login sayfasına yönlendirilmişse
+      if (res.redirected && res.url.includes('/login')) {
+        console.log('Oturum süresi dolmuş, login sayfasına yönlendiriliyor...');
+        window.location.href = '/login';
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      // Content-Type kontrolü - JSON değilse hata
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Beklenmeyen yanıt tipi:', contentType);
+        window.location.href = '/login';
+        return;
+      }
+
+      const data = await res.json();
+      console.log('API yanıt verisi:', data);
+
+      if (!data.success) {
+        console.error('API başarısız:', data);
+        alert("{{ _('Report could not be loaded') }}");
+        return;
+      }
+
+      document.getElementById('toplam').textContent = data.toplam;
+
+      // Yoğun saatler verilerini yükle
+      console.log('Yoğun saatler API çağrısı yapılıyor...');
+      const peakRes = await fetch('/api/raporlar/yoğun-saatler?' + params.toString());
+      console.log('Yoğun saatler API yanıt durumu:', peakRes.status);
+
+      // Oturum kontrolü
+      if (peakRes.redirected && peakRes.url.includes('/login')) {
+        console.log('Oturum süresi dolmuş, login sayfasına yönlendiriliyor...');
+        window.location.href = '/login';
+        return;
+      }
+
+      if (!peakRes.ok) {
+        throw new Error(`Yoğun saatler API HTTP error! status: ${peakRes.status}`);
+      }
+
+      // Content-Type kontrolü
+      const peakContentType = peakRes.headers.get('content-type');
+      if (!peakContentType || !peakContentType.includes('application/json')) {
+        console.error('Yoğun saatler API - Beklenmeyen yanıt tipi:', peakContentType);
+        window.location.href = '/login';
+        return;
+      }
+
+      const peakData = await peakRes.json();
+      console.log('Yoğun saatler API yanıt verisi:', peakData);
+
+      if (peakData.success) {
+        // KPI'ları güncelle
+        document.getElementById('peakHour').textContent = peakData.peakHour + ':00';
+        document.getElementById('capacityUsage').textContent = peakData.avgCapacityUsage + '%';
+        document.getElementById('efficiencyRate').textContent = peakData.efficiencyRate + '%';
+
+        // Detaylı tablo
+        const tableBody = document.getElementById('hourlyTable');
+        tableBody.innerHTML = '';
+
+        const kapasite = params.get('kapasite') || 8;
+
+        peakData.hourlyData.labels.forEach((hour, index) => {
+          const appointments = peakData.hourlyData.values[index];
+          const capacityUsage = (appointments / kapasite * 100).toFixed(1);
+          const efficiency = peakData.hourlyEfficiency[index];
+
+          let status = '';
+          let statusClass = '';
+          if (capacityUsage >= 90) {
+            status = "{{ _('Very Busy') }}";
+            statusClass = 'text-danger';
+          } else if (capacityUsage >= 70) {
+            status = "{{ _('Busy') }}";
+            statusClass = 'text-warning';
+          } else if (capacityUsage >= 50) {
+            status = "{{ _('Moderate') }}";
+            statusClass = 'text-info';
+          } else {
+            status = "{{ _('Quiet') }}";
+            statusClass = 'text-success';
+          }
+
+          const row = `
+        <tr>
+          <td>${hour}:00</td>
+          <td>${appointments}</td>
+          <td>${capacityUsage}%</td>
+          <td>${efficiency}%</td>
+          <td><span class="${statusClass}">${status}</span></td>
+        </tr>
+      `;
+          tableBody.innerHTML += row;
+        });
+      }
+
+      // Saat grafiği
+      try {
+        console.log('Saat grafiği oluşturuluyor...');
+        new Chart(document.getElementById('saatChart'), {
+          type: 'line',
+          data: { labels: data.saatler.labels, datasets: [{ label: "{{ _('By Hours') }}", data: data.saatler.values, borderColor: '#0d6efd', fill: false }] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            aspectRatio: 3,
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1,
+                  callback: function (value) {
+                    return Number.isInteger(value) ? value : null;
+                  }
+                }
+              }
+            }
+          }
+        });
+        console.log('Saat grafiği başarıyla oluşturuldu');
+      } catch (error) {
+        console.error('Saat grafiği oluşturma hatası:', error);
+      }
+
+      // Durum grafiği
+      try {
+        console.log('Durum grafiği oluşturuluyor...');
+        const durumLabels = Object.keys(data.durumlar);
+        const durumValues = Object.values(data.durumlar);
+        new Chart(document.getElementById('durumChart'), {
+          type: 'doughnut',
+          data: { labels: durumLabels, datasets: [{ data: durumValues, backgroundColor: ['#ffc107', '#198754', '#dc3545', '#0dcaf0', '#6c757d'] }] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            aspectRatio: 1,
+            plugins: {
+              legend: {
+                position: 'bottom'
+              }
+            }
+          }
+        });
+        console.log('Durum grafiği başarıyla oluşturuldu');
+      } catch (error) {
+        console.error('Durum grafiği oluşturma hatası:', error);
+      }
+
+      // Referans grafiği
+      try {
+        console.log('Referans grafiği oluşturuluyor...');
+        const refLabels = Object.keys(data.referanslar);
+        const refValues = Object.values(data.referanslar);
+        new Chart(document.getElementById('refChart'), {
+          type: 'bar',
+          data: { labels: refLabels, datasets: [{ label: "{{ _('Count') }}", data: refValues, backgroundColor: '#20c997' }] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            aspectRatio: 1,
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1,
+                  callback: function (value) {
+                    return Number.isInteger(value) ? value : null;
+                  }
+                }
+              }
+            }
+          }
+        });
+        console.log('Referans grafiği başarıyla oluşturuldu');
+      } catch (error) {
+        console.error('Referans grafiği oluşturma hatası:', error);
+      }
+
+    } catch (error) {
+      console.error('Rapor yükleme hatası:', error);
+      alert('Rapor yüklenirken bir hata oluştu: ' + error.message);
+    }
+  }
+
+  // Form submit debug
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.querySelector('form');
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        const defterSelect = document.getElementById('defterSelect');
+        console.log('Form submit - Seçilen defter:', defterSelect.value);
+      });
+    }
+  });
+
+  // Chart.js yüklenip yüklenmediğini kontrol et
+  if (typeof Chart === 'undefined') {
+    console.error('Chart.js yüklenmedi!');
+    alert('Grafik kütüphanesi yüklenemedi. Sayfayı yenileyin.');
+  } else {
+    console.log('Chart.js yüklendi, versiyon:', Chart.version);
+    loadReport();
+  }
+
+  // Sayfa yüklendiğinde otomatik kapasite hesaplama
+  document.addEventListener('DOMContentLoaded', function () {
+    updateCapacityFromDefter();
+  });
+
+  function exportReport(format) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('format', format);
+    window.location.href = '{{ url_for("rapor.raporlar") }}?' + params.toString();
+  }
+
+  function updateCapacityFromDefter() {
+    const defterSelect = document.getElementById('defterSelect');
+    const kapasiteInput = document.getElementById('kapasiteInput');
+
+    if (defterSelect.value) {
+      const selectedOption = defterSelect.options[defterSelect.selectedIndex];
+      const baslangic = selectedOption.getAttribute('data-baslangic') || '09:00';
+      const bitis = selectedOption.getAttribute('data-bitis') || '18:00';
+      const slotDakika = parseInt(selectedOption.getAttribute('data-slot')) || 30;
+
+      // Saat hesaplama
+      const [sh, sm] = baslangic.split(':').map(Number);
+      const [eh, em] = bitis.split(':').map(Number);
+
+      const totalMinutes = Math.max(0, (eh * 60 + em) - (sh * 60 + sm));
+      const calculatedCapacity = Math.max(1, Math.floor(totalMinutes / slotDakika));
+
+      // Kapasiteyi güncelle
+      kapasiteInput.value = calculatedCapacity;
+
+      console.log(`Defter seçildi: ${selectedOption.textContent}`);
+      console.log(`Çalışma saatleri: ${baslangic} - ${bitis}`);
+      console.log(`Slot süresi: ${slotDakika} dakika`);
+      console.log(`Hesaplanan kapasite: ${calculatedCapacity} slot`);
+    } else {
+      // Tüm defterler seçildiğinde varsayılan değer
+      kapasiteInput.value = 8;
+      console.log('Tüm defterler seçildi, varsayılan kapasite: 8');
+    }
+  }
+</script>
+{% endblock %}

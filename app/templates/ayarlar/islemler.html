@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Appointment Operations') }} - Crandyx CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ _('Appointment Operations') }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('ayarlar') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>{{ _('Back') }}
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{{ _('Add New Operation') }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <!-- Firma kullanıcıdan (session) alınır; formda gösterilmiyor -->
+
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('Appointment Book') }} *</label>
+                        <select name="defter_id" class="form-select" required>
+                            <option value="">{{ _('Select') }}</option>
+                            {% for d in defterler %}
+                            <option value="{{ d.AyarID }}">{{ d.DefterAdi }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('Operation Name') }} *</label>
+                        <input type="text" name="islem_adi" class="form-control" required>
+                    </div>
+                    
+                    <!-- Removed description, duration, and price fields -->
+                    
+                    <button type="submit" class="btn btn-primary">{{ _('Add Operation') }}</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{{ _('Operations List') }}</h5>
+            </div>
+            <div class="card-body">
+                {% if islemler %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>{{ _('Operation') }}</th>
+                                <th>{{ _('Appointment Book') }}</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for islem in islemler %}
+                            <tr>
+                                <td>
+                                    <input type="text" name="islem_adi" class="form-control form-control-sm" value="{{ islem.IslemAdi }}" required form="form-{{ islem.IslemID }}">
+                                </td>
+                                <td>
+                                    <select name="defter_id" class="form-select form-select-sm" required form="form-{{ islem.IslemID }}">
+                                        {% for d in defterler %}
+                                        <option value="{{ d.AyarID }}" {% if islem.DefterID == d.AyarID %}selected{% endif %}>{{ d.DefterAdi }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td class="text-end">
+                                    <form id="form-{{ islem.IslemID }}" method="POST" action="{{ url_for('ayarlar_islem_guncelle', islem_id=islem.IslemID) }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-save"></i></button>
+                                        <button formmethod="POST" formaction="{{ url_for('ayarlar_islem_sil', islem_id=islem.IslemID) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm({{ _('Are you sure you want to delete this operation?')|tojson }})" title="{{ _('Delete') }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">{{ _('No operations found.') }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

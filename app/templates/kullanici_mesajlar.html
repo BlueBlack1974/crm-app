@@ -1,0 +1,764 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('User Messages') }} - Crandyx CRM{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --chat-bg: #f8f9fc;
+        --bubble-sent: #e7f1ff;
+        /* Light Blue */
+        --bubble-received: #ffffff;
+        --border-color: #e3e6f0;
+        --primary-blue: #4e73df;
+    }
+
+    .chat-container {
+        height: calc(100vh - 230px);
+        /* Fix: Further reduce height to guarantee input visibility on all screens */
+        /* Adjusted for layout */
+        background-color: #fff;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+    }
+
+    .chat-sidebar {
+        background-color: #fff;
+        border-right: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-item {
+        cursor: pointer;
+        transition: background-color 0.2s;
+        border-bottom: 1px solid #f8f9fa;
+        padding: 1rem;
+    }
+
+    .chat-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .chat-item.active {
+        background-color: #eaecf4;
+        /* Slightly darker blue-grey */
+        border-left: 4px solid var(--primary-blue);
+    }
+
+    /* Avatar Styles */
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        background-color: #eaecf4;
+        border: 1px solid #d1d3e2;
+    }
+
+    .user-avatar-small {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        background-color: #eaecf4;
+        border: 1px solid #d1d3e2;
+        margin-right: 10px;
+    }
+
+    .user-initials {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: var(--primary-blue);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1rem;
+    }
+
+    .chat-main {
+        display: flex;
+        flex-direction: column;
+        background-color: var(--chat-bg);
+        height: 100%;
+        overflow: hidden;
+        position: relative;
+        /* Context */
+    }
+
+    .chat-header {
+        background-color: #fff;
+        border-bottom: 1px solid var(--border-color);
+        padding: 0.75rem 1.5rem;
+        display: flex;
+        align-items: center;
+        height: 70px;
+        flex-shrink: 0;
+        /* Fix: Prevent header from shrinking */
+    }
+
+    .chat-history {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 1.5rem;
+        padding-bottom: 2rem;
+        /* Fix: Extra space for last message visibility */
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        height: 0;
+        /* Critical: Forces flex child to shrink properly */
+        min-height: 0;
+    }
+
+    .message {
+        max-width: 65%;
+        padding: 0.8rem 1rem;
+        border-radius: 1rem;
+        position: relative;
+        word-wrap: break-word;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        font-size: 0.95rem;
+        line-height: 1.4;
+    }
+
+    .mesaj-gelen {
+        align-self: flex-start;
+        background-color: var(--bubble-received);
+        border-bottom-left-radius: 0.2rem;
+    }
+
+    .mesaj-giden {
+        align-self: flex-end;
+        background-color: var(--bubble-sent);
+        border-bottom-right-radius: 0.2rem;
+    }
+
+    .message-time {
+        font-size: 0.7rem;
+        color: #858796;
+        margin-top: 0.2rem;
+        text-align: right;
+        display: block;
+        opacity: 0.8;
+    }
+
+    .chat-input-area {
+        background-color: #f0f2f5;
+        border-top: 1px solid var(--border-color);
+        padding: 1rem;
+        flex-shrink: 0;
+        /* Fix: Prevent input area from shrinking or disappearing */
+        position: relative;
+        z-index: 10;
+    }
+
+    .chat-input-wrapper {
+        background-color: #fff;
+        border-radius: 1.5rem;
+        padding: 0.5rem 1rem;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .chat-input {
+        border: none;
+        outline: none;
+        width: 100%;
+        padding: 0.5rem;
+        resize: none;
+        max-height: 100px;
+        background: transparent;
+    }
+
+    .btn-send {
+        color: var(--primary-blue);
+        background: transparent;
+        border: none;
+        padding: 0.5rem;
+        transition: transform 0.2s;
+    }
+
+    .btn-send:hover {
+        transform: scale(1.1);
+    }
+
+    .badge-unread {
+        background-color: #e74a3b;
+        /* Red badge */
+    }
+
+    /* Scrollbar Styling */
+    .chat-history::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .chat-history::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .chat-history::-webkit-scrollbar-thumb {
+        background-color: #d1d3e2;
+        border-radius: 20px;
+    }
+
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        border: 2px solid #fff;
+    }
+
+    .status-online {
+        background-color: #1cc88a;
+        /* Green */
+    }
+
+    .status-offline {
+        background-color: #e74a3b;
+        /* Red */
+    }
+
+    /* Dark Mode Overrides for Chat */
+    body.dark-mode .chat-container {
+        border-color: #495057;
+        background-color: #212529;
+    }
+
+    body.dark-mode .chat-sidebar {
+        background-color: #2c3034;
+        border-color: #495057;
+    }
+
+    body.dark-mode .chat-item {
+        border-color: #343a40;
+    }
+
+    body.dark-mode .chat-item:hover {
+        background-color: #343a40;
+    }
+
+    body.dark-mode .chat-item.active {
+        background-color: #212529;
+        border-left-color: #0d6efd;
+    }
+
+    body.dark-mode .chat-item h6.text-dark,
+    body.dark-mode .chat-header h6.text-gray-800 {
+        color: #f8f9fa !important;
+    }
+
+    body.dark-mode .chat-header {
+        background-color: #2c3034;
+        border-color: #495057;
+    }
+
+    body.dark-mode .chat-main {
+        background-color: #212529;
+    }
+
+    body.dark-mode .chat-input-area {
+        background-color: #2c3034;
+        border-color: #495057;
+    }
+
+    body.dark-mode .chat-input-wrapper {
+        background-color: #212529;
+        border-color: #495057;
+    }
+
+    body.dark-mode .chat-input {
+        color: #f8f9fa;
+    }
+
+    body.dark-mode .message {
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    body.dark-mode .mesaj-gelen {
+        background-color: #343a40;
+        color: #f8f9fa;
+    }
+
+    body.dark-mode .mesaj-giden {
+        background-color: #0d6efd;
+        color: #ffffff;
+    }
+
+    body.dark-mode .message-time {
+        color: #adb5bd;
+    }
+
+    body.dark-mode #userSearch {
+        background-color: #212529 !important;
+        color: #f8f9fa !important;
+        border-color: #495057 !important;
+    }
+
+    body.dark-mode #userSearch::placeholder {
+        color: #adb5bd;
+    }
+
+    body.dark-mode .bg-light {
+        background-color: #2c3034 !important;
+    }
+
+    body.dark-mode .bg-white {
+        background-color: #2c3034 !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0 text-gray-800">{{ _('User Messages') }}</h1>
+</div>
+
+<div class="chat-container row g-0 shadow">
+    <!-- Sol Menü: Kullanıcı Listesi -->
+    <div class="col-md-4 col-lg-3 chat-sidebar">
+        <div class="p-3 border-bottom bg-light">
+            <input type="text" class="form-control rounded-pill border-0 bg-white shadow-sm" id="userSearch"
+                placeholder="{{ _('Search users...') }}">
+        </div>
+        <div class="list-group list-group-flush overflow-auto h-100" id="userList">
+            {% for conv in conversations %}
+            <div class="list-group-item chat-item position-relative d-flex align-items-center" onclick="loadChat(this)"
+                data-user-id="{{ conv.kullanici.KullaniciID }}" data-user-avatar="{{ conv.kullanici.ProfilFotografi }}"
+                data-user-name="{{ conv.kullanici.Ad }} {{ conv.kullanici.Soyad }}"
+                data-user-online="{{ 'true' if conv.is_online else 'false' }}">
+
+                <div class="me-3 position-relative">
+                    {% if conv.kullanici.ProfilFotografi %}
+                    <img src="{{ url_for('serve_user_avatar', user_id=conv.kullanici.KullaniciID) }}"
+                        class="user-avatar" alt="Avatar">
+                    {% else %}
+                    <div class="user-initials">
+                        {{ conv.kullanici.Ad[0] }}{{ conv.kullanici.Soyad[0] }}
+                    </div>
+                    {% endif %}
+
+                    {% if conv.is_online %}
+                    <span class="status-indicator status-online"></span>
+                    {% else %}
+                    <span class="status-indicator status-offline"></span>
+                    {% endif %}
+                </div>
+
+                <div class="flex-grow-1 overflow-hidden">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 text-truncate font-weight-bold text-dark">{{ conv.kullanici.Ad }} {{
+                            conv.kullanici.Soyad }}</h6>
+                        {% if conv.son_mesaj %}
+                        <small class="text-xs text-muted ms-2">{{ conv.son_mesaj.OlusturmaTarihi.strftime('%H:%M')
+                            }}</small>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-1">
+                        {% if conv.son_mesaj %}
+                        <small class="text-muted text-truncate d-block" style="max-width: 150px;">
+                            {{ conv.son_mesaj.Mesaj[:40] }}{% if conv.son_mesaj.Mesaj|length > 40 %}...{% endif %}
+                        </small>
+                        {% else %}
+                        <small class="text-muted font-italic">{{ _('No messages yet') }}</small>
+                        {% endif %}
+
+                        {% if conv.okunmamis_sayisi > 0 %}
+                        <span class="badge badge-unread rounded-pill">{{ conv.okunmamis_sayisi }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="p-4 text-center text-muted">
+                {{ _('No users found.') }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Sağ Taraf: Mesajlaşma -->
+    <div class="col-md-8 col-lg-9 chat-main">
+        <!-- Chat Header -->
+        <div class="chat-header justify-content-between" id="chatHeader" style="visibility: hidden;">
+            <div class="d-flex align-items-center">
+                <div id="headerAvatarContainer"></div>
+                <div>
+                    <h6 class="m-0 font-weight-bold text-gray-800" id="chatTitle"></h6>
+                    <small id="chatStatusText" style="font-size: 0.75rem;"></small>
+                    <!-- Placeholder for status -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat History -->
+        <div class="chat-history" id="chatArea">
+            <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
+                <div class="bg-white p-4 rounded-circle shadow-sm mb-3">
+                    <i class="fas fa-comments fa-2x text-primary"></i>
+                </div>
+                <h5 class="font-weight-light">{{ _('Select a user to start messaging') }}</h5>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="chat-input-area" id="inputArea" style="display: none;">
+            <form id="messageForm" onsubmit="sendMessage(event)">
+                <input type="hidden" id="activeRecipientId">
+                <div class="chat-input-wrapper">
+                    <input type="text" class="chat-input" id="messageInput" placeholder="{{ _('Type a message...') }}"
+                        autocomplete="off">
+                    <button type="submit" class="btn-send" id="sendBtn">
+                        <i class="fas fa-paper-plane fa-lg"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const globalUserIdStr = "{{ session.user_id if session.user_id else '' }}";
+    const LOGGED_IN_USER_ID = globalUserIdStr ? parseInt(globalUserIdStr) : null;
+    let currentChatUserId = null;
+    let chatRefreshInterval = null;
+
+    // Kullanıcı arama
+    document.getElementById('userSearch').addEventListener('input', function (e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const items = document.querySelectorAll('.chat-item');
+        items.forEach(item => {
+            const userName = item.getAttribute('data-user-name').toLowerCase();
+            if (userName.includes(searchTerm)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+
+    function loadChat(element) {
+        const userId = element.getAttribute('data-user-id');
+        const userName = element.getAttribute('data-user-name');
+        const avatarPath = element.getAttribute('data-user-avatar');
+        const isOnline = element.getAttribute('data-user-online') === 'true';
+        // UI updates
+        document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+        if (element) element.classList.add('active');
+
+        // Header Update
+        document.getElementById('chatTitle').innerText = userName;
+        const statusText = document.getElementById('chatStatusText');
+
+        if (isOnline) {
+            statusText.innerText = '{{ _("Online") }}';
+            statusText.className = 'text-success font-weight-bold';
+        } else {
+            statusText.innerText = '{{ _("Offline") }}';
+            statusText.className = 'text-danger';
+        }
+
+        const avatarContainer = document.getElementById('headerAvatarContainer');
+
+        if (avatarPath && avatarPath !== 'None' && avatarPath !== '') {
+            avatarContainer.innerHTML = `<img src="/avatar/${userId}" class="user-avatar-small" alt="Avatar">`;
+        } else {
+            // Initials fallback logic in JS is messy without helper, trying simple icon if no img
+            avatarContainer.innerHTML = `<div class="user-avatar-small d-flex align-items-center justify-content-center bg-primary text-white font-weight-bold" style="font-size: 1.2rem;">${userName.charAt(0)}</div>`;
+        }
+
+        document.getElementById('chatHeader').style.visibility = 'visible';
+        document.getElementById('inputArea').style.display = 'block';
+
+        document.getElementById('activeRecipientId').value = userId;
+        const msgInput = document.getElementById('messageInput');
+        msgInput.disabled = false;
+        msgInput.focus();
+
+        currentChatUserId = userId;
+
+        const chatArea = document.getElementById('chatArea');
+        chatArea.innerHTML = '<div class="text-center mt-5"><div class="spinner-border text-primary" role="status"></div></div>';
+
+        // Fetch messages
+        fetch(`/kullanici-mesaj/api/mesajlar/${userId}`)
+            .then(response => response.json())
+            .then(data => {
+                chatArea.innerHTML = '';
+
+                if (!data.success || !data.mesajlar || data.mesajlar.length === 0) {
+                    chatArea.innerHTML = '<div class="text-center text-muted mt-5 small">{{ _("No messages yet. Say hello!") }}</div>';
+                } else {
+                    const currentUserId = LOGGED_IN_USER_ID;
+                    data.mesajlar.forEach(msg => {
+                        addMessage(msg.mesaj, msg.gonderen_id == currentUserId, msg.olusturma_tarihi);
+                    });
+                }
+
+                chatArea.scrollTop = chatArea.scrollHeight;
+
+                updateUnreadCount();
+                startChatRefresh(userId);
+            })
+            .catch(err => {
+                chatArea.innerHTML = '<div class="text-danger text-center mt-5">{{ _("Error loading messages.") }}</div>';
+
+                console.error(err);
+
+            });
+
+    }
+
+    function addMessage(text, isSent, timestamp) {
+        const chatArea = document.getElementById('chatArea');
+        // Remove empty placeholder if exists
+        const placeholder = chatArea.querySelector('.text-center.text-muted');
+        if (placeholder) placeholder.remove();
+
+        const div = document.createElement('div');
+        div.className = `message ${isSent ? 'mesaj-giden' : 'mesaj-gelen'}`;
+
+        const date = timestamp ? new Date(timestamp) : new Date();
+        const timeStr = date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+
+        div.innerHTML = `
+            ${escapeHtml(text)}
+            <span class="message-time">${timeStr}</span>
+        `;
+        chatArea.appendChild(div);
+
+        // Timeout ensures scroll happens after rendering
+        setTimeout(() => {
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }, 50);
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML.replace(/\n/g, '<br>');
+    }
+
+    function sendMessage(e) {
+        e.preventDefault();
+        const recipientId = document.getElementById('activeRecipientId').value;
+        const input = document.getElementById('messageInput');
+        const text = input.value.trim();
+
+        if (!text || !recipientId) return;
+
+        // Optimistic UI
+        addMessage(text, true, new Date().toISOString());
+        input.value = '';
+
+        fetch(`/kullanici-mesaj/api/mesaj-gonder`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': "{{ csrf_token() }}"
+            },
+            body: JSON.stringify({
+                alici_id: recipientId,
+                mesaj: text
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    // Hata durumunda (gerçek hayatta burada mesajın yanına ünlem konabilir)
+                    alert('{{ _("Message failed") }}: ' + (data.error || '{{ _("Unknown error") }}'));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('{{ _("Network error") }}');
+            });
+    }
+
+    // Notification Sound (Base64 MP3 - Pop)
+    const notificationSound = new Audio("data:audio/mp3;base64,//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//uQxAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq");
+
+    function playNotificationSound() {
+        try {
+            notificationSound.currentTime = 0;
+            notificationSound.play().catch(e => console.log("Audio play failed (user interaction needed):", e));
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function startChatRefresh(userId) {
+        if (chatRefreshInterval) {
+            clearInterval(chatRefreshInterval);
+        }
+
+        chatRefreshInterval = setInterval(() => {
+            if (currentChatUserId === userId) {
+                fetch(`/kullanici-mesaj/api/mesajlar/${userId}?t=${new Date().getTime()}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.mesajlar) {
+                            const chatArea = document.getElementById('chatArea');
+                            const currentScroll = chatArea.scrollTop;
+                            const isNearBottom = chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < 100;
+
+                            const domMessages = chatArea.querySelectorAll('.message');
+                            if (data.mesajlar.length > domMessages.length) {
+                                // Check if the *last* message is from someone else to play sound
+                                const lastMsg = data.mesajlar[data.mesajlar.length - 1];
+                                const currentUserId = LOGGED_IN_USER_ID;
+
+                                // Reset and redraw
+                                chatArea.innerHTML = '';
+                                data.mesajlar.forEach(msg => {
+                                    addMessage(msg.mesaj, msg.gonderen_id == currentUserId, msg.olusturma_tarihi);
+                                });
+
+                                // Play sound if last message is NOT from me
+                                // Handled globally in base.html now
+                                // if (lastMsg.gonderen_id != currentUserId) {
+                                //    playNotificationSound();
+                                // }
+
+                                if (isNearBottom) {
+                                    chatArea.scrollTop = chatArea.scrollHeight;
+                                } else {
+                                    chatArea.scrollTop = currentScroll;
+                                }
+                            }
+                        }
+                    })
+                    .catch(err => console.error('Chat refresh error:', err));
+            }
+        }, 5000);
+    }
+
+    function updateUnreadCount() {
+        // 1. Update global badge (Total)
+        fetch('/kullanici-mesaj/api/okunmamis-sayisi?t=' + new Date().getTime())
+            .then(response => response.json())
+            .then(data => {
+                const badge = document.getElementById('mesaj-badge');
+                if (badge) {
+                    if (data.okunmamis_sayisi > 0) {
+                        badge.textContent = data.okunmamis_sayisi;
+                        badge.style.display = '';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            })
+            .catch(err => console.error('Unread count error:', err));
+
+        // 2. Update per-user badges in sidebar
+        fetch('/kullanici-mesaj/api/okunmamis-mesajlar-ozet?t=' + new Date().getTime())
+            .then(response => response.json())
+            .then(data => {
+                // Clear all badges first (optimistic) or update matching ones
+                // Better: Iterate all sidebar items. If user ID in data, show count. Else hide.
+                const unreadMap = {};
+                if (data.ozet) {
+                    data.ozet.forEach(item => {
+                        unreadMap[item.gonderen_id] = item.sayi;
+                    });
+                }
+
+                document.querySelectorAll('.chat-item').forEach(item => {
+                    const userId = item.getAttribute('data-user-id');
+                    // Find badge element inside this chat item or create it
+                    let badge = item.querySelector('.badge-unread');
+
+                    const count = unreadMap[userId] || 0;
+
+                    // Logic: Show badge if count > 0 AND (chat is not open OR chat is open but user is not active)
+                    // Actually, if I am chatting with User A, messages are marked read when I fetch them.
+                    // So backend should return 0 for active user if I just fetched.
+                    // But if I fetched 10s ago and new msg arrived, backend returns 1.
+                    // If I am currently viewing User A, I should probably hide the badge or rely on startChatRefresh to append message.
+                    // Standard UX: If I am on their chat, badge is hidden or cleared immediately. 
+                    // Since fetch('/api/mesajlar') marks as read, standard polling logic works fine.
+
+                    if (count > 0) {
+                        if (!badge) {
+                            // Create badge if missing
+                            const badgeContainer = item.querySelector('.d-flex.justify-content-between.align-items-center.mt-1');
+                            if (badgeContainer) {
+                                badge = document.createElement('span');
+                                badge.className = 'badge badge-unread rounded-pill';
+                                badgeContainer.appendChild(badge);
+                            }
+                        }
+                        if (badge) {
+                            badge.textContent = count;
+                            badge.style.display = '';
+                        }
+                    } else {
+                        if (badge) badge.style.display = 'none';
+                    }
+                });
+            })
+            .catch(err => console.error('Unread detail error:', err));
+    }
+
+    function updateOnlineStatus() {
+        fetch('/kullanici-mesaj/api/online-kullanicilar')
+            .then(response => response.json())
+            .then(data => {
+                const onlineUsers = data.online_users || {};
+
+                // Update sidebar items
+                document.querySelectorAll('.chat-item').forEach(item => {
+                    const userId = parseInt(item.getAttribute('data-user-id'));
+                    const isOnline = !!onlineUsers[userId];
+
+                    // Update data attribute
+                    item.setAttribute('data-user-online', isOnline);
+
+                    // Update indicator
+                    const indicator = item.querySelector('.status-indicator');
+                    if (indicator) {
+                        if (isOnline) {
+                            indicator.classList.remove('status-offline');
+                            indicator.classList.add('status-online');
+                        } else {
+                            indicator.classList.remove('status-online');
+                            indicator.classList.add('status-offline');
+                        }
+                    }
+
+                    // Update header if this is the active chat
+                    if (userId === parseInt(currentChatUserId)) {
+                        const statusText = document.getElementById('chatStatusText');
+                        if (statusText) {
+                            if (isOnline) {
+                                statusText.innerText = '{{ _("Online") }}';
+                                statusText.className = 'text-success font-weight-bold';
+                            } else {
+                                statusText.innerText = '{{ _("Offline") }}';
+                                statusText.className = 'text-danger';
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(err => console.error('Online status update error:', err));
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        updateUnreadCount();
+        updateOnlineStatus(); // Initial call
+
+        setInterval(updateUnreadCount, 30000);
+        setInterval(updateOnlineStatus, 30000); // Check every 30 seconds
+    });
+</script>
+{% endblock %}

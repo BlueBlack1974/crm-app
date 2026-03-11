@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_babel import get_locale
-from app.extensions import db
+from app.extensions import db, csrf
 from app.models import (
     Randevu, RandevuYetki, RandevuReferans, RandevuDefterAyar, Kullanici, 
     RandevuIslem, RandevuDefterBlok, Bildirim, Todo, Musteri, MusteriKategori
@@ -984,3 +984,112 @@ def api_slot_check():
         
     except Exception as e:
         return jsonify({"success": False, "message": f"Hata: {str(e)}"}), 500
+
+@randevu_bp.route('/api/randevu/seri-kaydet', methods=['POST'])
+@login_required
+@csrf.exempt
+def api_randevu_seri_kaydet():
+    """Toplu randevu serisi kaydetme"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "message": "JSON verisi bulunamadı"}), 400
+            
+        baslik = data.get('baslik')
+        defter_id = data.get('defter_id')
+        musteri_id = data.get('musteri_id')
+        islem_id = data.get('islem_id')
+        aciklama = data.get('aciklama', '')
+        randevular_data = data.get('randevular', [])
+        
+        if not baslik or not defter_id or not musteri_id or not randevular_data:
+            return jsonify({"success": False, "message": "Eksik parametreler. Başlık, Defter, Müşteri ve en az 1 tarih gerekli."}), 400
+            
+        # Müşteriyi bul
+        from app.models import Musteri, RandevuIslem, RandevuDefterAyar, RandevuSeri
+        musteri = Musteri.query.filter_by(MusteriID=musteri_id, FirmaID=session['firma_id']).first()
+        if not musteri:
+            return jsonify({"success": False, "message": "Müşteri bulunamadı"}), 404
+            
+        # Randevu serisini oluştur
+        yeni_seri = RandevuSeri(
+            FirmaID=session['firma_id'],
+            MusteriID=musteri.MusteriID,
+            DefterID=defter_id,
+            IslemID=islem_id if islem_id else None,
+            Baslik=baslik,
+            ToplamRandevu=len(randevular_data),
+            Aciklama=aciklama,
+            OlusturanKullaniciID=session['user_id']
+        )
+        
+        db.session.add(yeni_seri)
+        db.session.flush() # SeriID'yi almak için
+        
+        eklenen_randevular = []
+        for index, rnd_data in enumerate(randevular_data):
+            try:
+                tarih_str = rnd_data.get('tarih')
+                saat_str = rnd_data.get('saat')
+                sure = rnd_data.get('sure', 60)
+                
+                randevu_dt = datetime.strptime(f"{tarih_str} {saat_str}", "%Y-%m-%d %H:%M")
+                
+                yeni_randevu = Randevu(
+                    RandevuBaslik=f"{baslik} - Seans {index+1}",
+                    RandevuAciklamasi=aciklama,
+                    RandevuTarihi=randevu_dt,
+                    RandevuSuresi=sure,
+                    MusteriID=musteri.MusteriID,
+                    MusteriAdi=musteri.MusteriAdi,
+                    MusteriSoyadi=musteri.MusteriSoyadi,
+                    MusteriTelefon=musteri.Telefon,
+                    MusteriEmail=musteri.Email,
+                    IslemID=islem_id if islem_id else None,
+                    OlusturanKullaniciID=session['user_id'],
+                    FirmaID=session['firma_id'],
+                    DefterID=defter_id,
+                    SeriID=yeni_seri.SeriID,
+                    SeriNo=index + 1
+                )
+                db.session.add(yeni_randevu)
+                eklenen_randevular.append(yeni_randevu)
+            except Exception as item_err:
+                print(f"[WARN] Randevu öğesi eklenirken hata: {item_err}")
+                continue
+                
+        # Eğer hiçbiri eklenemediyse hata ver
+        if not eklenen_randevular:
+            db.session.rollback()
+            return jsonify({"success": False, "message": "Geçerli tarih/saat bilgisi bulunamadı."}), 400
+            
+        # Admin değilse yetkileri ekle
+        is_admin = session.get('is_admin', False)
+        if not is_admin:
+            db.session.flush() # Randevu ID'lerini almak için
+            for r in eklenen_randevular:
+                yeni_yetki = RandevuYetki(
+                    RandevuID=r.RandevuID,
+                    KullaniciID=session['user_id'],
+                    GoruntulemeYetkisi=True,
+                    DuzenlemeYetkisi=True,
+                    SilmeYetkisi=True
+                )
+                db.session.add(yeni_yetki)
+                
+        # Activity Log
+        from app.utils.logging import log_user_action_decorator
+        
+        db.session.commit()
+        return jsonify({
+            "success": True, 
+            "message": f"Randevu serisi ve {len(eklenen_randevular)} randevu başarıyla oluşturuldu.",
+            "seri_id": yeni_seri.SeriID
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "message": f"Sunucu hatası: {str(e)}"}), 500
+

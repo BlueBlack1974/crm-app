@@ -127,3 +127,36 @@ class RandevuYetki(db.Model):
     
     def __repr__(self):
         return f'<RandevuYetki {self.RandevuID}-{self.KullaniciID}>'
+
+class FirmaEmailAyarlari(db.Model):
+    __tablename__ = 'FirmaEmailAyarlari'
+    
+    AyarID = db.Column(db.Integer, primary_key=True)
+    FirmaID = db.Column(db.Integer, db.ForeignKey('Firmalar.FirmaID'), nullable=False, unique=True)
+    SMTP_Server = db.Column(db.NVARCHAR(100), nullable=False)
+    SMTP_Port = db.Column(db.Integer, default=587)
+    Email = db.Column(db.NVARCHAR(100), nullable=False)
+    Sifre = db.Column(db.NVARCHAR(200), nullable=False) # Uygulama şifresi veya düz şifre
+    TLS_Aktif = db.Column(db.Boolean, default=True)
+    GuncellemeTarihi = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # İlişki
+    firma = db.relationship('Firma', backref=db.backref('email_ayari', uselist=False), lazy=True)
+    
+    def __repr__(self):
+        return f'<FirmaEmailAyarlari {self.FirmaID}>'
+
+class SifreSifirlamaToken(db.Model):
+    __tablename__ = 'SifreSifirlamaTokenlari'
+    
+    TokenID = db.Column(db.Integer, primary_key=True)
+    KullaniciID = db.Column(db.Integer, db.ForeignKey('Kullanicilar.KullaniciID'), nullable=False)
+    Token = db.Column(db.NVARCHAR(100), unique=True, nullable=False)
+    OlusturmaTarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    GecerlilikSuresi = db.Column(db.DateTime, nullable=False)
+    Kullanildi = db.Column(db.Boolean, default=False)
+    
+    kullanici = db.relationship('Kullanici', backref='sifirlama_tokenlari', lazy=True)
+    
+    def __repr__(self):
+        return f'<SifreSifirlamaToken {self.KullaniciID}>'

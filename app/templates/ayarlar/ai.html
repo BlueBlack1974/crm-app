@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('AI Assistant Settings') }} - Crandyx CRM{% endblock %}
+
+{% block head %}
+<style>
+    .ai-status-badge {
+        font-size: 0.9rem;
+    }
+
+    .usage-bar {
+        height: 8px;
+        border-radius: 4px;
+    }
+
+    .test-result {
+        font-size: 0.9rem;
+    }
+
+    .firma-card {
+        transition: box-shadow 0.2s;
+    }
+
+    .firma-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, .1);
+    }
+
+    .api-key-field {
+        font-family: monospace;
+        letter-spacing: 0.05em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-robot me-2 text-primary"></i>{{ _('AI Assistant Settings') }}</h1>
+    <a href="{{ url_for('settings.index') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>{{ _('Back') }}
+    </a>
+</div>
+
+<!-- API Key ve Genel Ayarlar -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-key me-2"></i><strong>Gemini API Bağlantısı</strong>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('settings.ai_ayarlar_kaydet') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Gemini API Key</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control api-key-field" name="gemini_api_key"
+                                id="geminiApiKey" value="{{ gemini_api_key or '' }}" placeholder="AIza...">
+                            <button class="btn btn-outline-secondary" type="button" onclick="toggleKeyVisibility()">
+                                <i class="fas fa-eye" id="eyeIcon"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted">
+                            <a href="https://aistudio.google.com/apikey" target="_blank">
+                                <i class="fas fa-external-link-alt me-1"></i>Google AI Studio'dan ücretsiz API key alın
+                            </a>
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Gemini Modeli</label>
+                        <select class="form-select" name="gemini_model">
+                            <option value="gemini-2.5-flash" {% if gemini_model=='gemini-2.5-flash' or not gemini_model
+                                %}selected{% endif %}>
+                                gemini-2.5-flash (Varsayılan - Hızlı, Ekonomik)
+                            </option>
+                            <option value="gemini-2.0-flash" {% if gemini_model=='gemini-2.0-flash' %}selected{% endif
+                                %}>
+                                gemini-2.0-flash (Eski Sürüm)
+                            </option>
+                            <option value="gemini-2.5-pro" {% if gemini_model=='gemini-2.5-pro' %}selected{% endif %}>
+                                gemini-2.5-pro (Güçlü, Pahalı)
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Kaydet
+                        </button>
+                        <button type="button" class="btn btn-outline-success" onclick="testConnection()">
+                            <i class="fas fa-plug me-1"></i>Bağlantıyı Test Et
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Test Sonucu -->
+                <div id="testResult" class="mt-3 d-none">
+                    <div class="alert mb-0" id="testAlert" role="alert"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <i class="fas fa-info-circle me-2 text-info"></i><strong>Bilgi</strong>
+            </div>
+            <div class="card-body small text-muted">
+                <p><i class="fas fa-check text-success me-1"></i>API key sunucuda güvenle saklanır, firma kullanıcıları
+                    göremez.</p>
+                <p><i class="fas fa-check text-success me-1"></i>Her firma için aylık kullanım limiti
+                    belirleyebilirsiniz.</p>
+                <p><i class="fas fa-check text-success me-1"></i><strong>gemini-2.0-flash</strong> modeli 1000 istek
+                    için ~$0.10 maliyetlidir.</p>
+                <p class="mb-0"><i class="fas fa-check text-success me-1"></i>Limit dolduğunda kullanıcıya bilgi
+                    verilir.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Firma Bazlı AI Ayarları -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header">
+        <i class="fas fa-building me-2"></i><strong>Firma Bazlı AI Ayarları</strong>
+        <span class="badge bg-secondary ms-2">{{ firmalar|length }} firma</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Firma</th>
+                        <th class="text-center">AI Durumu</th>
+                        <th>Aylık Limit</th>
+                        <th>Bu Ay Kullanım</th>
+                        <th>İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for firma in firmalar %}
+                    <tr>
+                        <td>
+                            <strong>{{ firma.FirmaAdi }}</strong>
+                            <br><small class="text-muted">{{ firma.FirmaKodu }}</small>
+                        </td>
+                        <td class="text-center">
+                            {% if firma.AIAktif %}
+                            <span class="badge bg-success"><i class="fas fa-check me-1"></i>Aktif</span>
+                            {% else %}
+                            <span class="badge bg-secondary"><i class="fas fa-times me-1"></i>Pasif</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if firma.AIAylikLimit == 0 %}
+                            <span class="text-success"><i class="fas fa-infinity me-1"></i>Sınırsız</span>
+                            {% else %}
+                            {{ firma.AIAylikLimit }} istek/ay
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set kullanilan = firma.AIKullanilanSayi if firma.AIKullanimAy == ay_kodu else 0 %}
+                            {% if firma.AIAylikLimit > 0 %}
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1 usage-bar">
+                                    <div class="progress-bar {% if kullanilan >= firma.AIAylikLimit %}bg-danger{% elif kullanilan >= firma.AIAylikLimit * 0.8 %}bg-warning{% else %}bg-success{% endif %}"
+                                        style="width: {{ [kullanilan / firma.AIAylikLimit * 100, 100]|min }}%"></div>
+                                </div>
+                                <small>{{ kullanilan }}/{{ firma.AIAylikLimit }}</small>
+                            </div>
+                            {% else %}
+                            <small class="text-muted">{{ kullanilan }} istek</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary"
+                                onclick="firmaAyarDuzenle({{ firma.FirmaID }}, '{{ firma.FirmaAdi }}', {{ 'true' if firma.AIAktif else 'false' }}, {{ firma.AIAylikLimit }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-3">Firma bulunamadı</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<!-- Firma AI Düzenleme Modal -->
+<div class="modal fade" id="firmaAIModal" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{{ url_for('settings.ai_firma_guncelle') }}" class="w-100">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="firma_id" id="modalFirmaId">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-robot me-2"></i>AI Ayarları — <span
+                            id="modalFirmaAdi"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="ai_aktif" id="modalAIAktif"
+                                role="switch" style="cursor: pointer;">
+                            <label class="form-check-label fw-bold" for="modalAIAktif" style="cursor: pointer;">AI
+                                Asistan Aktif</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Aylık İstek Limiti</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="ai_aylik_limit" id="modalAILimit" min="0"
+                                max="10000" value="50">
+                            <span class="input-group-text">istek/ay</span>
+                        </div>
+                        <small class="text-muted">0 girerseniz sınırsız olur.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Kaydet</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+
+
+{% block scripts %}
+<script>
+    function toggleKeyVisibility() {
+        const field = document.getElementById('geminiApiKey');
+        const icon = document.getElementById('eyeIcon');
+        if (field.type === 'password') {
+            field.type = 'text';
+            icon.classList.replace('fa-eye', 'fa-eye-slash');
+        } else {
+            field.type = 'password';
+            icon.classList.replace('fa-eye-slash', 'fa-eye');
+        }
+    }
+
+    function testConnection() {
+        const btn = event.target.closest('button');
+        const orig = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Test ediliyor...';
+
+        fetch('/api/ai/test-connection', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+            }
+        })
+            .then(r => r.json())
+            .then(data => {
+                const box = document.getElementById('testResult');
+                const alert = document.getElementById('testAlert');
+                box.classList.remove('d-none');
+                if (data.success) {
+                    alert.className = 'alert alert-success mb-0';
+                    alert.innerHTML = '<i class="fas fa-check-circle me-2"></i><strong>Bağlantı başarılı!</strong><br><em>' + data.yanit + '</em>';
+                } else {
+                    alert.className = 'alert alert-danger mb-0';
+                    alert.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i><strong>Bağlantı hatası:</strong> ' + data.error;
+                }
+            })
+            .catch(e => {
+                const box = document.getElementById('testResult');
+                const alert = document.getElementById('testAlert');
+                box.classList.remove('d-none');
+                alert.className = 'alert alert-danger mb-0';
+                alert.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>İstek hatası: ' + e.message;
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = orig;
+            });
+    }
+
+    function firmaAyarDuzenle(firmaId, firmaAdi, aiAktif, aiLimit) {
+        document.getElementById('modalFirmaId').value = firmaId;
+        document.getElementById('modalFirmaAdi').textContent = firmaAdi;
+        document.getElementById('modalAIAktif').checked = aiAktif;
+        document.getElementById('modalAILimit').value = aiLimit;
+
+        // Z-Index/Overlay çakışmasını engellemek için modal'i body'nin en dışına taşı
+        const modalEl = document.getElementById('firmaAIModal');
+        if (modalEl.parentNode !== document.body) {
+            document.body.appendChild(modalEl);
+        }
+
+        new bootstrap.Modal(modalEl).show();
+    }
+</script>
+{% endblock %}

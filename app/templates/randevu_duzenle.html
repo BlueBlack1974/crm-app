@@ -1,0 +1,674 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Edit Appointment') }} - Crandyx CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ _('Edit Appointment') }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('randevu.randevu_detay', randevu_id=randevu.RandevuID) }}" class="btn btn-secondary me-2">
+            <i class="fas fa-arrow-left me-1"></i>{{ _('Back') }}
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Appointment Information') }}</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="tarih_gun" class="form-label">{{ _('Date') }} *</label>
+                                <input type="date" class="form-control" id="tarih_gun" name="tarih_gun"
+                                    value="{{ randevu.RandevuTarihi.strftime('%Y-%m-%d') }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="saat" class="form-label">{{ _('Time') }} *</label>
+                                <input type="time" class="form-control" id="saat" name="saat"
+                                    value="{{ randevu.RandevuTarihi.strftime('%H:%M') }}" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="referans_id" class="form-label">{{ _('Reference') }}</label>
+                                <select class="form-select" id="referans_id" name="referans_id">
+                                    <option value="">{{ _('Select Reference') }}</option>
+                                    {% for ref in referanslar %}
+                                    <option value="{{ ref.ReferansID }}" {% if randevu.RandevuBaslik==ref.Ad
+                                        %}selected{% endif %}>
+                                        {{ ref.Ad }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="randevu_suresi" class="form-label">{{ _('Duration (minutes)') }} *</label>
+                                <input type="number" class="form-control" id="randevu_suresi" name="randevu_suresi"
+                                    value="{{ randevu.RandevuSuresi }}" min="{{ min_sure }}" max="480"
+                                    step="{{ min_sure }}" required>
+                                <div class="invalid-feedback" id="suresi-error">
+                                    {{ _('Duration must be multiples of') }} {{ min_sure }} {{ _('minutes') }}
+                                </div>
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-info-circle"></i>
+                                    {{ _('Duration must be multiples of') }} {{ min_sure }} {{ _('minutes') }} ({{
+                                    min_sure }}, {{ min_sure * 2 }}, {{ min_sure * 3 }}, ...)
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="hatirlatma_gunu" class="form-label">{{ _('Reminder Day') }}</label>
+                                <input type="date" class="form-control" id="hatirlatma_gunu" name="hatirlatma_gunu"
+                                    value="{% if randevu.gorev and randevu.gorev.HatirlatmaTarihi %}{{ randevu.gorev.HatirlatmaTarihi.strftime('%Y-%m-%d') }}{% elif randevu.hatirlatmalar and randevu.hatirlatmalar|length > 0 %}{{ randevu.hatirlatmalar[0].HatirlamaTarihi.strftime('%Y-%m-%d') }}{% endif %}">
+                                <small class="form-text text-muted"><i class="fas fa-bell me-1"></i>{{ _('If set,
+                                    related task reminder date will be updated') }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="mb-3">
+                        <label for="randevu_notlar" class="form-label">{{ _('Notes') }}</label>
+                        <textarea class="form-control" id="randevu_notlar" name="randevu_notlar"
+                            rows="4">{{ randevu.RandevuNotlar or '' }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="atanan_kullanici" class="form-label">{{ _('Assign to User') }}</label>
+                        <select class="form-select" id="atanan_kullanici" name="atanan_kullanici">
+                            <option value="">{{ _('Select user (optional)') }}</option>
+                            <!-- Kullanıcılar JavaScript ile doldurulacak -->
+                        </select>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle"></i>
+                            {{ _('Seçilen kullanıcıya bu randevu için otomatik görev oluşturulacak') }}
+                        </small>
+                    </div>
+
+                    <!-- Müşteri İletişim Bilgileri -->
+                    {% if randevu.musteri %}
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">{{ _('Customer Contact Information') }}</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="musteri_telefon" class="form-label">{{ _('Phone') }}</label>
+                                        <div class="input-group">
+                                            <select class="form-select" id="telefon_ulke_kodu"
+                                                style="max-width: 140px;">
+                                                <option value="+90" selected>🇹🇷 +90</option>
+                                                <option value="+1">🇺🇸 +1</option>
+                                                <option value="+44">🇬🇧 +44</option>
+                                                <option value="+49">🇩🇪 +49</option>
+                                                <option value="+33">🇫🇷 +33</option>
+                                                <option value="+39">🇮🇹 +39</option>
+                                                <option value="+34">🇪🇸 +34</option>
+                                                <option value="+7">🇷🇺 +7</option>
+                                                <option value="+31">🇳🇱 +31</option>
+                                                <option value="+32">🇧🇪 +32</option>
+                                                <option value="+41">🇨🇭 +41</option>
+                                                <option value="+43">🇦🇹 +43</option>
+                                                <option value="+45">🇩🇰 +45</option>
+                                                <option value="+46">🇸🇪 +46</option>
+                                                <option value="+47">🇳🇴 +47</option>
+                                                <option value="+48">🇵🇱 +48</option>
+                                                <option value="+351">🇵🇹 +351</option>
+                                                <option value="+30">🇬🇷 +30</option>
+                                                <option value="+40">🇷🇴 +40</option>
+                                                <option value="+359">🇧🇬 +359</option>
+                                                <option value="+385">🇭🇷 +385</option>
+                                                <option value="+386">🇸🇮 +386</option>
+                                                <option value="+420">🇨🇿 +420</option>
+                                                <option value="+421">🇸🇰 +421</option>
+                                                <option value="+36">🇭🇺 +36</option>
+                                                <option value="+81">🇯🇵 +81</option>
+                                                <option value="+82">🇰🇷 +82</option>
+                                                <option value="+86">🇨🇳 +86</option>
+                                                <option value="+91">🇮🇳 +91</option>
+                                                <option value="+971">🇦🇪 +971</option>
+                                                <option value="+966">🇸🇦 +966</option>
+                                                <option value="+20">🇪🇬 +20</option>
+                                                <option value="+27">🇿🇦 +27</option>
+                                                <option value="+55">🇧🇷 +55</option>
+                                                <option value="+52">🇲🇽 +52</option>
+                                                <option value="+54">🇦🇷 +54</option>
+                                                <option value="+61">🇦🇺 +61</option>
+                                                <option value="+64">🇳🇿 +64</option>
+                                            </select>
+                                            <input type="tel" class="form-control" id="musteri_telefon"
+                                                name="musteri_telefon"
+                                                value="{% if randevu.musteri.Telefon %}{{ randevu.musteri.Telefon }}{% endif %}"
+                                                placeholder="536 555 66 44" pattern="[0-9\s]{10,15}"
+                                                title="{{ _('Enter a valid phone number (e.g.: 536 555 66 44)') }}">
+                                        </div>
+                                        <div class="invalid-feedback" id="telefon-error">
+                                            {{ _('Enter a valid phone number (e.g.: 536 555 66 44)') }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="musteri_email" class="form-label">{{ _('Email') }}</label>
+                                        <input type="email" class="form-control" id="musteri_email" name="musteri_email"
+                                            value="{{ randevu.musteri.Email or '' }}"
+                                            pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+                                            title="{{ _('Enter a valid email address') }}">
+                                        <div class="invalid-feedback" id="email-error">
+                                            {{ _('Enter a valid email address') }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="musteri_dogum_tarihi" class="form-label">{{ _('Birth Date')
+                                            }}</label>
+                                        <input type="date" class="form-control" id="musteri_dogum_tarihi"
+                                            name="musteri_dogum_tarihi"
+                                            value="{% if randevu.musteri.DogumTarihi %}{{ randevu.musteri.DogumTarihi.strftime('%Y-%m-%d') }}{% endif %}">
+                                        <small class="form-text text-muted" id="yas-gosterge">
+                                            {% if randevu.musteri.Yas %}Yaş: {{ randevu.musteri.Yas }}{% else %}Yaş
+                                            otomatik olarak hesaplanacak{% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="musteri_yas" class="form-label">{{ _('Age') }}</label>
+                                        <input type="number" class="form-control" id="musteri_yas" name="musteri_yas"
+                                            value="{{ randevu.musteri.Yas or '' }}" min="0" max="120"
+                                            placeholder="{{ _('Enter age') }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="musteri_cinsiyet" class="form-label">{{ _('Gender') }}</label>
+                                        <select class="form-select" id="musteri_cinsiyet" name="musteri_cinsiyet">
+                                            <option value="">{{ _('Select') }}</option>
+                                            <option value="Erkek" {% if randevu.musteri.Cinsiyet=='Erkek' %}selected{%
+                                                endif %}>{{ _('Male') }}</option>
+                                            <option value="Kadın" {% if randevu.musteri.Cinsiyet=='Kadın' %}selected{%
+                                                endif %}>{{ _('Female') }}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('randevu_detay', randevu_id=randevu.RandevuID) }}"
+                            class="btn btn-secondary">{{ _('Cancel') }}</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>{{ _('Update') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Customer Information') }}</h6>
+            </div>
+            <div class="card-body">
+                {% if randevu.musteri %}
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="text-muted">{{ _('Full Name') }}</h6>
+                        <p class="mb-3">{{ randevu.musteri.tam_adi }}</p>
+                    </div>
+                    <div class="col-12">
+                        {% if randevu.musteri.Telefon %}
+                        <h6 class="text-muted">{{ _('Phone') }}</h6>
+                        <p class="mb-3"><a href="tel:{{ randevu.musteri.Telefon }}">{{ randevu.musteri.Telefon }}</a>
+                        </p>
+                        {% endif %}
+                    </div>
+                    <div class="col-12">
+                        {% if randevu.musteri.Email %}
+                        <h6 class="text-muted">{{ _('Email') }}</h6>
+                        <p class="mb-3"><a href="mailto:{{ randevu.musteri.Email }}">{{ randevu.musteri.Email }}</a></p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted">{{ _('Customer information not found') }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Appointment Information') }}</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="text-muted">{{ _('Status') }}</h6>
+                        <p class="mb-3">
+                            {% if randevu.Durum == 'Beklemede' %}
+                            <span class="badge bg-warning">{{ _('Pending') }}</span>
+                            {% elif randevu.Durum == 'Onaylandi' %}
+                            <span class="badge bg-success">{{ _('Confirmed') }}</span>
+                            {% elif randevu.Durum == 'Iptal' %}
+                            <span class="badge bg-danger">{{ _('Cancelled') }}</span>
+                            {% elif randevu.Durum == 'Tamamlandi' %}
+                            <span class="badge bg-info">{{ _('Completed') }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-12">
+                        <h6 class="text-muted">{{ _('Created By') }}</h6>
+                        <p class="mb-3">{{ randevu.olusturan_kullanici.Ad }} {{ randevu.olusturan_kullanici.Soyad }}</p>
+                    </div>
+                    <div class="col-12">
+                        <h6 class="text-muted">{{ _('Created') }}</h6>
+                        <p class="mb-3">{{ randevu.OlusturmaTarihi.strftime('%d.%m.%Y %H:%M') }}</p>
+                    </div>
+                    {% if randevu.GuncellemeTarihi != randevu.OlusturmaTarihi %}
+                    <div class="col-12">
+                        <h6 class="text-muted">{{ _('Updated') }}</h6>
+                        <p class="mb-3">{{ randevu.GuncellemeTarihi.strftime('%d.%m.%Y %H:%M') }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Validation stilleri */
+    .is-invalid {
+        border-color: #dc3545 !important;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+    }
+
+    .is-valid {
+        border-color: #28a745 !important;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+    }
+
+    .validation-message {
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .validation-success {
+        color: #28a745;
+    }
+
+    .validation-error {
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Mevcut telefon numarasını parse et ve doldur
+        const telefonInput = document.getElementById('musteri_telefon');
+        const ulkeKoduSelect = document.getElementById('telefon_ulke_kodu');
+
+        if (telefonInput && ulkeKoduSelect) {
+            const mevcutTelefon = telefonInput.value;
+            if (mevcutTelefon) {
+                // Telefon numarasını parse et - öncelik sırasına göre kontrol et
+                const ulkeKodlari = [
+                    { kod: '+351', uzunluk: 4 }, { kod: '+359', uzunluk: 4 }, { kod: '+385', uzunluk: 4 },
+                    { kod: '+386', uzunluk: 4 }, { kod: '+420', uzunluk: 4 }, { kod: '+421', uzunluk: 4 },
+                    { kod: '+971', uzunluk: 4 }, { kod: '+966', uzunluk: 4 },
+                    { kod: '+90', uzunluk: 3 }, { kod: '+44', uzunluk: 3 }, { kod: '+49', uzunluk: 3 },
+                    { kod: '+33', uzunluk: 3 }, { kod: '+39', uzunluk: 3 }, { kod: '+34', uzunluk: 3 },
+                    { kod: '+31', uzunluk: 3 }, { kod: '+32', uzunluk: 3 }, { kod: '+41', uzunluk: 3 },
+                    { kod: '+43', uzunluk: 3 }, { kod: '+45', uzunluk: 3 }, { kod: '+46', uzunluk: 3 },
+                    { kod: '+47', uzunluk: 3 }, { kod: '+48', uzunluk: 3 }, { kod: '+30', uzunluk: 3 },
+                    { kod: '+40', uzunluk: 3 }, { kod: '+36', uzunluk: 3 }, { kod: '+81', uzunluk: 3 },
+                    { kod: '+82', uzunluk: 3 }, { kod: '+86', uzunluk: 3 }, { kod: '+91', uzunluk: 3 },
+                    { kod: '+20', uzunluk: 3 }, { kod: '+27', uzunluk: 3 }, { kod: '+55', uzunluk: 3 },
+                    { kod: '+52', uzunluk: 3 }, { kod: '+54', uzunluk: 3 }, { kod: '+61', uzunluk: 3 },
+                    { kod: '+64', uzunluk: 3 },
+                    { kod: '+1', uzunluk: 2 }, { kod: '+7', uzunluk: 2 }
+                ];
+
+                let bulundu = false;
+                for (const ulke of ulkeKodlari) {
+                    if (mevcutTelefon.startsWith(ulke.kod)) {
+                        ulkeKoduSelect.value = ulke.kod;
+                        telefonInput.value = mevcutTelefon.substring(ulke.uzunluk).replace(/\D/g, '');
+                        bulundu = true;
+                        break;
+                    }
+                }
+
+                if (!bulundu) {
+                    // Varsayılan olarak +90 kabul et
+                    ulkeKoduSelect.value = '+90';
+                    telefonInput.value = mevcutTelefon.replace(/\D/g, '');
+                }
+
+                // Telefon numarasını formatla
+                formatTelefon(telefonInput);
+            }
+        }
+
+        // Telefon validation ve formatlaması
+        if (telefonInput) {
+            telefonInput.addEventListener('input', function () {
+                formatTelefon(this);
+                validateTelefon(this);
+            });
+            telefonInput.addEventListener('blur', function () {
+                formatTelefon(this);
+                validateTelefon(this);
+            });
+        }
+
+        // E-posta validation
+        const emailInput = document.getElementById('musteri_email');
+        if (emailInput) {
+            emailInput.addEventListener('input', function () {
+                validateEmail(this);
+            });
+            emailInput.addEventListener('blur', function () {
+                validateEmail(this);
+            });
+        }
+
+        // Doğum tarihi değiştiğinde yaş hesapla
+        const dogumTarihiInput = document.getElementById('musteri_dogum_tarihi');
+        const yasInput = document.getElementById('musteri_yas');
+        const yasGosterge = document.getElementById('yas-gosterge');
+
+        if (dogumTarihiInput) {
+            dogumTarihiInput.addEventListener('change', function () {
+                const yas = yasHesapla(this.value);
+                if (yas !== null && yas >= 0) {
+                    yasInput.value = yas;
+                    yasGosterge.textContent = `Yaş: ${yas}`;
+                } else {
+                    yasInput.value = '';
+                    yasGosterge.textContent = 'Yaş hesaplanamadı';
+                }
+            });
+        }
+
+        // Yaş değiştiğinde doğum tarihini temizle (manuel yaş girişi)
+        if (yasInput) {
+            yasInput.addEventListener('input', function () {
+                if (this.value && dogumTarihiInput) {
+                    dogumTarihiInput.value = '';
+                    yasGosterge.textContent = 'Manuel yaş girişi';
+                }
+            });
+        }
+
+        // Süre validation
+        const sureInput = document.getElementById('randevu_suresi');
+        if (sureInput) {
+            sureInput.addEventListener('input', function () {
+                validateSure(this);
+            });
+            sureInput.addEventListener('blur', function () {
+                validateSure(this);
+            });
+        }
+
+        // Form submit validation
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                if (!validateForm()) {
+                    e.preventDefault();
+                    alert({{ _("Please enter valid phone number and email address.")|tojson }});
+                    return false;
+                }
+            });
+        }
+    });
+
+    // Yaş hesaplama fonksiyonu
+    function yasHesapla(dogumTarihi) {
+        if (!dogumTarihi) return null;
+
+        const bugun = new Date();
+        const dogum = new Date(dogumTarihi);
+
+        let yas = bugun.getFullYear() - dogum.getFullYear();
+        const ayFarki = bugun.getMonth() - dogum.getMonth();
+
+        if (ayFarki < 0 || (ayFarki === 0 && bugun.getDate() < dogum.getDate())) {
+            yas--;
+        }
+
+        return yas;
+    }
+
+    // Telefon formatlaması fonksiyonu
+    function formatTelefon(input) {
+        let value = input.value.replace(/\D/g, ''); // Sadece rakamları al
+
+        if (value.length > 0) {
+            // Türkiye telefon numarası formatlaması (5XX XXX XX XX)
+            if (value.length <= 3) {
+                value = value;
+            } else if (value.length <= 6) {
+                value = value.substring(0, 3) + ' ' + value.substring(3);
+            } else if (value.length <= 8) {
+                value = value.substring(0, 3) + ' ' + value.substring(3, 6) + ' ' + value.substring(6);
+            } else {
+                value = value.substring(0, 3) + ' ' + value.substring(3, 6) + ' ' + value.substring(6, 8) + ' ' + value.substring(8, 10);
+            }
+        }
+
+        input.value = value;
+    }
+
+    // Telefon validation fonksiyonu
+    function validateTelefon(input) {
+        const value = input.value.trim();
+        const cleanValue = value.replace(/\D/g, '');
+
+        if (value === '') {
+            clearValidation(input.id);
+            return true;
+        }
+
+        // Türkiye telefon numarası kontrolü (10 haneli, 5 ile başlamalı)
+        if (cleanValue.length === 10 && cleanValue.startsWith('5') && /^[0-9]+$/.test(cleanValue)) {
+            setValidationSuccess(input.id, '{{ _("Valid phone number") }}');
+            return true;
+        } else {
+            setValidationError(input.id, '{{ _("Enter a valid phone number (e.g.: 536 555 66 44)") }}');
+            return false;
+        }
+    }
+
+    // E-posta validation fonksiyonu
+    function validateEmail(input) {
+        const value = input.value.trim();
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+        if (value === '') {
+            clearValidation(input.id);
+            return true;
+        }
+
+        if (emailRegex.test(value)) {
+            setValidationSuccess(input.id, '{{ _("Valid email address") }}');
+            return true;
+        } else {
+            setValidationError(input.id, '{{ _("Enter a valid email address") }}');
+            return false;
+        }
+    }
+
+    // Süre validation fonksiyonu
+    function validateSure(input) {
+        const sure = parseInt(input.value);
+        const slotDakika = {{ min_sure }};
+
+    if (isNaN(sure) || sure < slotDakika) {
+        setValidationError('randevu_suresi', `{{ _('Minimum duration must be') }} ${slotDakika} {{ _('minutes') }}`);
+        return false;
+    }
+
+    if (sure % slotDakika !== 0) {
+        setValidationError('randevu_suresi', `{{ _('Duration must be multiples of') }} ${slotDakika} {{ _('minutes') }} (${slotDakika}, ${slotDakika * 2}, ${slotDakika * 3}, ...)`);
+        return false;
+    }
+
+    setValidationSuccess('randevu_suresi', '{{ _("Valid duration") }}');
+    return true;
+}
+
+    // Validation başarı durumu
+    function setValidationSuccess(inputId, message) {
+        const input = document.getElementById(inputId);
+        let errorDiv;
+
+        if (inputId === 'randevu_suresi') {
+            errorDiv = document.getElementById('suresi-error');
+        } else {
+            errorDiv = document.getElementById(inputId.replace('musteri_', '') + '-error');
+        }
+
+        input.classList.remove('is-invalid');
+        input.classList.add('is-valid');
+
+        if (errorDiv) {
+            errorDiv.textContent = message;
+            errorDiv.className = 'validation-message validation-success';
+        }
+    }
+
+    // Validation hata durumu
+    function setValidationError(inputId, message) {
+        const input = document.getElementById(inputId);
+        let errorDiv;
+
+        if (inputId === 'randevu_suresi') {
+            errorDiv = document.getElementById('suresi-error');
+        } else {
+            errorDiv = document.getElementById(inputId.replace('musteri_', '') + '-error');
+        }
+
+        input.classList.remove('is-valid');
+        input.classList.add('is-invalid');
+
+        if (errorDiv) {
+            errorDiv.textContent = message;
+            errorDiv.className = 'validation-message validation-error';
+        }
+    }
+
+    // Validation temizleme
+    function clearValidation(inputId) {
+        const input = document.getElementById(inputId);
+        let errorDiv;
+
+        if (inputId === 'randevu_suresi') {
+            errorDiv = document.getElementById('suresi-error');
+        } else {
+            errorDiv = document.getElementById(inputId.replace('musteri_', '') + '-error');
+        }
+
+        input.classList.remove('is-valid', 'is-invalid');
+
+        if (errorDiv) {
+            errorDiv.textContent = '';
+            errorDiv.className = 'invalid-feedback';
+        }
+    }
+
+    // Form submit validation
+    function validateForm() {
+        let isValid = true;
+
+        // Telefon validation
+        const telefonInput = document.getElementById('musteri_telefon');
+        if (telefonInput && telefonInput.value.trim() !== '') {
+            if (!validateTelefon(telefonInput)) {
+                isValid = false;
+            }
+        }
+
+        // E-posta validation
+        const emailInput = document.getElementById('musteri_email');
+        if (emailInput && emailInput.value.trim() !== '') {
+            if (!validateEmail(emailInput)) {
+                isValid = false;
+            }
+        }
+
+        // Süre validation - slot dakikasının katı olmalı
+        const sureInput = document.getElementById('randevu_suresi');
+        if (sureInput) {
+            if (!validateSure(sureInput)) {
+                isValid = false;
+            }
+        }
+
+        return isValid;
+    }
+
+    // Kullanıcıları yükle
+    function loadKullanicilar() {
+        fetch('/api/kullanicilar')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const select = document.getElementById('atanan_kullanici');
+                    // Mevcut seçenekleri temizle (ilk seçenek hariç)
+                    while (select.children.length > 1) {
+                        select.removeChild(select.lastChild);
+                    }
+
+                    // Kullanıcıları ekle
+                    data.kullanicilar.forEach(kullanici => {
+                        const option = document.createElement('option');
+                        option.value = kullanici.id;
+                        option.textContent = kullanici.tam_adi;
+                        select.appendChild(option);
+                    });
+                } else {
+                    console.error('Kullanıcılar yüklenemedi:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Kullanıcı yükleme hatası:', error);
+            });
+    }
+
+    // Sayfa yüklendiğinde kullanıcıları yükle
+    document.addEventListener('DOMContentLoaded', function () {
+        loadKullanicilar();
+    });
+</script>
+{% endblock %}

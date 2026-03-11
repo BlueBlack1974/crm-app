@@ -1,0 +1,15 @@
+@app.route('/debug/email_settings')
+def debug_email_settings():
+    from app.models import FirmaEmailAyar, Kullanici
+    try:
+        user = Kullanici.query.first()
+        ayarlar = FirmaEmailAyar.query.all()
+        ret = f"Current User: {user.KullaniciAdi} (Firma: {user.FirmaID})<br>"
+        if not ayarlar:
+            ret += "No email settings found for ANY company!"
+        else:
+            for a in ayarlar:
+                ret += f"Found Setting -> FirmaID: {a.FirmaID}, Server: {a.SMTP_Sunucu}, User: {a.KullaniciAdi}<br>"
+        return ret
+    except Exception as e:
+        return f"Error querying: {e}"

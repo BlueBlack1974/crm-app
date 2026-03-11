@@ -1,0 +1,927 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('WhatsApp Chat') }} - Crandyx CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fab fa-whatsapp text-success me-2"></i>{{ _('WhatsApp Chat') }}</h1>
+</div>
+
+<div class="row">
+    <!-- Sol Panel - Müşteri Listesi -->
+    <div class="col-md-4 col-lg-3">
+        <div class="card shadow h-100">
+            <div class="card-header">
+                <div class="d-flex gap-2 mb-2">
+                    <button class="btn btn-success btn-sm flex-grow-1" data-bs-toggle="modal"
+                        data-bs-target="#yeniChatModal">
+                        <i class="fas fa-plus me-1"></i>{{ _('New Chat') }}
+                    </button>
+                </div>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="musteriArama"
+                        placeholder="{{ _('Search Customer') }}...">
+                    <button class="btn btn-outline-secondary" type="button">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0" style="max-height: 600px; overflow-y: auto;">
+                <div class="list-group list-group-flush" id="musteriListesi">
+                    {% for musteri in musteriler %}
+                    <a href="#" class="list-group-item list-group-item-action musteri-item"
+                        data-musteri-id="{{ musteri.MusteriID }}" data-telefon="{{ musteri.Telefon or '' }}"
+                        data-email="{{ musteri.Email or '' }}">
+                        <div class="d-flex w-100 justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">
+                                    <i class="fas fa-user-circle text-secondary me-1"></i>
+                                    {{ musteri.MusteriAdi }} {{ musteri.MusteriSoyadi }}
+                                </h6>
+                                <div class="small text-muted">
+                                    <i class="fas fa-phone me-1"></i>{{ musteri.Telefon }}
+                                </div>
+                                {% if musteri.Email %}
+                                <div class="small text-muted">
+                                    <i class="fas fa-envelope me-1"></i>{{ musteri.Email }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-success rounded-pill">
+                                <i class="fab fa-whatsapp"></i>
+                            </span>
+                        </div>
+                    </a>
+                    {% else %}
+                    <div class="p-3 text-center text-muted">
+                        <i class="fas fa-users fa-2x mb-2"></i>
+                        <p class="mb-1">{{ _('No customers with phone numbers found') }}</p>
+                        <small>{{ _('Add phone numbers to customers to see them here') }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sağ Panel - Chat Alanı -->
+    <div class="col-md-8 col-lg-9">
+        <div class="card shadow h-100">
+            <div class="card-header d-flex justify-content-between align-items-center" id="chatHeader">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-circle bg-success text-white me-3" id="chatAvatar"
+                        style="display: none; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0" id="chatMusteriAdi">{{ _('Select a customer to start chatting') }}</h6>
+                        <small class="text-muted" id="chatMusteriTelefon"></small>
+                        <small class="text-muted d-block" id="chatMusteriEmail" style="display: none;"></small>
+                    </div>
+                </div>
+                <div id="chatActions" style="display: none;">
+                    <button class="btn btn-sm btn-success me-1" id="btnRandevuEkle" title="{{ _('Add Appointment') }}"
+                        style="display: none;">
+                        <i class="fas fa-calendar-plus"></i> {{ _('Add Appointment') }}
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" id="btnRefresh" title="{{ _('Refresh') }}">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body" id="chatArea" style="height: 450px; overflow-y: auto; background-color: #e5ddd5;">
+                <div class="text-center text-muted py-5" id="chatPlaceholder">
+                    <i class="fab fa-whatsapp fa-4x text-success mb-3"></i>
+                    <p>{{ _('Select a customer from the list to view messages') }}</p>
+                </div>
+                <div id="mesajlarContainer" style="display: none;"></div>
+            </div>
+            <div class="card-footer" id="chatFooter" style="display: none;">
+                <form id="mesajForm">
+                    <input type="hidden" id="hedefMusteriID" value="">
+                    <input type="hidden" id="hedefTelefon" value="">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="mesajInput"
+                            placeholder="{{ _('Type a message') }}..." required>
+                        <button class="btn btn-success" type="submit">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .musteri-item.active {
+        background-color: #dcf8c6 !important;
+        border-left: 3px solid #25d366;
+    }
+
+    .mesaj-balonu {
+        max-width: 70%;
+        padding: 8px 12px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        word-wrap: break-word;
+    }
+
+    .mesaj-gelen {
+        background-color: #fff;
+        margin-right: auto;
+        border-top-left-radius: 0;
+    }
+
+    .mesaj-giden {
+        background-color: #dcf8c6;
+        margin-left: auto;
+        border-top-right-radius: 0;
+    }
+
+    .mesaj-zaman {
+        font-size: 0.7rem;
+        color: #667781;
+        margin-top: 4px;
+        text-align: right;
+    }
+
+    /* Dark Mode Overrides for WhatsApp Chat */
+    body.dark-mode .card {
+        background-color: #212529;
+        border-color: #495057;
+    }
+
+    body.dark-mode .card-header,
+    body.dark-mode .card-footer {
+        background-color: #2c3034;
+        border-color: #495057;
+    }
+
+    body.dark-mode .list-group-item {
+        background-color: #212529;
+        border-color: #343a40;
+        color: #f8f9fa;
+    }
+
+    body.dark-mode .list-group-item:hover {
+        background-color: #343a40;
+        color: #f8f9fa;
+    }
+
+    body.dark-mode .musteri-item h6,
+    body.dark-mode #chatMusteriAdi {
+        color: #f8f9fa !important;
+    }
+
+    body.dark-mode .text-muted {
+        color: #adb5bd !important;
+    }
+
+    body.dark-mode .musteri-item.active {
+        background-color: #1b4b2c !important;
+        /* Dark green for active */
+        border-left-color: #25d366;
+    }
+
+    body.dark-mode #chatArea {
+        background-color: #0b141a !important;
+        /* WhatsApp Dark Mode BG */
+    }
+
+    body.dark-mode .mesaj-gelen {
+        background-color: #202c33;
+        /* WhatsApp dark mode received bubble */
+        color: #e9edef;
+    }
+
+    body.dark-mode .mesaj-giden {
+        background-color: #005c4b;
+        /* WhatsApp dark mode sent bubble */
+        color: #e9edef;
+    }
+
+    body.dark-mode .mesaj-zaman {
+        color: #8696a0;
+    }
+
+    body.dark-mode #mesajInput,
+    body.dark-mode #musteriArama {
+        background-color: #2a3942;
+        border-color: #2a3942;
+        color: #d1d7db;
+    }
+
+    body.dark-mode #mesajInput::placeholder,
+    body.dark-mode #musteriArama::placeholder {
+        color: #8696a0;
+    }
+
+    body.dark-mode .input-group .btn-outline-secondary {
+        border-color: #2a3942;
+        background-color: #2a3942;
+        color: #8696a0;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Modal'ı body'e taşı (z-index sorunlarını çözmek için)
+        const modalEl = document.getElementById('yeniChatModal');
+        document.body.appendChild(modalEl);
+
+        const musteriItems = document.querySelectorAll('.musteri-item');
+        const chatPlaceholder = document.getElementById('chatPlaceholder');
+        const mesajlarContainer = document.getElementById('mesajlarContainer');
+        const chatFooter = document.getElementById('chatFooter');
+        const chatActions = document.getElementById('chatActions');
+        const chatMusteriAdi = document.getElementById('chatMusteriAdi');
+        const chatMusteriTelefon = document.getElementById('chatMusteriTelefon');
+        const chatMusteriEmail = document.getElementById('chatMusteriEmail');
+        const chatAvatar = document.getElementById('chatAvatar');
+        const btnRandevuEkle = document.getElementById('btnRandevuEkle');
+        const hedefMusteriID = document.getElementById('hedefMusteriID');
+        const hedefTelefon = document.getElementById('hedefTelefon');
+        const mesajForm = document.getElementById('mesajForm');
+        const mesajInput = document.getElementById('mesajInput');
+        const musteriArama = document.getElementById('musteriArama');
+
+        // Müşteri seçimi
+        musteriItems.forEach(item => {
+            item.addEventListener('click', function (e) {
+                e.preventDefault();
+
+                // Aktif sınıfını güncelle
+                musteriItems.forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+
+                // Müşteri bilgilerini al
+                const musteriId = this.dataset.musteriId;
+                const telefon = this.dataset.telefon;
+                const email = this.dataset.email;
+                const musteriAdiText = this.querySelector('h6').textContent.trim();
+
+                // Header'ı güncelle
+                chatMusteriAdi.textContent = musteriAdiText;
+                chatMusteriTelefon.innerHTML = '<i class="fas fa-phone me-1"></i>' + (telefon || '{{ _("No Phone") }}');
+
+                // Email varsa göster
+                if (email) {
+                    chatMusteriEmail.innerHTML = '<i class="fas fa-envelope me-1"></i>' + email;
+                    chatMusteriEmail.style.display = 'block';
+                } else {
+                    chatMusteriEmail.style.display = 'none';
+                }
+
+                // Avatar'ı göster
+                chatAvatar.style.display = 'flex';
+
+                // Randevu ekle butonunu göster
+                btnRandevuEkle.dataset.musteriId = musteriId;
+                btnRandevuEkle.style.display = 'inline-block';
+
+                // Hidden inputları güncelle
+                hedefMusteriID.value = musteriId;
+                hedefTelefon.value = telefon;
+
+                // Chat alanını göster
+                chatPlaceholder.style.display = 'none';
+                mesajlarContainer.style.display = 'block';
+                chatFooter.style.display = 'block';
+                chatActions.style.display = 'flex';
+
+                // Mesajları yükle
+                loadMessages(musteriId);
+            });
+        });
+
+        // Mesajları yükle
+        function loadMessages(musteriId) {
+            mesajlarContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> {{ _("Loading") }}...</div>';
+
+            fetch('/api/whatsapp/messages/' + musteriId)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.messages.length > 0) {
+                        let html = '';
+                        data.messages.forEach(msg => {
+                            const sinif = msg.yonelim === 'gelen' ? 'mesaj-gelen' : 'mesaj-giden';
+                            html += `
+                            <div class="d-flex">
+                                <div class="mesaj-balonu ${sinif}">
+                                    <div>${msg.icerik}</div>
+                                    <div class="mesaj-zaman">${msg.tarih}</div>
+                                </div>
+                            </div>
+                        `;
+                        });
+                        mesajlarContainer.innerHTML = html;
+                        mesajlarContainer.scrollTop = mesajlarContainer.scrollHeight;
+                    } else {
+                        mesajlarContainer.innerHTML = '<div class="text-center text-muted py-3">{{ _("No messages yet") }}</div>';
+                    }
+                })
+                .catch(error => {
+                    mesajlarContainer.innerHTML = '<div class="text-center text-danger py-3">{{ _("Error loading messages") }}</div>';
+                });
+        }
+
+        // Mesaj gönder
+        mesajForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const mesaj = mesajInput.value.trim();
+            const telefon = hedefTelefon.value;
+            const musteriId = hedefMusteriID.value;
+
+            console.log('WhatsApp mesaj gönderme - Değerler:', {
+                mesaj: mesaj,
+                telefon: telefon,
+                musteriId: musteriId,
+                mesajUzunluk: mesaj.length,
+                telefonUzunluk: telefon ? telefon.length : 0
+            });
+
+            if (!mesaj || !telefon) {
+                console.error('WhatsApp mesaj gönderme - Eksik parametreler:', {
+                    mesaj: mesaj,
+                    telefon: telefon
+                });
+                alert({{ _("Please enter a message and select a customer with a phone number")|tojson }});
+        return;
+    }
+
+            // Gönder butonunu devre dışı bırak
+            const submitBtn = mesajForm.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    fetch('/api/whatsapp/send', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            telefon: telefon,
+            mesaj: mesaj,
+            musteri_id: musteriId
+        })
+    })
+        .then(response => {
+            console.log('WhatsApp send response status:', response.status);
+            if (!response.ok) {
+                return response.json().then(err => {
+                    console.error('WhatsApp send error:', err);
+                    throw new Error(err.error || 'HTTP ' + response.status);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('WhatsApp send success:', data);
+            if (data.success) {
+                mesajInput.value = '';
+                loadMessages(musteriId);
+            } else {
+                alert(data.error || '{{ _("Error sending message") }}');
+            }
+        })
+        .catch(error => {
+            console.error('WhatsApp send catch error:', error);
+            alert('{{ _("Error sending message") }}: ' + error.message);
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        });
+        });
+
+    // Müşteri arama
+    musteriArama.addEventListener('input', function () {
+        const aranan = this.value.toLowerCase();
+        musteriItems.forEach(item => {
+            const ad = item.querySelector('h6').textContent.toLowerCase();
+            const telefon = item.querySelector('small').textContent.toLowerCase();
+            if (ad.includes(aranan) || telefon.includes(aranan)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+
+    // Refresh butonu
+    document.getElementById('btnRefresh').addEventListener('click', function () {
+        const musteriId = hedefMusteriID.value;
+        if (musteriId) {
+            loadMessages(musteriId);
+        }
+    });
+
+    // Yeni Chat başlat
+    document.getElementById('btnYeniChatBaslat').addEventListener('click', function () {
+        const telefon = document.getElementById('yeniTelefon').value.trim();
+        const isim = document.getElementById('yeniIsim').value.trim() || telefon;
+
+        if (!telefon) {
+            alert({{ _("Please enter a phone number")|tojson }});
+    return;
+        }
+
+    // Telefon numarası formatını düzenle (başında + yoksa ekle)
+    let formattedTelefon = telefon;
+    if (!formattedTelefon.startsWith('+')) {
+        formattedTelefon = '+' + formattedTelefon;
+    }
+
+    // Modal'ı kapat
+    const modalEl = document.getElementById('yeniChatModal');
+    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modal.hide();
+
+    // Header'ı güncelle
+    document.getElementById('chatMusteriAdi').textContent = isim;
+    document.getElementById('chatMusteriTelefon').innerHTML = '<i class="fas fa-phone me-1"></i>' + formattedTelefon;
+    document.getElementById('chatMusteriEmail').style.display = 'none';
+    document.getElementById('chatAvatar').style.display = 'flex';
+    document.getElementById('btnRandevuEkle').style.display = 'none';
+
+    // Hidden inputları güncelle (müşteri ID'si yok, sadece telefon)
+    document.getElementById('hedefMusteriID').value = '';
+    document.getElementById('hedefTelefon').value = formattedTelefon;
+
+    // Chat alanını göster
+    document.getElementById('chatPlaceholder').style.display = 'none';
+    document.getElementById('mesajlarContainer').style.display = 'block';
+    document.getElementById('mesajlarContainer').innerHTML = '<div class="text-center text-muted py-3">{{ _("No messages yet. Start typing to send a message.") }}</div>';
+    document.getElementById('chatFooter').style.display = 'block';
+    document.getElementById('chatActions').style.display = 'flex';
+
+    // Formu temizle
+    document.getElementById('yeniTelefon').value = '';
+    document.getElementById('yeniIsim').value = '';
+        });
+    });
+</script>
+
+<!-- Yeni Chat Modal -->
+<div class="modal fade" id="yeniChatModal" tabindex="-1" aria-labelledby="yeniChatModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="yeniChatModalLabel">
+                    <i class="fab fa-whatsapp text-success me-2"></i>{{ _('New Chat') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="yeniTelefon" class="form-label">{{ _('Phone Number') }} *</label>
+                    <input type="tel" class="form-control" id="yeniTelefon" placeholder="+905xxxxxxxxx" required>
+                    <small class="form-text text-muted">{{ _('Enter phone number with country code (e.g.,
+                        +905551234567)') }}</small>
+                </div>
+                <div class="mb-3">
+                    <label for="yeniIsim" class="form-label">{{ _('Name') }} ({{ _('Optional') }})</label>
+                    <input type="text" class="form-control" id="yeniIsim" placeholder="{{ _('Contact Name') }}">
+                    <small class="form-text text-muted">{{ _('If not specified, phone number will be used as name')
+                        }}</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                <button type="button" class="btn btn-success" id="btnYeniChatBaslat">
+                    <i class="fab fa-whatsapp me-1"></i>{{ _('Start Chat') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Randevu Ekleme Modal -->
+<div class="modal fade" id="randevuEkleModal" tabindex="-1" aria-labelledby="randevuEkleModalLabel" aria-hidden="true"
+    data-bs-backdrop="static" data-bs-keyboard="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="randevuEkleModalLabel">
+                    <i class="fas fa-calendar-plus me-2"></i>{{ _('Add Appointment') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="randevuEkleForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" id="randevu_musteri_id" name="secilen_musteri_id" value="">
+                <input type="hidden" id="randevu_musteri_adi" name="musteri_adi" value="">
+                <input type="hidden" id="randevu_musteri_soyadi" name="musteri_soyadi" value="">
+                <input type="hidden" id="randevu_baslik" name="randevu_baslik" value="">
+                <input type="hidden" name="sure" value="60">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="randevu_defter_id" class="form-label">{{ _('Appointment Book') }} *</label>
+                        <select class="form-select" id="randevu_defter_id" name="defter_id" required>
+                            <option value="">{{ _('Select Book') }}...</option>
+                            {% for defter in defterler %}
+                            <option value="{{ defter.AyarID }}">{{ defter.DefterAdi }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="randevu_tarih" class="form-label">{{ _('Date') }} *</label>
+                        <input type="date" class="form-control" id="randevu_tarih" name="tarih_gun" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('Time') }} *</label>
+                        <div id="randevu_slotContainer" class="mt-2">
+                            <div class="text-muted small">{{ _('Select date and book first') }}</div>
+                        </div>
+                        <input type="hidden" id="randevu_saat" name="saat" required>
+                        <div class="mt-2">
+                            <span class="badge bg-info" id="randevu_selectedInfo" style="display:none"></span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="randevu_not" class="form-label">{{ _('Notes') }}</label>
+                        <textarea class="form-control" id="randevu_not" name="randevu_aciklamasi" rows="3"
+                            placeholder="{{ _('Enter appointment notes...') }}"></textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <small>
+                            <i class="fas fa-info-circle me-1"></i>
+                            <span id="randevu_musteri_bilgi">{{ _('Customer information will be automatically filled')
+                                }}</span>
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                    <button type="button" class="btn btn-primary" id="randevuEkleSubmitBtn">
+                        <i class="fas fa-save me-1"></i>{{ _('Create Appointment') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Randevu ekle butonu event listener
+    document.addEventListener('DOMContentLoaded', function () {
+        const btnRandevuEkle = document.getElementById('btnRandevuEkle');
+        const randevuEkleModal = document.getElementById('randevuEkleModal');
+        const randevuMusteriId = document.getElementById('randevu_musteri_id');
+        const randevuMusteriBilgi = document.getElementById('randevu_musteri_bilgi');
+
+        // Modal'ı body'ye taşı (z-index sorunlarını çözmek için)
+        if (randevuEkleModal && randevuEkleModal.parentElement !== document.body) {
+            document.body.appendChild(randevuEkleModal);
+        }
+
+        if (btnRandevuEkle) {
+            btnRandevuEkle.addEventListener('click', function () {
+                const musteriId = this.dataset.musteriId;
+                const musteriAdi = document.getElementById('chatMusteriAdi').textContent;
+                const musteriTelefon = document.getElementById('chatMusteriTelefon').textContent.replace(/[^\d+]/g, '');
+
+                // Müşteri bilgilerini parse et (Ad Soyad formatından)
+                const adSoyad = musteriAdi.split(' ');
+                const ad = adSoyad[0] || '';
+                const soyad = adSoyad.slice(1).join(' ') || 'Müşteri';
+
+                // Form alanlarını doldur
+                randevuMusteriId.value = musteriId;
+                document.getElementById('randevu_musteri_adi').value = ad;
+                document.getElementById('randevu_musteri_soyadi').value = soyad;
+                document.getElementById('randevu_baslik').value = `${ad} ${soyad} Randevusu`;
+
+                // Müşteri bilgilerini göster
+                randevuMusteriBilgi.textContent = `{{ _('Customer') }}: ${musteriAdi} | {{ _('Phone') }}: ${musteriTelefon}`;
+
+                // Tarihi bugün olarak ayarla
+                const today = new Date();
+                const dateString = today.toISOString().slice(0, 10);
+                document.getElementById('randevu_tarih').value = dateString;
+
+                // Slotları yükle
+                loadRandevuSlots();
+
+                // Modal'ı body'ye taşı (her açılışta)
+                if (randevuEkleModal.parentElement !== document.body) {
+                    document.body.appendChild(randevuEkleModal);
+                }
+
+                // Z-index ayarla
+                randevuEkleModal.style.zIndex = '1060';
+
+                // Mevcut modal instance'ı temizle
+                const existingModal = bootstrap.Modal.getInstance(randevuEkleModal);
+                if (existingModal) {
+                    existingModal.dispose();
+                }
+
+                // Yeni modal instance oluştur ve aç
+                const modal = new bootstrap.Modal(randevuEkleModal, {
+                    backdrop: true,
+                    keyboard: true,
+                    focus: true
+                });
+
+                // Modal açıldığında z-index'i ayarla
+                randevuEkleModal.addEventListener('shown.bs.modal', function () {
+                    randevuEkleModal.style.zIndex = '1060';
+                    const backdrop = document.querySelector('.modal-backdrop:last-of-type');
+                    if (backdrop) {
+                        backdrop.style.zIndex = '1059';
+                    }
+                }, { once: true });
+
+                modal.show();
+            });
+        }
+
+        // Randevu ekleme form submit
+        const randevuEkleForm = document.getElementById('randevuEkleForm');
+        const randevuEkleSubmitBtn = document.getElementById('randevuEkleSubmitBtn');
+
+        if (randevuEkleSubmitBtn) {
+            randevuEkleSubmitBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+
+                // Form validasyonu
+                const form = document.getElementById('randevuEkleForm');
+                if (!form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
+
+                // Saat seçilmiş mi kontrol et
+                const saat = document.getElementById('randevu_saat').value;
+                if (!saat) {
+                    alert({{ _("Please select a time slot")|tojson }});
+            return;
+        }
+
+        // Butonu devre dışı bırak
+        randevuEkleSubmitBtn.disabled = true;
+        randevuEkleSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>{{ _("Creating") }}...';
+
+        // Form verilerini topla (JSON formatında)
+        const formDataObj = {};
+        const formElements = form.elements;
+        for (let element of formElements) {
+            if (element.name && element.value) {
+                formDataObj[element.name] = element.value;
+            }
+        }
+
+        // CSRF token'ı ekle
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+        formDataObj['csrf_token'] = csrfToken;
+
+        // Form verilerini logla
+        console.log('Form verileri (JSON):', formDataObj);
+
+        // AJAX ile gönder (JSON formatında)
+        fetch('{{ url_for("randevu_ekle") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(formDataObj),
+            credentials: 'same-origin'
+        })
+            .then(response => {
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+
+                // Response tipini kontrol et
+                const contentType = response.headers.get('content-type');
+                console.log('Content-Type:', contentType);
+
+                if (response.redirected) {
+                    console.log('Response redirected to:', response.url);
+                    // Redirect varsa, başarılı oldu demektir
+                    return { success: true, redirected: true };
+                }
+
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json().then(data => {
+                        console.log('JSON response:', data);
+                        return data;
+                    }).catch(err => {
+                        console.error('JSON parse error:', err);
+                        return response.text().then(text => {
+                            console.error('Response text:', text);
+                            return { success: false, message: 'Server error: ' + text.substring(0, 200) };
+                        });
+                    });
+                } else {
+                    // HTML response (muhtemelen hata sayfası)
+                    return response.text().then(text => {
+                        console.error('HTML response:', text.substring(0, 500));
+                        return { success: false, message: 'Server returned HTML instead of JSON. Check server logs.' };
+                    });
+                }
+            })
+            .then(data => {
+                console.log('Final data:', data);
+
+                if (data.success || data.redirected) {
+                    // Başarılı
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('randevuEkleModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+
+                    // Başarı mesajı göster
+                    alert({{ _("Appointment created successfully")|tojson }});
+
+        // Formu temizle
+        form.reset();
+        document.getElementById('randevu_slotContainer').innerHTML = '<div class="text-muted small">{{ _("Select date and book first") }}</div>';
+        document.getElementById('randevu_selectedInfo').style.display = 'none';
+    } else {
+        // Hata
+        const errorMsg = data.message || data.error || '{{ _("Error creating appointment") }}';
+        console.error('Error response:', errorMsg);
+        alert(errorMsg);
+                        randevuEkleSubmitBtn.disabled = false;
+        randevuEkleSubmitBtn.innerHTML = '<i class="fas fa-save me-1"></i>{{ _("Create Appointment") }}';
+    }
+                })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            console.error('Error stack:', error.stack);
+            alert('{{ _("Error creating appointment") }}: ' + error.message);
+            randevuEkleSubmitBtn.disabled = false;
+            randevuEkleSubmitBtn.innerHTML = '<i class="fas fa-save me-1"></i>{{ _("Create Appointment") }}';
+        });
+            });
+        }
+
+    // Defter ve tarih değiştiğinde slotları yükle
+    const randevuDefterSelect = document.getElementById('randevu_defter_id');
+    const randevuTarihInput = document.getElementById('randevu_tarih');
+
+    if (randevuDefterSelect) {
+        randevuDefterSelect.addEventListener('change', function () {
+            loadRandevuSlots();
+        });
+    }
+
+    if (randevuTarihInput) {
+        randevuTarihInput.addEventListener('change', function () {
+            loadRandevuSlots();
+        });
+    }
+
+    // Slot yükleme fonksiyonu
+    function loadRandevuSlots() {
+        const date = document.getElementById('randevu_tarih').value;
+        const defterId = document.getElementById('randevu_defter_id').value;
+        const container = document.getElementById('randevu_slotContainer');
+
+        if (!date || !defterId) {
+            container.innerHTML = '<div class="text-muted small">{{ _("Select date and book first") }}</div>';
+            document.getElementById('randevu_saat').value = '';
+            document.getElementById('randevu_selectedInfo').style.display = 'none';
+            return;
+        }
+
+        container.innerHTML = '<div class="text-muted small">{{ _("Loading available times...") }}</div>';
+
+        fetch(`/api/slots?date=${date}&defter_id=${defterId}&all=1`, {
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(r => {
+                if (r.status === 401) {
+                    alert({{ _("Session expired. Please login again.")|tojson }});
+        return Promise.reject(new Error('Unauthorized'));
+    }
+    return r.json();
+            })
+            .then(data => {
+        if (!data.success) {
+            throw new Error(data.message || 'Error');
+        }
+        if (!data.slots || data.slots.length === 0) {
+            container.innerHTML = `
+                        <div class="alert alert-warning mb-0">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            {{ _('No available time slots for this date. Please choose another date.') }}
+                        </div>
+                    `;
+            document.getElementById('randevu_saat').value = '';
+            document.getElementById('randevu_selectedInfo').style.display = 'none';
+            return;
+        }
+
+        // Container'ı temizle
+        container.innerHTML = '';
+
+        // Slotları render et
+        const wrap = document.createElement('div');
+        wrap.className = 'd-flex flex-wrap gap-2';
+        wrap.style.marginTop = '10px';
+
+        // Açıklama/legend
+        const legend = document.createElement('div');
+        legend.className = 'w-100 small text-muted mb-1';
+        legend.innerHTML = `
+                    <span class="badge bg-primary me-2">{{ _('Selectable') }}</span>
+                    <span class="badge bg-secondary">{{ _('Closed/Full') }}</span>
+                `;
+        wrap.appendChild(legend);
+
+        data.slots.forEach(s => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-sm ' + (s.available ? 'btn-outline-primary' : 'btn-outline-secondary');
+            btn.textContent = s.time;
+            btn.disabled = !s.available;
+            btn.style.margin = '2px';
+            if (!s.available) {
+                btn.title = '{{ _("Closed/Full") }}';
+                btn.style.cursor = 'not-allowed';
+                btn.style.opacity = '0.35';
+                btn.style.filter = 'grayscale(100%)';
+                btn.setAttribute('aria-disabled', 'true');
+                btn.classList.add('disabled', 'pe-none');
+            }
+            if (s.available) {
+                btn.addEventListener('click', () => selectRandevuSlot(s.time));
+            }
+            wrap.appendChild(btn);
+        });
+
+        container.appendChild(wrap);
+    })
+        .catch(err => {
+            console.error('Slot load error:', err);
+            container.innerHTML = '<div class="alert alert-danger mb-0">{{ _("Failed to load slots") }}</div>';
+        });
+        }
+
+    // Slot seçme fonksiyonu
+    function selectRandevuSlot(time) {
+        const date = document.getElementById('randevu_tarih').value;
+
+        // Geçmiş saat kontrolü
+        const selectedDateTime = new Date(`${date}T${time}:00`);
+        const now = new Date();
+
+        if (selectedDateTime <= now) {
+            alert({{ _("You cannot make an appointment for a past time. Please select a future time.")|tojson }});
+    return;
+        }
+
+    document.getElementById('randevu_saat').value = time;
+    const info = document.getElementById('randevu_selectedInfo');
+
+    // Tarihi Türkiye formatına çevir
+    const [year, month, day] = date.split('-');
+    const turkishDate = `${day}.${month}.${year}`;
+
+    info.textContent = `${turkishDate} ${time}`;
+    info.style.display = 'inline-block';
+
+    // Seçili slotu vurgula
+    const container = document.getElementById('randevu_slotContainer');
+    const buttons = container.querySelectorAll('button');
+    buttons.forEach(btn => {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-outline-primary');
+    });
+    buttons.forEach(btn => {
+        if (btn.textContent === time && !btn.disabled) {
+            btn.classList.remove('btn-outline-primary');
+            btn.classList.add('btn-primary');
+        }
+    });
+        }
+    });
+</script>
+
+<style>
+    /* Randevu Ekleme Modal z-index fix */
+    #randevuEkleModal {
+        z-index: 1060 !important;
+    }
+
+    #randevuEkleModal .modal-backdrop {
+        z-index: 1059 !important;
+    }
+
+    /* Modal içeriğinin tıklanabilir olması için */
+    #randevuEkleModal .modal-dialog {
+        pointer-events: auto;
+    }
+
+    #randevuEkleModal .modal-content {
+        pointer-events: auto;
+    }
+</style>
+{% endblock %}

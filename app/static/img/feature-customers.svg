@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 300">
+  <rect width="600" height="300" fill="#f8f9fa"/>
+  <rect x="40" y="40" width="520" height="220" rx="12" fill="#ffffff" stroke="#dee2e6"/>
+  <text x="60" y="72" font-size="20" font-family="Segoe UI, Arial" fill="#0d6efd">Müşteriler</text>
+  <g fill="#adb5bd">
+    <circle cx="120" cy="150" r="28" fill="#0d6efd"/>
+    <rect x="160" y="132" width="120" height="12" rx="6"/>
+    <rect x="160" y="152" width="220" height="10" rx="5"/>
+  </g>
+  <g fill="#adb5bd">
+    <circle cx="120" cy="210" r="28" fill="#20c997"/>
+    <rect x="160" y="192" width="140" height="12" rx="6"/>
+    <rect x="160" y="212" width="200" height="10" rx="5"/>
+  </g>
+</svg>
+
+
+
+
+
+

@@ -1,0 +1,490 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Database Settings') }} - Crandyx CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">{{ _('Database Settings') }}</h1>
+        <p class="text-muted mb-0">{{ _('Configure database connection. Select MSSQL or MySQL and enter connection details.') }}</p>
+    </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('ayarlar') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>{{ _('Back') }}
+        </a>
+    </div>
+</div>
+
+{% if message %}
+<div class="alert alert-{{ message_type }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-database me-2"></i>{{ _('Database Configuration') }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('ayarlar_veritabani') }}" onsubmit="return validateForm()">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-4">
+                        <label for="database_type" class="form-label">{{ _('Database Type') }} <span class="text-danger">*</span></label>
+                        <select class="form-select" id="database_type" name="database_type" required onchange="toggleDatabaseFields()">
+                            <option value="mssql" {{ 'selected' if db_type == 'mssql' else '' }}>Microsoft SQL Server (MSSQL)</option>
+                            <option value="mysql" {{ 'selected' if db_type == 'mysql' else '' }}>MySQL / MariaDB</option>
+                        </select>
+                        <small class="form-text text-muted">{{ _('Select the database type you want to use.') }}</small>
+                    </div>
+
+                    <!-- MSSQL Settings -->
+                    <div id="mssql_settings" style="display: {{ 'block' if db_type == 'mssql' else 'none' }};">
+                        <h6 class="mb-3">{{ _('MSSQL Connection Settings') }}</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="mssql_server" class="form-label">{{ _('Server') }} <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="mssql_server" name="mssql_server" value="{{ mssql_server or 'localhost' }}" data-required-for="mssql">
+                                <small class="form-text text-muted">{{ _('Example: localhost, server.domain.com, or localhost\\SQLEXPRESS') }}</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="mssql_port" class="form-label">{{ _('Port') }}</label>
+                                <input type="number" class="form-control" id="mssql_port" name="mssql_port" value="{{ mssql_port or '1433' }}" min="1" max="65535">
+                                <small class="form-text text-muted">{{ _('Default: 1433') }}</small>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="mssql_database" class="form-label">{{ _('Database Name') }} <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="mssql_database" name="mssql_database" value="{{ mssql_database or '' }}" data-required-for="mssql">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="mssql_driver" class="form-label">{{ _('ODBC Driver') }}</label>
+                                <select class="form-select" id="mssql_driver" name="mssql_driver">
+                                    <option value="ODBC Driver 17 for SQL Server" {{ 'selected' if not mssql_driver or mssql_driver == 'ODBC Driver 17 for SQL Server' else '' }}>ODBC Driver 17 for SQL Server</option>
+                                    <option value="ODBC Driver 18 for SQL Server" {{ 'selected' if mssql_driver == 'ODBC Driver 18 for SQL Server' else '' }}>ODBC Driver 18 for SQL Server</option>
+                                    <option value="SQL Server" {{ 'selected' if mssql_driver == 'SQL Server' else '' }}>SQL Server (Legacy)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="mssql_username" class="form-label">{{ _('Username') }} <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="mssql_username" name="mssql_username" value="{{ mssql_username or '' }}" data-required-for="mssql">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="mssql_password" class="form-label">{{ _('Password') }} <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="mssql_password" name="mssql_password" value="" placeholder="{{ _('Enter database password') }}" data-required-for="mssql">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('mssql_password')">
+                                        <i class="fas fa-eye" id="mssql_password_icon"></i>
+                                    </button>
+                                </div>
+                                <small class="form-text text-muted">{{ _('Enter the database user password. Required for connection.') }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MySQL Settings -->
+                    <div id="mysql_settings" style="display: {{ 'block' if db_type == 'mysql' else 'none' }};">
+                        <h6 class="mb-3">{{ _('MySQL Connection Settings') }}</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="mysql_host" class="form-label">{{ _('Host') }} <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="mysql_host" name="mysql_host" value="{{ mysql_host or 'localhost' }}" data-required-for="mysql">
+                                <small class="form-text text-muted">{{ _('Example: localhost, 127.0.0.1, or mysql.example.com') }}</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="mysql_port" class="form-label">{{ _('Port') }}</label>
+                                <input type="number" class="form-control" id="mysql_port" name="mysql_port" value="{{ mysql_port or '3306' }}" min="1" max="65535">
+                                <small class="form-text text-muted">{{ _('Default: 3306') }}</small>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="mysql_database" class="form-label">{{ _('Database Name') }} <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="mysql_database" name="mysql_database" value="{{ mysql_database or '' }}" data-required-for="mysql">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="mysql_charset" class="form-label">{{ _('Charset') }}</label>
+                                <select class="form-select" id="mysql_charset" name="mysql_charset">
+                                    <option value="utf8mb4" {{ 'selected' if not mysql_charset or mysql_charset == 'utf8mb4' else '' }}>utf8mb4 (Recommended)</option>
+                                    <option value="utf8" {{ 'selected' if mysql_charset == 'utf8' else '' }}>utf8</option>
+                                    <option value="latin1" {{ 'selected' if mysql_charset == 'latin1' else '' }}>latin1</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="mysql_username" class="form-label">{{ _('Username') }} <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="mysql_username" name="mysql_username" value="{{ mysql_username or '' }}" data-required-for="mysql">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="mysql_password" class="form-label">{{ _('Password') }} <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="mysql_password" name="mysql_password" value="" placeholder="{{ _('Enter database password') }}" data-required-for="mysql">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('mysql_password')">
+                                        <i class="fas fa-eye" id="mysql_password_icon"></i>
+                                    </button>
+                                </div>
+                                <small class="form-text text-muted">{{ _('Enter the database user password. Required for connection.') }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Connection Test Result -->
+                    <div id="test_result" class="alert mt-4" style="display: none;"></div>
+
+                    <!-- Current Database Status -->
+                    <div class="card mt-4 mb-4">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">
+                                <i class="fas fa-info-circle me-2"></i>{{ _('Current Database Connection Status') }}
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="db_status_info">
+                                <div class="text-center">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                        <span class="visually-hidden">{{ _('Loading...') }}</span>
+                                    </div>
+                                    <p class="mt-2">{{ _('Checking connection status...') }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>{{ _('Instructions:') }}</strong>
+                        <ol class="mb-0 mt-2">
+                            <li>{{ _('Fill in all required fields (marked with *)') }}</li>
+                            <li>{{ _('Click "Test Connection" to verify your settings') }}</li>
+                            <li>{{ _('If test is successful, click "Save Settings" to save') }}</li>
+                            <li>{{ _('Restart the application after saving for changes to take effect') }}</li>
+                        </ol>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="export_to_env" name="export_to_env" value="true">
+                            <label class="form-check-label" for="export_to_env">
+                                <strong>{{ _('Also export settings to .env file') }}</strong>
+                                <small class="d-block text-muted">{{ _('This will update the .env file with your current database settings. A backup will be created automatically.') }}</small>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="button" class="btn btn-success btn-lg" onclick="testConnection()" id="test_btn">
+                            <i class="fas fa-plug me-2"></i>{{ _('Test Connection') }}
+                        </button>
+                        <button type="submit" class="btn btn-primary btn-lg" id="save_btn">
+                            <i class="fas fa-save me-2"></i>{{ _('Save Settings') }}
+                        </button>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            {{ _('You can save settings even without testing, but testing is recommended to ensure the connection works.') }}
+                        </small>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// setDefaultAvatar fonksiyonu base.html'de tanımlı, ama güvenlik için burada da tanımlayalım
+if (typeof setDefaultAvatar === 'undefined') {
+    function setDefaultAvatar(imgEl) {
+        if (imgEl && imgEl.onerror) {
+            imgEl.onerror = null;
+            imgEl.src = "{{ url_for('static', filename='img/avatar-default.svg') }}";
+        }
+    }
+}
+
+function toggleDatabaseFields() {
+    const dbType = document.getElementById('database_type').value;
+    const mssqlDiv = document.getElementById('mssql_settings');
+    const mysqlDiv = document.getElementById('mysql_settings');
+    
+    // Görünürlüğü değiştir
+    mssqlDiv.style.display = dbType === 'mssql' ? 'block' : 'none';
+    mysqlDiv.style.display = dbType === 'mysql' ? 'block' : 'none';
+    
+    // Required attribute'larını güncelle
+    // MSSQL alanları
+    const mssqlFields = mssqlDiv.querySelectorAll('[data-required-for="mssql"]');
+    mssqlFields.forEach(field => {
+        if (dbType === 'mssql') {
+            field.setAttribute('required', 'required');
+        } else {
+            field.removeAttribute('required');
+        }
+    });
+    
+    // MySQL alanları
+    const mysqlFields = mysqlDiv.querySelectorAll('[data-required-for="mysql"]');
+    mysqlFields.forEach(field => {
+        if (dbType === 'mysql') {
+            field.setAttribute('required', 'required');
+        } else {
+            field.removeAttribute('required');
+        }
+    });
+}
+
+// Sayfa yüklendiğinde required attribute'larını ayarla ve durum bilgisini yükle
+document.addEventListener('DOMContentLoaded', function() {
+    toggleDatabaseFields();
+    checkDatabaseStatus();
+});
+
+// Veritabanı bağlantı durumunu kontrol et
+function checkDatabaseStatus() {
+    fetch('{{ url_for("ayarlar_veritabani_durum") }}')
+        .then(response => {
+            // Önce response tipini kontrol et
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const contentType = response.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                // JSON değil, HTML döndürülmüş olabilir (redirect veya hata sayfası)
+                return response.text().then(text => {
+                    console.error("Expected JSON but got:", text.substring(0, 200));
+                    throw new Error("Server returned non-JSON response. Please check server logs.");
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            const statusDiv = document.getElementById('db_status_info');
+            
+            if (data.error) {
+                statusDiv.innerHTML = `
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${data.error}
+                    </div>
+                `;
+                return;
+            }
+            
+            let statusHtml = '<div class="row">';
+            
+            // Aktif bağlantı bilgisi
+            statusHtml += '<div class="col-md-12 mb-3">';
+            statusHtml += '<strong>{{ _("Active Connection:") }}</strong><br>';
+            if (data.is_using_settings) {
+                statusHtml += '<span class="badge bg-success me-2">{{ _("Using System Settings") }}</span>';
+            } else if (data.is_using_env) {
+                statusHtml += '<span class="badge bg-info me-2">{{ _("Using .env File") }}</span>';
+            } else {
+                statusHtml += '<span class="badge bg-secondary me-2">{{ _("Unknown") }}</span>';
+            }
+            statusHtml += '</div>';
+            
+            // Mevcut URI (maskelenmiş)
+            statusHtml += '<div class="col-md-12 mb-2">';
+            statusHtml += '<strong>{{ _("Current Connection URI:") }}</strong><br>';
+            statusHtml += '<code class="small">' + (data.current_uri || '{{ _("Not available") }}') + '</code>';
+            statusHtml += '</div>';
+            
+            // SistemAyarlar durumu
+            if (data.settings_available) {
+                statusHtml += '<div class="col-md-12 mb-2">';
+                statusHtml += '<strong>{{ _("System Settings URI:") }}</strong><br>';
+                statusHtml += '<code class="small">' + data.settings_uri + '</code>';
+                statusHtml += '</div>';
+            } else {
+                statusHtml += '<div class="col-md-12 mb-2">';
+                statusHtml += '<small class="text-muted">{{ _("No database settings found in System Settings.") }}</small>';
+                statusHtml += '</div>';
+            }
+            
+            // Veritabanı tipi
+            if (data.current_database_type) {
+                statusHtml += '<div class="col-md-12 mb-2">';
+                statusHtml += '<strong>{{ _("Database Type:") }}</strong> ';
+                statusHtml += '<span class="badge bg-primary">' + (data.current_database_type.toUpperCase()) + '</span>';
+                statusHtml += '</div>';
+            }
+            
+            statusHtml += '</div>';
+            
+            statusDiv.innerHTML = statusHtml;
+        })
+        .catch(error => {
+            document.getElementById('db_status_info').innerHTML = `
+                <div class="alert alert-danger mb-0">
+                    <i class="fas fa-times-circle me-2"></i>
+                    {{ _("Error loading status:") }} ${error.message}
+                </div>
+            `;
+        });
+}
+
+// Form submit öncesi validasyon
+function validateForm() {
+    const dbType = document.getElementById('database_type').value;
+    
+    if (dbType === 'mssql') {
+        const server = document.getElementById('mssql_server').value.trim();
+        const database = document.getElementById('mssql_database').value.trim();
+        const username = document.getElementById('mssql_username').value.trim();
+        const password = document.getElementById('mssql_password').value;
+        
+        if (!server || !database || !username || !password) {
+            alert({{ _("Please fill in all required MSSQL fields")|tojson }});
+            return false;
+        }
+    } else if (dbType === 'mysql') {
+        const host = document.getElementById('mysql_host').value.trim();
+        const database = document.getElementById('mysql_database').value.trim();
+        const username = document.getElementById('mysql_username').value.trim();
+        const password = document.getElementById('mysql_password').value;
+        
+        if (!host || !database || !username || !password) {
+            alert({{ _("Please fill in all required MySQL fields")|tojson }});
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+function togglePassword(fieldId) {
+    const field = document.getElementById(fieldId);
+    const icon = document.getElementById(fieldId + '_icon');
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        field.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+function testConnection() {
+    const dbType = document.getElementById('database_type').value;
+    const formData = new FormData();
+    formData.append('database_type', dbType);
+    
+    // CSRF token ekle
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (csrfToken) {
+        formData.append('csrf_token', csrfToken);
+    }
+    
+    // Validation
+    let isValid = true;
+    let errorMsg = '';
+    
+    if (dbType === 'mssql') {
+        const server = document.getElementById('mssql_server').value.trim();
+        const database = document.getElementById('mssql_database').value.trim();
+        const username = document.getElementById('mssql_username').value.trim();
+        const password = document.getElementById('mssql_password').value;
+        
+        if (!server || !database || !username || !password) {
+            isValid = false;
+            errorMsg = '{{ _("Please fill in all required fields") }}';
+        } else {
+            formData.append('mssql_server', server);
+            formData.append('mssql_port', document.getElementById('mssql_port').value || '1433');
+            formData.append('mssql_database', database);
+            formData.append('mssql_username', username);
+            formData.append('mssql_password', password);
+            formData.append('mssql_driver', document.getElementById('mssql_driver').value);
+        }
+    } else {
+        const host = document.getElementById('mysql_host').value.trim();
+        const database = document.getElementById('mysql_database').value.trim();
+        const username = document.getElementById('mysql_username').value.trim();
+        const password = document.getElementById('mysql_password').value;
+        
+        if (!host || !database || !username || !password) {
+            isValid = false;
+            errorMsg = '{{ _("Please fill in all required fields") }}';
+        } else {
+            formData.append('mysql_host', host);
+            formData.append('mysql_port', document.getElementById('mysql_port').value || '3306');
+            formData.append('mysql_database', database);
+            formData.append('mysql_username', username);
+            formData.append('mysql_password', password);
+            formData.append('mysql_charset', document.getElementById('mysql_charset').value);
+        }
+    }
+    
+    if (!isValid) {
+        showTestResult(false, errorMsg);
+        return;
+    }
+    
+    // Test butonunu devre dışı bırak ve yükleniyor göster
+    const testBtn = document.getElementById('test_btn');
+    const originalHtml = testBtn.innerHTML;
+    testBtn.disabled = true;
+    testBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>{{ _("Testing...") }}';
+    
+    // Test sonucu alanını gizle
+    const resultDiv = document.getElementById('test_result');
+    resultDiv.style.display = 'none';
+    
+    fetch('{{ url_for("ayarlar_veritabani_test") }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': csrfToken || ''
+        }
+    })
+    .then(response => {
+        // Response tipini kontrol et
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            // JSON değilse, HTML hata sayfası dönmüş demektir
+            return response.text().then(text => {
+                throw new Error('{{ _("Server returned an error. Please check your connection and try again.") }}');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        testBtn.disabled = false;
+        testBtn.innerHTML = originalHtml;
+        
+        if (data.success) {
+            showTestResult(true, '{{ _("Connection successful! Database connection is working correctly.") }}');
+        } else {
+            showTestResult(false, '{{ _("Connection failed:") }} ' + (data.error || '{{ _("Unknown error") }}'));
+        }
+    })
+    .catch(error => {
+        testBtn.disabled = false;
+        testBtn.innerHTML = originalHtml;
+        showTestResult(false, '{{ _("Error:") }} ' + (error.message || '{{ _("Unknown error occurred") }}'));
+    });
+}
+
+function showTestResult(success, message) {
+    const resultDiv = document.getElementById('test_result');
+    resultDiv.style.display = 'block';
+    resultDiv.className = 'alert mt-4 ' + (success ? 'alert-success' : 'alert-danger');
+    resultDiv.innerHTML = '<i class="fas ' + (success ? 'fa-check-circle' : 'fa-times-circle') + ' me-2"></i>' + message;
+    
+    // Scroll to result
+    resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+</script>
+{% endblock %}
+

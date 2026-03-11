@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="IjU1NDMxNTY4NzU3ZDdmMjBkZDdiOGQ0NzA4MjMxMWQxY2ZhMThkNTAi.aanbcw.aQv4VRwIqQKB1qMr3E9nlVvaS7o">
+    <title>Giriş - Crandyx CRM</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/img/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="/static/img/favicon-48x48.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/img/favicon-256x256.png">
+    <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
+
+    <!-- Apply dark mode immediately before page render to prevent flashing -->
+    <script>
+        const excludedEndpoints = ['main.index', 'auth.login'];
+        const currentEndpoint = 'auth.login';
+
+        if (localStorage.getItem('theme') === 'dark' && !excludedEndpoints.includes(currentEndpoint)) {
+            // Document body might not exist yet, so we use documentElement
+            document.documentElement.classList.add('dark-mode');
+
+            // Wait for body to be created to attach the class there since CSS targets body.dark-mode
+            const observer = new MutationObserver(function (mutations) {
+                if (document.body) {
+                    document.body.classList.add('dark-mode');
+                    observer.disconnect();
+                }
+            });
+            observer.observe(document.documentElement, { childList: true });
+        }
+    </script>
+
+    <!-- Critical resource preloading -->
+    
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+
+    <style>
+        /* Global Modal Stilleri - Tüm modal'lar için */
+        .modal-content {
+            box-shadow:
+                0 4px 8px rgba(0, 0, 0, 0.1),
+                0 8px 16px rgba(0, 0, 0, 0.15),
+                0 16px 32px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 12px;
+            background-color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Modal dialog'a hafif gölge ekle */
+        .modal-dialog {
+            filter: drop-shadow(0 0 15px rgba(0, 0, 0, 0.2));
+            transform: translateY(-3px);
+        }
+
+        /* Modal açıkken hafif gölge efekti */
+        .modal.show .modal-content {
+            box-shadow:
+                0 6px 12px rgba(0, 0, 0, 0.15),
+                0 12px 24px rgba(0, 0, 0, 0.2),
+                0 24px 48px rgba(0, 0, 0, 0.25);
+        }
+
+        /* Modal backdrop'u tamamen şeffaf yap */
+        .modal-backdrop {
+            background-color: transparent !important;
+            opacity: 0 !important;
+        }
+
+        .sidebar {
+            min-height: 100vh;
+            background-color: #343a40;
+        }
+
+        .sidebar .nav-link {
+            color: #adb5bd;
+        }
+
+        .sidebar .nav-link:hover {
+            color: #fff;
+        }
+
+        .sidebar .nav-link.active {
+            color: #fff;
+            background-color: #495057;
+        }
+
+        /* Hatırlatmalar butonu animasyonu */
+        .reminder-button {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .reminder-badge {
+            background-color: #dc3545 !important;
+            animation: pulse 1.5s infinite;
+        }
+
+        .main-content {
+            margin-left: 0;
+        }
+
+        @media (min-width: 768px) {
+            .main-content {
+                margin-left: 250px;
+            }
+        }
+
+        /* Mobil iyilestirmeler */
+        @media (max-width: 767.98px) {
+
+            .container-fluid,
+            .container {
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+
+            .calendar-grid {
+                grid-template-columns: repeat(7, minmax(90px, 1fr));
+                overflow-x: auto;
+            }
+
+            .week-view {
+                overflow-x: auto;
+            }
+
+            .calendar-day {
+                min-width: 120px;
+            }
+        }
+    </style>
+
+    <style>
+        /* Bildirim dropdown'unu her şeyin üstünde tut */
+        .dropdown-menu {
+            z-index: 1050;
+        }
+
+        #notifBell+.dropdown-menu {
+            z-index: 3000;
+            position: relative;
+        }
+
+        .sidebar {
+            z-index: 1020;
+        }
+
+        .navbar,
+        .main-content {
+            position: relative;
+            z-index: 1000;
+        }
+
+        /* Dark Mode Temel Renk Degiskenleri (Sadece Sag İcerik Icin) */
+        body.dark-mode {
+            background-color: #212529 !important;
+            color: #f8f9fa !important;
+        }
+
+        body.dark-mode .main-content {
+            background-color: #212529;
+        }
+
+        body.dark-mode .card,
+        body.dark-mode .list-group-item,
+        body.dark-mode .modal-content {
+            background-color: #2c3034 !important;
+            border-color: #495057 !important;
+            color: #f8f9fa !important;
+        }
+
+        body.dark-mode .table {
+            color: #f8f9fa !important;
+            border-color: #495057 !important;
+        }
+
+        body.dark-mode .table th,
+        body.dark-mode .table td {
+            background-color: #2c3034 !important;
+            border-color: #495057 !important;
+        }
+
+        body.dark-mode .table-striped>tbody>tr:nth-of-type(odd)>* {
+            background-color: #343a40 !important;
+        }
+
+        body.dark-mode .form-control,
+        body.dark-mode .form-select {
+            background-color: #343a40 !important;
+            border-color: #495057 !important;
+            color: #f8f9fa !important;
+        }
+
+        body.dark-mode .form-control:focus,
+        body.dark-mode .form-select:focus {
+            background-color: #2c3034 !important;
+            color: #f8f9fa !important;
+            border-color: #0d6efd !important;
+        }
+
+        body.dark-mode .text-muted {
+            color: #adb5bd !important;
+        }
+
+        body.dark-mode .border,
+        body.dark-mode .border-bottom,
+        body.dark-mode .border-top {
+            border-color: #495057 !important;
+        }
+
+        #notifBell+.dropdown-menu {
+            z-index: 3000;
+            position: relative;
+        }
+
+        .sidebar {
+            z-index: 1020;
+        }
+
+        .navbar,
+        .main-content {
+            position: relative;
+            z-index: 1000;
+        }
+    </style>
+    
+</head>
+
+<body data-logged-in="false" lang="tr">
+    
+
+    <!-- Main content -->
+    <main class="main-content">
+        
+            <div class="container py-4">
+                
+
+                
+<div class="container-fluid vh-100 d-flex align-items-center justify-content-center">
+    <div class="row justify-content-center w-100">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <img src="/static/img/Crandyx_Logo.png" alt="Crandyx CRM Logo"
+                            class="img-fluid mb-3" style="max-width: 200px; height: auto;">
+                        <h2 class="card-title">Giriş</h2>
+                        <p class="text-muted">Randevu Defteri Sistemi</p>
+                    </div>
+
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="IjU1NDMxNTY4NzU3ZDdmMjBkZDdiOGQ0NzA4MjMxMWQxY2ZhMThkNTAi.aanbcw.aQv4VRwIqQKB1qMr3E9nlVvaS7o">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Kullanıcı Adı</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" class="form-control" id="username" name="username" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Şifre</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                <input type="password" class="form-control" id="password" name="password" required>
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-sign-in-alt me-2"></i>
+                                Giriş
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="text-center mt-3">
+                        <a href="#" class="text-decoration-none" data-bs-toggle="modal"
+                            data-bs-target="#forgotPasswordModal">
+                            <i class="fas fa-key me-1"></i>
+                            Şifremi Unuttum?
+                        </a>
+                    </div>
+
+                    
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Şifre Hatırlatma Modal -->
+    <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel"
+        aria-hidden="true" data-bs-backdrop="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="forgotPasswordModalLabel">
+                        <i class="fas fa-key me-2"></i>
+                        Şifremi Unuttum
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="forgotPasswordForm" method="POST" action="/forgot-password">
+                    <input type="hidden" name="csrf_token" value="IjU1NDMxNTY4NzU3ZDdmMjBkZDdiOGQ0NzA4MjMxMWQxY2ZhMThkNTAi.aanbcw.aQv4VRwIqQKB1qMr3E9nlVvaS7o">
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Kullanıcı adınızı ve e-posta adresinizi girin. Size şifre sıfırlama bağlantısı göndereceğiz.
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="forgot_username" class="form-label">Kullanıcı Adı</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" class="form-control" id="forgot_username" name="username" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="forgot_email" class="form-label">E-posta Adresi</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" class="form-control" id="forgot_email" name="email" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            İptal
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>
+                            Sıfırlama Bağlantısı Gönder
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+            </div>
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        // Global SweetAlert Toast Yapılandırması
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+
+        // Backend'den gelen Flash mesajları yakala ve Toast olarak göster
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            
+        
+        });
+    </script>
+
+    <script>
+        // setDefaultAvatar fonksiyonu - avatar resmi yüklenemediğinde varsayılan resmi göster
+        function setDefaultAvatar(imgEl) {
+            if (!imgEl) return;
+            try {
+                imgEl.onerror = null; // Sonsuz döngüyü önle
+                const defaultAvatar = "/static/img/avatar-default.svg";
+                if (imgEl.src !== defaultAvatar) {
+                    imgEl.src = defaultAvatar;
+                }
+            } catch (e) {
+                console.warn('setDefaultAvatar error:', e);
+            }
+        }
+        // Global olarak erişilebilir olduğundan emin ol
+        window.setDefaultAvatar = setDefaultAvatar;
+
+        function isLoggedIn() {
+            const v = document.body?.dataset?.loggedIn;
+            return v === 'true';
+        }
+    </script>
+
+    <!-- Dark Mode Toggle Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const themeToggleBtn = document.getElementById('themeToggle');
+            const toggleIcon = themeToggleBtn ? themeToggleBtn.querySelector('i') : null;
+            const currentEndpoint = 'auth.login';
+            const excludedEndpoints = ['main.index', 'auth.login'];
+            const isExcluded = excludedEndpoints.includes(currentEndpoint);
+
+            // set correct icon based on current mode
+            if (document.body.classList.contains('dark-mode') && toggleIcon && !isExcluded) {
+                toggleIcon.classList.remove('fa-moon');
+                toggleIcon.classList.add('fa-sun');
+            }
+
+            if (themeToggleBtn) {
+                themeToggleBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+
+                    if (isExcluded) {
+                        return; // Prevent toggling dark mode on excluded pages
+                    }
+
+                    document.body.classList.toggle('dark-mode');
+
+                    if (document.body.classList.contains('dark-mode')) {
+                        localStorage.setItem('theme', 'dark');
+                        toggleIcon.classList.remove('fa-moon');
+                        toggleIcon.classList.add('fa-sun');
+                    } else {
+                        localStorage.setItem('theme', 'light');
+                        toggleIcon.classList.remove('fa-sun');
+                        toggleIcon.classList.add('fa-moon');
+                    }
+                });
+            }
+        });
+    </script>
+
+    <script>
+        // Basit bildirim polling'i
+        async function fetchNotifications() {
+            try {
+                const res = await fetch('/api/bildirimler');
+                if (!res.ok) return;
+                const data = await res.json();
+                const list = document.getElementById('notifList');
+                const count = document.getElementById('notifCount');
+                if (!list || !count) return;
+                list.innerHTML = '';
+                data.items.forEach(b => {
+                    const li = document.createElement('li');
+                    li.className = 'px-3 py-2 border-bottom d-flex justify-content-between align-items-start' + (b.okundu ? '' : ' bg-secondary bg-opacity-10');
+                    li.dataset.id = b.id;
+
+                    // Bildirim metnini çevir
+                    let translatedMetin = b.metin;
+                    const currentLang = document.documentElement.lang || 'tr';
+
+                    if (currentLang === 'en') {
+                        // Türkçe metinleri İngilizce'ye çevir
+                        if (b.metin.includes('için randevu oluşturuldu')) {
+                            translatedMetin = b.metin.replace('için randevu oluşturuldu', 'appointment created for');
+                        } else if (b.metin.includes('taşındı')) {
+                            translatedMetin = b.metin.replace('Randevu', 'Appointment moved from').replace('taşındı', '');
+                        }
+                    } else {
+                        // İngilizce metinleri Türkçe'ye çevir (eğer varsa)
+                        if (b.metin.includes('appointment created for')) {
+                            translatedMetin = b.metin.replace('appointment created for', 'için randevu oluşturuldu');
+                        } else if (b.metin.includes('Appointment moved from')) {
+                            translatedMetin = b.metin.replace('Appointment moved from', 'Randevu').replace('->', '->') + ' taşındı';
+                        }
+                    }
+
+                    li.innerHTML = `<div><div class="small text-muted">${b.tarih}</div><div>${translatedMetin}</div></div>` +
+                        (b.okundu ? '' : '<button class="btn btn-sm btn-link p-0 ms-2">' + `Okundu İşaretle` + '</button>');
+                    if (!b.okundu) {
+                        li.querySelector('button').addEventListener('click', async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            try {
+                                await fetch('/api/bildirimler/okundu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: [b.id] }) });
+                                // Görsel olarak okundu işaretle ve sayacı azalt
+                                li.classList.remove('bg-secondary', 'bg-opacity-10');
+                                li.querySelector('button')?.remove();
+                                const newUnread = Math.max(0, (data.unread || 0) - 1);
+                                count.textContent = newUnread;
+                                count.style.display = newUnread > 0 ? 'inline-block' : 'none';
+                            } catch (err) { console.warn('Bildirim okundu işaretlenemedi'); }
+                        });
+                    }
+                    list.appendChild(li);
+                });
+                count.textContent = data.unread;
+                count.style.display = data.unread > 0 ? 'inline-block' : 'none';
+
+                // Tümünü okundu işaretle
+                const mark = document.getElementById('markAllRead');
+                if (mark) {
+                    mark.onclick = async (e) => {
+                        e.preventDefault();
+                        const ids = data.items.filter(x => !x.okundu).map(x => x.id);
+                        if (ids.length === 0) return;
+                        await fetch('/api/bildirimler/okundu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) });
+                        fetchNotifications();
+                    };
+                }
+            } catch (e) {
+                console.warn('Bildirim alınamadı');
+            }
+        }
+        if (isLoggedIn()) {
+            // Dinamik aralık: görünürken hızlı, gizliyken yavaş
+            let pollTimer = null;
+            const ACTIVE_INTERVAL_MS = 15000;
+            const HIDDEN_INTERVAL_MS = 60000;
+
+            function clearPollTimer() {
+                if (pollTimer) {
+                    clearTimeout(pollTimer);
+                    pollTimer = null;
+                }
+            }
+
+            async function pollOnceAndSchedule() {
+                try { await fetchNotifications(); } catch (e) { }
+                clearPollTimer();
+                const next = document.hidden ? HIDDEN_INTERVAL_MS : ACTIVE_INTERVAL_MS;
+                pollTimer = setTimeout(pollOnceAndSchedule, next);
+            }
+
+            // İlk çağrı ve planlama
+            pollOnceAndSchedule();
+
+            // Sekme görünürlüğü/fokus değişince aralığı yeniden ayarla
+            document.addEventListener('visibilitychange', () => {
+                // görünür olduğunda hızlıca güncelle
+                if (!document.hidden) { pollOnceAndSchedule(); }
+            });
+            window.addEventListener('focus', () => { pollOnceAndSchedule(); });
+            window.addEventListener('blur', () => { pollOnceAndSchedule(); });
+
+            // Çanağa gelince anlık yenile (kullanıcı etkileşimi)
+            const bell = document.getElementById('notifBell');
+            if (bell) {
+                bell.addEventListener('mouseenter', () => { fetchNotifications(); });
+                bell.addEventListener('click', () => { fetchNotifications(); });
+            }
+
+            // NOT: beforeunload event'inde clear-session çağrılmıyor
+            // Çünkü sayfa navigasyonunda da tetiklenir ve oturumu yanlışlıkla temizler
+            // Kullanıcı logout butonuna tıkladığında oturum temizlenir
+
+            // Sayfa görünürlük değişikliği (tab değişimi, minimize vb.)
+            document.addEventListener('visibilitychange', function () {
+                if (document.hidden) {
+                    // Sayfa gizlendiğinde son görülme zamanını güncelle
+                    navigator.sendBeacon('/api/update-last-seen');
+                }
+            });
+
+            // Global Message Notification Logic
+            let lastUnreadMessageCount = 0;
+            const messageSound = new Audio("/static/audio/notification.wav");
+
+            async function checkUnreadMessages() {
+                try {
+                    const res = await fetch('/kullanici-mesaj/api/okunmamis-sayisi?t=' + new Date().getTime());
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const count = data.okunmamis_sayisi;
+
+                    // Update badges
+                    const badge = document.getElementById('mesaj-badge');
+                    const mobileBadge = document.getElementById('mesaj-badge-mobile');
+
+                    if (badge) {
+                        badge.textContent = count;
+                        badge.style.display = count > 0 ? '' : 'none';
+                    }
+                    if (mobileBadge) {
+                        mobileBadge.textContent = count;
+                        mobileBadge.style.display = count > 0 ? '' : 'none';
+                    }
+
+                    // Play sound if count increased and we strictly have more than 0 messages
+                    // We also check if lastUnreadMessageCount was initialized (not first load) to avoid sound on refresh
+                    if (count > lastUnreadMessageCount && count > 0) {
+                        // Check if we are NOT on the messages page or (we are on messages page but tab is hidden)
+                        // Actually, if we are on messages page, the local logic might handle it too. 
+                        // To avoid double sound, we can check path.
+                        const isMessagePage = window.location.pathname.includes('/kullanici-mesaj/mesajlar');
+
+                        if (!isMessagePage || document.hidden) {
+                            try {
+                                messageSound.currentTime = 0;
+                                messageSound.play().catch(e => console.log("Audio autoplay blocked:", e));
+                            } catch (e) { console.error(e); }
+                        }
+                    }
+
+                    lastUnreadMessageCount = count;
+                } catch (e) {
+                    console.warn('Message check failed', e);
+                }
+            }
+
+            // Initialize count without sound
+            fetch('/kullanici-mesaj/api/okunmamis-sayisi?t=' + new Date().getTime())
+                .then(r => r.json())
+                .then(d => { lastUnreadMessageCount = d.okunmamis_sayisi; })
+                .catch(e => { });
+
+            // Poll every 10 seconds
+            setInterval(checkUnreadMessages, 10000);
+        }
+
+        // Hatırlatmalar fonksiyonları
+        async function loadReminders() {
+            try {
+                const response = await fetch('/api/today-reminders');
+
+                // Oturum kontrolü - eğer login sayfasına yönlendirilmişse
+                if (response.redirected && response.url.includes('/login')) {
+                    return; // Sessizce çık
+                }
+
+                if (!response.ok) {
+                    console.warn('Reminder fetch failed:', response.status);
+                    return;
+                }
+
+                // Content-Type kontrolü - JSON değilse hata
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    console.warn('Beklenmeyen yanıt tipi:', contentType);
+                    return;
+                }
+
+                const data = await response.json();
+
+                const reminderList = document.getElementById('reminderList');
+                const reminderCount = document.getElementById('reminderCount');
+                const reminderButton = document.getElementById('reminderButton');
+
+                if (data.success && data.reminders.length > 0) {
+                    // Hatırlatmalar var
+                    const currentLang = document.documentElement.lang || 'tr';
+                    let reminderLabelText, completeText, readText;
+
+                    if (currentLang === 'en') {
+                        reminderLabelText = 'Reminder:';
+                        completeText = 'Complete';
+                        readText = 'Read';
+                    } else if (currentLang === 'fr') {
+                        reminderLabelText = 'Rappel:';
+                        completeText = 'Terminer';
+                        readText = 'Lu';
+                    } else if (currentLang === 'de') {
+                        reminderLabelText = 'Erinnerung:';
+                        completeText = 'Abschließen';
+                        readText = 'Gelesen';
+                    } else {
+                        reminderLabelText = 'Hatırlatma:';
+                        completeText = 'Tamamla';
+                        readText = 'Okundu';
+                    }
+
+                    reminderList.innerHTML = data.reminders.map(reminder => {
+                        // Görev mi? Görevlere solid, genel hatırlatmalara dashed ve mavi ton
+                        const isTask = !!reminder.gorev_mi;
+                        const taskColor = reminder.durum_rengi || '#0dcaf0'; // info
+                        const borderStyle = isTask ? `4px solid ${taskColor}` : `4px dashed #0dcaf0`;
+                        const titleColor = isTask ? taskColor : '#0dcaf0';
+                        const typeBadge = isTask ? '' : `<small class=\"badge bg-info text-dark ms-2\">Genel</small>`;
+
+                        return `
+                            < div class="card mb-3" style = "border-left: ${borderStyle} !important;" >
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="card-title" style="color: ${titleColor} !important;">
+                                                <i class="fas fa-exclamation-triangle me-2"></i>${reminder.baslik} ${typeBadge}
+                                            </h6>
+                                            <p class="card-text">${reminder.aciklama || (currentLang === 'en' ? 'No description' : currentLang === 'fr' ? 'Aucune description' : currentLang === 'de' ? 'Keine Beschreibung' : 'Açıklama yok')}</p>
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i><span class="reminder-label">${reminderLabelText}</span> ${reminder.hatirlatma_tarihi}
+                                            </small>
+                                            ${reminder.durum && isTask ? `<br><small class=\"badge\" style=\"background-color: ${taskColor} !important; color: white;\">${reminder.durum}</small>` : ''}
+                                        </div>
+                                        <div class="btn-group-vertical">
+                                            <button class="btn btn-success btn-sm" onclick="completeReminder(${reminder.id})">
+                                                <i class="fas fa-check"></i> <span class="complete-btn-text">${completeText}</span>
+                                            </button>
+                                            <button class="btn btn-outline-secondary btn-sm" onclick="markReminderAsRead(${reminder.id})">
+                                                <i class="fas fa-eye"></i> <span class="read-btn-text">${readText}</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                        </div >
+                        `;
+                    }).join('');
+
+                    // Sayaç ve animasyon
+                    reminderCount.textContent = data.reminders.length;
+                    reminderCount.style.display = 'inline-block';
+                    reminderButton.classList.add('reminder-button');
+                    reminderCount.classList.add('reminder-badge');
+
+                    // Yeni yüklenen butonları çevir
+                    translateSidebar();
+
+                } else {
+                    // Hatırlatma yok
+                    const currentLang = document.documentElement.lang || 'tr';
+                    let noRemindersText, allTasksText;
+
+                    if (currentLang === 'en') {
+                        noRemindersText = 'No reminders for today!';
+                        allTasksText = 'All your tasks are up to date.';
+                    } else if (currentLang === 'fr') {
+                        noRemindersText = 'Aucun rappel pour aujourd\'hui !';
+                        allTasksText = 'Toutes vos tâches sont à jour.';
+                    } else if (currentLang === 'de') {
+                        noRemindersText = 'Keine Erinnerungen für heute!';
+                        allTasksText = 'Alle Ihre Aufgaben sind auf dem neuesten Stand.';
+                    } else {
+                        noRemindersText = 'Bugün için hatırlatma yok!';
+                        allTasksText = 'Tüm görevleriniz güncel.';
+                    }
+
+                    reminderList.innerHTML = `
+                        <div class="text-center py-4">
+                            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                            <h5 class="text-muted">${noRemindersText}</h5>
+                            <p class="text-muted">${allTasksText}</p>
+                        </div>
+                    `;
+
+                    // Animasyonu kaldır
+                    reminderCount.style.display = 'none';
+                    reminderButton.classList.remove('reminder-button');
+                    reminderCount.classList.remove('reminder-badge');
+                }
+            } catch (error) {
+                console.error('Hatırlatmalar yüklenirken hata:', error);
+                const currentLang = document.documentElement.lang || 'tr';
+                let errorText;
+
+                if (currentLang === 'en') {
+                    errorText = 'An error occurred while loading reminders.';
+                } else if (currentLang === 'fr') {
+                    errorText = 'Une erreur s\'est produite lors du chargement des rappels.';
+                } else if (currentLang === 'de') {
+                    errorText = 'Ein Fehler ist beim Laden der Erinnerungen aufgetreten.';
+                } else {
+                    errorText = 'Hatırlatmalar yüklenirken bir hata oluştu.';
+                }
+
+                document.getElementById('reminderList').innerHTML = `
+                        < div class="alert alert-danger" >
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                    ${errorText}
+                </div >
+                        `;
+            }
+        }
+
+        async function completeReminder(todoId) {
+            try {
+                const response = await fetch(`/ todos / ${todoId}/durum`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ durum: 'Tamamlandı' })
+                });
+
+                if (response.ok) {
+                    // Modal'ı yenile
+                    loadReminders();
+                    // Ana sayfayı da yenile
+                    if (typeof fetchNotifications === 'function') {
+                        fetchNotifications();
+                    }
+                }
+            } catch (error) {
+                console.error('Görev tamamlanırken hata:', error);
+            }
+        }
+
+        async function markReminderAsRead(todoId) {
+            // Bu fonksiyon gelecekte implement edilebilir
+            console.log('Hatırlatma okundu işaretlendi:', todoId);
+        }
+
+        async function markAllRemindersAsRead() {
+            // Bu fonksiyon gelecekte implement edilebilir
+            console.log('Tüm hatırlatmalar okundu işaretlendi');
+        }
+
+        // Modal açıldığında hatırlatmaları yükle
+        document.addEventListener('DOMContentLoaded', function () {
+            const reminderModal = document.getElementById('reminderModal');
+            if (reminderModal) {
+                reminderModal.addEventListener('show.bs.modal', function () {
+                    loadReminders();
+                });
+            }
+
+            // Sayfa yüklendiğinde hatırlatma sayısını kontrol et
+            checkReminderCount();
+        });
+
+        async function checkReminderCount() {
+            try {
+                const response = await fetch('/api/today-reminders');
+
+                // Oturum kontrolü - eğer login sayfasına yönlendirilmişse
+                if (response.redirected && response.url.includes('/login')) {
+                    return; // Sessizce çık
+                }
+
+                if (!response.ok) {
+                    return; // Sessizce çık
+                }
+
+                // Content-Type kontrolü - JSON değilse hata
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    return; // Sessizce çık
+                }
+
+                const data = await response.json();
+
+                const reminderCount = document.getElementById('reminderCount');
+                const reminderButton = document.getElementById('reminderButton');
+
+                if (data.success && data.reminders.length > 0) {
+                    reminderCount.textContent = data.reminders.length;
+                    reminderCount.style.display = 'inline-block';
+                    reminderButton.classList.add('reminder-button');
+                    reminderCount.classList.add('reminder-badge');
+                } else {
+                    reminderCount.style.display = 'none';
+                    reminderButton.classList.remove('reminder-button');
+                    reminderCount.classList.remove('reminder-badge');
+                }
+            } catch (error) {
+                console.error('Hatırlatma sayısı kontrol edilirken hata:', error);
+            }
+        }
+    </script>
+
+    
+
+    <!-- Hatırlatmalar Modal -->
+    <div class="modal fade" id="reminderModal" tabindex="-1" aria-labelledby="reminderModalLabel" aria-hidden="true"
+        data-bs-backdrop="false">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reminderModalLabel">
+                        <i class="fas fa-bell me-2"></i>Bugünkü Hatırlatmalarım
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="reminderList">
+                        <div class="text-center py-4">
+                            <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                            <p class="text-muted mt-2" id="loadingText">Hatırlatmalar yükleniyor...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="closeBtn">Kapat</button>
+                    <button type="button" class="btn btn-primary" onclick="markAllRemindersAsRead()"
+                        id="markAllBtn">Tümünü Okundu İşaretle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sidebar çevirileri
+        function translateSidebar() {
+            const currentLang = document.documentElement.lang || 'tr';
+
+            // Sidebar buton ve modal başlığını çevir
+            const reminderText = document.getElementById('reminderText');
+            const reminderModalLabel = document.getElementById('reminderModalLabel');
+            const loadingText = document.getElementById('loadingText');
+            const closeBtn = document.getElementById('closeBtn');
+            const markAllBtn = document.getElementById('markAllBtn');
+
+            if (currentLang === 'en') {
+                if (reminderText) {
+                    reminderText.textContent = "Today's Reminders";
+                }
+                if (reminderModalLabel) {
+                    reminderModalLabel.innerHTML = '<i class="fas fa-bell me-2"></i>Today\'s Reminders';
+                }
+                if (loadingText) {
+                    loadingText.textContent = 'Loading reminders...';
+                }
+                if (closeBtn) {
+                    closeBtn.textContent = 'Close';
+                }
+                if (markAllBtn) {
+                    markAllBtn.textContent = 'Mark All as Read';
+                }
+
+                // Modal içindeki dinamik butonları çevir
+                document.querySelectorAll('.complete-btn-text').forEach(el => {
+                    el.textContent = 'Complete';
+                });
+                document.querySelectorAll('.read-btn-text').forEach(el => {
+                    el.textContent = 'Read';
+                });
+                document.querySelectorAll('.reminder-label').forEach(el => {
+                    el.textContent = 'Reminder:';
+                });
+            } else if (currentLang === 'fr') {
+                if (reminderText) {
+                    reminderText.textContent = 'Mes Rappels d\'Aujourd\'hui';
+                }
+                if (reminderModalLabel) {
+                    reminderModalLabel.innerHTML = '<i class="fas fa-bell me-2"></i>Mes Rappels d\'Aujourd\'hui';
+                }
+                if (loadingText) {
+                    loadingText.textContent = 'Chargement des rappels...';
+                }
+                if (closeBtn) {
+                    closeBtn.textContent = 'Fermer';
+                }
+                if (markAllBtn) {
+                    markAllBtn.textContent = 'Marquer Tout comme Lu';
+                }
+
+                // Modal içindeki dinamik butonları çevir
+                document.querySelectorAll('.complete-btn-text').forEach(el => {
+                    el.textContent = 'Terminer';
+                });
+                document.querySelectorAll('.read-btn-text').forEach(el => {
+                    el.textContent = 'Lu';
+                });
+                document.querySelectorAll('.reminder-label').forEach(el => {
+                    el.textContent = 'Rappel:';
+                });
+            } else if (currentLang === 'de') {
+                if (reminderText) {
+                    reminderText.textContent = 'Meine Erinnerungen für Heute';
+                }
+                if (reminderModalLabel) {
+                    reminderModalLabel.innerHTML = '<i class="fas fa-bell me-2"></i>Meine Erinnerungen für Heute';
+                }
+                if (loadingText) {
+                    loadingText.textContent = 'Erinnerungen werden geladen...';
+                }
+                if (closeBtn) {
+                    closeBtn.textContent = 'Schließen';
+                }
+                if (markAllBtn) {
+                    markAllBtn.textContent = 'Alle als Gelesen Markieren';
+                }
+
+                // Modal içindeki dinamik butonları çevir
+                document.querySelectorAll('.complete-btn-text').forEach(el => {
+                    el.textContent = 'Abschließen';
+                });
+                document.querySelectorAll('.read-btn-text').forEach(el => {
+                    el.textContent = 'Gelesen';
+                });
+                document.querySelectorAll('.reminder-label').forEach(el => {
+                    el.textContent = 'Erinnerung:';
+                });
+            } else {
+                if (reminderText) {
+                    reminderText.textContent = 'Bugünkü Hatırlatmalarım';
+                }
+                if (reminderModalLabel) {
+                    reminderModalLabel.innerHTML = '<i class="fas fa-bell me-2"></i>Bugünkü Hatırlatmalarım';
+                }
+                if (loadingText) {
+                    loadingText.textContent = 'Hatırlatmalar yükleniyor...';
+                }
+                if (closeBtn) {
+                    closeBtn.textContent = 'Kapat';
+                }
+                if (markAllBtn) {
+                    markAllBtn.textContent = 'Tümünü Okundu İşaretle';
+                }
+
+                // Modal içindeki dinamik butonları çevir
+                document.querySelectorAll('.complete-btn-text').forEach(el => {
+                    el.textContent = 'Tamamla';
+                });
+                document.querySelectorAll('.read-btn-text').forEach(el => {
+                    el.textContent = 'Okundu';
+                });
+                document.querySelectorAll('.reminder-label').forEach(el => {
+                    el.textContent = 'Hatırlatma:';
+                });
+            }
+
+            // Duration info çevirisi
+            const durationInfoText = document.getElementById('duration-info-text');
+            if (durationInfoText) {
+                let message;
+                if (currentLang === 'en') {
+                    message = 'Appointment duration must be multiples of the selected book\'s slot minutes';
+                } else if (currentLang === 'fr') {
+                    message = 'La durée du rendez-vous doit être un multiple des minutes de créneau du livre sélectionné';
+                } else if (currentLang === 'de') {
+                    message = 'Die Termindauer muss ein Vielfaches der Minuten des ausgewählten Buchs sein';
+                } else {
+                    message = 'Randevu süresi seçilen defterin slot dakikasının katları olmalı';
+                }
+                durationInfoText.textContent = message;
+            }
+
+            // Durum çevirisi
+            const statusElements = document.querySelectorAll('.durum-text');
+            statusElements.forEach(element => {
+                const originalStatus = element.getAttribute('data-durum');
+                if (originalStatus) {
+                    let translatedStatus;
+                    if (currentLang === 'en') {
+                        if (originalStatus === 'Beklemede') translatedStatus = 'Pending';
+                        else if (originalStatus === 'Devam Ediyor') translatedStatus = 'In Progress';
+                        else if (originalStatus === 'Tamamlandı') translatedStatus = 'Complete';
+                        else translatedStatus = originalStatus;
+                    } else if (currentLang === 'fr') {
+                        if (originalStatus === 'Beklemede') translatedStatus = 'En Attente';
+                        else if (originalStatus === 'Devam Ediyor') translatedStatus = 'En Cours';
+                        else if (originalStatus === 'Tamamlandı') translatedStatus = 'Terminé';
+                        else translatedStatus = originalStatus;
+                    } else if (currentLang === 'de') {
+                        if (originalStatus === 'Beklemede') translatedStatus = 'Ausstehend';
+                        else if (originalStatus === 'Devam Ediyor') translatedStatus = 'In Bearbeitung';
+                        else if (originalStatus === 'Tamamlandı') translatedStatus = 'Abgeschlossen';
+                        else translatedStatus = originalStatus;
+                    } else {
+                        translatedStatus = originalStatus;
+                    }
+                    element.textContent = translatedStatus;
+                }
+            });
+        }
+
+        // Sayfa yüklendiğinde çevirileri uygula
+        document.addEventListener('DOMContentLoaded', function () {
+            translateSidebar();
+        });
+
+        // Dil değişikliği fonksiyonu
+        function handleLanguageChange(lang) {
+            console.log('Dil değişiyor:', lang);
+
+            // Lang attribute'unu hemen set et
+            document.documentElement.lang = lang;
+            document.body.setAttribute('lang', lang);
+
+            // languageChanged event'ini tetikle
+            const event = new CustomEvent('languageChanged', { detail: { language: lang } });
+            document.dispatchEvent(event);
+
+            // Önce session'ı kontrol et
+            fetch('/api/session/check', {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => {
+                    if (response.ok) {
+                        // Session aktif, dil değişikliğini yap
+                        window.location.href = `/set_language/${lang}`;
+                    } else {
+                        // Session süresi dolmuş, login sayfasına yönlendir
+                        window.location.href = '/login';
+                    }
+                })
+                .catch(error => {
+                    console.error('Session kontrol hatası:', error);
+                    // Hata durumunda sayfa yenile
+                    window.location.href = `/set_language/${lang}`;
+                });
+        }
+
+        // Dil değişikliklerini dinle
+        document.addEventListener('languageChanged', function () {
+            translateSidebar();
+        });
+
+        // CSRF Token Helper - Tüm fetch isteklerine otomatik CSRF token ekle
+        (function () {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+            if (!csrfToken) {
+                console.warn('[CSRF] CSRF token bulunamadi! Meta tag kontrol edin.');
+                return;
+            }
+
+            // Fetch'i override et
+            const originalFetch = window.fetch;
+            window.fetch = function (...args) {
+                const [url, options = {}] = args;
+
+                // POST, PUT, PATCH, DELETE istekleri için CSRF token ekle
+                if (options.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method.toUpperCase())) {
+                    if (!options.headers) {
+                        options.headers = {};
+                    }
+
+                    // Content-Type header'ı yoksa veya JSON ise
+                    const isJson = options.headers['Content-Type']?.includes('application/json') ||
+                        (!options.headers['Content-Type'] && options.body && typeof options.body === 'string' && options.body.trim().startsWith('{'));
+
+                    // FormData ise veya Content-Type belirtilmemişse header'a ekle
+                    const isFormData = options.body instanceof FormData;
+
+                    // Her durumda header'a ekle (Flask-WTF hem header hem form field'dan okuyabilir)
+                    if (!options.headers['X-CSRFToken']) {
+                        options.headers['X-CSRFToken'] = csrfToken;
+                    }
+
+                    // FormData ise, FormData'ya da ekle (güvenlik için)
+                    if (isFormData && options.body instanceof FormData) {
+                        // FormData'da zaten varsa ekleme
+                        if (!options.body.has('csrf_token')) {
+                            options.body.append('csrf_token', csrfToken);
+                        }
+                    }
+                }
+
+                return originalFetch.apply(this, args);
+            };
+
+            // XMLHttpRequest'i de override et (eski kodlar için)
+            const originalXHROpen = XMLHttpRequest.prototype.open;
+            const originalXHRSend = XMLHttpRequest.prototype.send;
+
+            XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+                this._method = method;
+                this._url = url;
+                return originalXHROpen.apply(this, [method, url, ...rest]);
+            };
+
+            XMLHttpRequest.prototype.send = function (data) {
+                if (this._method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(this._method.toUpperCase())) {
+                    if (!this.getRequestHeader('X-CSRFToken')) {
+                        this.setRequestHeader('X-CSRFToken', csrfToken);
+                    }
+                    // FormData ise, FormData'ya da ekle
+                    if (data instanceof FormData && !data.has('csrf_token')) {
+                        data.append('csrf_token', csrfToken);
+                    }
+                }
+                return originalXHRSend.apply(this, [data]);
+            };
+        })();
+    </script>
+
+    <!-- Mesaj Sayacı Badge Update -->
+    <script>
+        function updateMessageBadges() {
+            fetch('/api/mesaj-sayaci')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // WhatsApp badge (desktop + mobile)
+                        ['whatsapp-badge', 'whatsapp-badge-mobile'].forEach(id => {
+                            const badge = document.getElementById(id);
+                            if (badge) {
+                                if (data.whatsapp > 0) {
+                                    badge.textContent = data.whatsapp > 99 ? '99+' : data.whatsapp;
+                                    badge.style.display = 'inline-block';
+                                } else {
+                                    badge.style.display = 'none';
+                                }
+                            }
+                        });
+
+                        // Instagram badge (desktop + mobile)
+                        ['instagram-badge', 'instagram-badge-mobile'].forEach(id => {
+                            const badge = document.getElementById(id);
+                            if (badge) {
+                                if (data.instagram > 0) {
+                                    badge.textContent = data.instagram > 99 ? '99+' : data.instagram;
+                                    badge.style.display = 'inline-block';
+                                } else {
+                                    badge.style.display = 'none';
+                                }
+                            }
+                        });
+                    }
+                })
+                .catch(error => console.log('Badge update error:', error));
+        }
+
+        // Mesaj badge güncelleme
+        function updateUserMessageBadge() {
+            fetch('/kullanici-mesaj/api/okunmamis-sayisi')
+                .then(response => response.json())
+                .then(data => {
+                    const count = data.okunmamis_sayisi || 0;
+                    ['mesaj-badge', 'mesaj-badge-mobile'].forEach(id => {
+                        const badge = document.getElementById(id);
+                        if (badge) {
+                            if (count > 0) {
+                                badge.textContent = count > 99 ? '99+' : count;
+                                badge.style.display = 'inline-block';
+                            } else {
+                                badge.style.display = 'none';
+                            }
+                        }
+                    });
+                })
+                .catch(error => console.log('User message badge update error:', error));
+        }
+
+        // İlk yüklemede ve her 30 saniyede güncelle
+        document.addEventListener('DOMContentLoaded', function () {
+            updateMessageBadges();
+            updateUserMessageBadge();
+            setInterval(updateMessageBadges, 30000);
+            setInterval(updateUserMessageBadge, 30000);
+        });
+    </script>
+
+    
+
+</body>
+
+</html>

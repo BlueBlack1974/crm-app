@@ -513,6 +513,10 @@
 
                     <div class="d-flex justify-content-end">
                         <a href="{{ url_for('randevular') }}" class="btn btn-secondary me-2">{{ _('Cancel') }}</a>
+                        <button type="button" class="btn btn-info me-2 text-white" id="btnSeriPlanla" style="display: none;">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            {{ _('Plan Appointment Series') }}
+                        </button>
                         <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
                             <i class="fas fa-save me-2"></i>
                             {{ _('Create Appointment') }}
@@ -559,7 +563,96 @@
             </div>
         </div>
     </div>
+    </div>
 </div>
+
+<!-- Randevu Serisi Modal -->
+<div class="modal fade" id="seriModal" tabindex="-1" aria-labelledby="seriModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="seriModalLabel"><i class="fas fa-calendar-alt me-2"></i>{{ _('Plan Appointment Series') }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <!-- Sol Panel: Ayarlar -->
+                    <div class="col-md-4 border-end">
+                        <h6 class="border-bottom pb-2 mb-3">{{ _('Series Settings') }}</h6>
+                        
+                        <div class="mb-3">
+                            <label class="form-label form-label-sm">{{ _('Series Title') }} *</label>
+                            <input type="text" id="seri_baslik" class="form-control form-control-sm" placeholder="{{ _('e.g. Physiotherapy Sessions') }}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label form-label-sm">{{ _('Total Sessions') }} *</label>
+                            <input type="number" id="seri_toplam" class="form-control form-control-sm" min="2" max="50" value="5">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label form-label-sm">{{ _('Frequency') }}</label>
+                            <select id="seri_siklik" class="form-select form-select-sm">
+                                <option value="1">{{ _('Every Day') }}</option>
+                                <option value="2" selected>{{ _('Every 2 Days') }}</option>
+                                <option value="3">{{ _('Every 3 Days') }}</option>
+                                <option value="7">{{ _('Once a Week') }}</option>
+                                <option value="14">{{ _('Every 2 Weeks') }}</option>
+                                <option value="30">{{ _('Once a Month') }}</option>
+                            </select>
+                        </div>
+                        
+                        <div class="alert alert-warning py-2 small mb-3">
+                            <i class="fas fa-info-circle me-1"></i> {{ _('Closed days based on the selected book will be automatically skipped.') }}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="button" id="btnHesapla" class="btn btn-primary btn-sm">
+                                <i class="fas fa-calculator me-1"></i> {{ _('Calculate Dates') }}
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Sağ Panel: Liste -->
+                    <div class="col-md-8">
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                            <h6 class="mb-0">{{ _('Calculated Dates') }}</h6>
+                            <span class="badge bg-secondary" id="seri_sayac">0 / 0</span>
+                        </div>
+                        
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-sm table-hover" id="tblSeriTarihler">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th width="5%">#</th>
+                                        <th width="35%">{{ _('Date') }}</th>
+                                        <th width="25%">{{ _('Time') }}</th>
+                                        <th width="25%">{{ _('Status') }}</th>
+                                        <th width="10%"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="empty-row">
+                                        <td colspan="5" class="text-center text-muted py-4">
+                                            {{ _('Click Calculate Dates to generate the schedule.') }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                <button type="button" class="btn btn-success" id="btnSeriKaydet" disabled>
+                    <i class="fas fa-check-circle me-2"></i>{{ _('Save Series') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -815,6 +908,8 @@
         document.getElementById('selectedInfo').style.display = 'none';
         // Step2'yi kapatma, sadece saat seçimini temizle
         document.getElementById('submitBtn').disabled = true;
+        const btnSeriPlanla = document.getElementById('btnSeriPlanla');
+        if (btnSeriPlanla) btnSeriPlanla.style.display = 'none';
     }
 
     function loadSlots() {
@@ -948,6 +1043,9 @@
         // Saat seçildiğinde step3'ü göster
         document.getElementById('step3').style.display = 'block';
         document.getElementById('submitBtn').disabled = false;
+        const btnSeriPlanla = document.getElementById('btnSeriPlanla');
+        // Seçilmiş müsait saat varsa seri butonunu da göster, fakat formu tam doldurunca aktif et!
+        if (btnSeriPlanla) btnSeriPlanla.style.display = 'inline-block';
 
         // Real-time slot kontrolü
         checkSlotAvailability(time);
@@ -2562,5 +2660,256 @@
                 console.error('Kullanıcı yükleme hatası:', error);
             });
     }
+
+    // RANDEVU SERİSİ PLANLAMA EKRANI MANTIK
+    document.addEventListener('DOMContentLoaded', function() {
+        const btnSeriPlanla = document.getElementById('btnSeriPlanla');
+        const seriModal = new bootstrap.Modal(document.getElementById('seriModal'));
+        const btnHesapla = document.getElementById('btnHesapla');
+        const btnSeriKaydet = document.getElementById('btnSeriKaydet');
+        
+        let calculatedSeries = [];
+
+        if (btnSeriPlanla) {
+            btnSeriPlanla.addEventListener('click', function() {
+                // Modalı açarken varsayılanları doldur
+                const defterId = document.getElementById('defter_id').value;
+                const tarihVal = document.getElementById('tarih_gun').value;
+                const saatVal = document.getElementById('saat').value;
+                const musteriId = document.getElementById('secilen_musteri_id').value;
+                
+                if (!defterId || !tarihVal || !saatVal || !musteriId) {
+                    alert('Lütfen önce Defter, Tarih, Saat ve Müşteri seçimini tamamlayın.');
+                    return;
+                }
+                
+                const musteriAdi = document.getElementById('secilen_musteri_adi').textContent;
+                document.getElementById('seri_baslik').value = musteriAdi ? `${musteriAdi} - Seri Randevular` : 'Seri Randevular';
+                
+                // Modalı aç
+                seriModal.show();
+            });
+        }
+        
+        if (btnHesapla) {
+            btnHesapla.addEventListener('click', async function() {
+                const total = parseInt(document.getElementById('seri_toplam').value) || 5;
+                const freq = parseInt(document.getElementById('seri_siklik').value) || 2;
+                const startDateStr = document.getElementById('tarih_gun').value;
+                const defaultTime = document.getElementById('saat').value;
+                const defterId = document.getElementById('defter_id').value;
+                const sureVal = document.getElementById('sure').value || 60;
+                
+                calculatedSeries = [];
+                let currentDate = new Date(startDateStr);
+                
+                const tbody = document.querySelector('#tblSeriTarihler tbody');
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin text-primary"></i> Hesaplanıyor...</td></tr>';
+                btnSeriKaydet.disabled = true;
+                
+                let actualIndex = 0;
+                let failCount = 0;
+                
+                while (actualIndex < total && failCount < 100) {
+                    const checkDateStr = currentDate.toISOString().split('T')[0];
+                    
+                    // O gün için müsait slotları API'den çek
+                    try {
+                        const csrfMatch = document.cookie.match(/csrf_access_token=([^;]+)/);
+                        const csrfToken = csrfMatch ? csrfMatch[1] : '';
+                        
+                        const req = await fetch(`{{ url_for("randevu.api_slots") }}?date=${checkDateStr}&defter_id=${defterId}`, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                        
+                        const res = await req.json();
+                        
+                        if (res.slots && res.slots.length > 0) {
+                            // Slotlar geldi. Önce istenilen saati bul
+                            let targetSlot = res.slots.find(s => s.time === defaultTime && s.available);
+                            
+                            // Eğer istenen saat doluysa veya yoksa, o günden sonraki en yakın saate bak
+                            if (!targetSlot) {
+                                targetSlot = res.slots.find(s => s.available && s.time >= defaultTime);
+                            }
+                            // Eğer ondan sonraki saat de yoksa, o gün içindeki herhangi bir boş saati al
+                            if (!targetSlot) {
+                                targetSlot = res.slots.find(s => s.available);
+                            }
+                            
+                            if (targetSlot) {
+                                calculatedSeries.push({
+                                    id: Date.now() + actualIndex,
+                                    index: actualIndex + 1,
+                                    tarih: checkDateStr,
+                                    saat: targetSlot.time,
+                                    durum: '✅ Uygun',
+                                    valid: true
+                                });
+                                actualIndex++;
+                                // Bir sonraki tarihi ata
+                                currentDate.setDate(currentDate.getDate() + freq);
+                            } else {
+                                // O gün hiç boş saat yoksa
+                                currentDate.setDate(currentDate.getDate() + 1); 
+                                failCount++;
+                            }
+                        } else {
+                            // Slot dönmediyse veya defter o gün kapalıysa o günü atla
+                            currentDate.setDate(currentDate.getDate() + 1); 
+                            failCount++;
+                        }
+                        
+                    } catch (e) {
+                        console.error("Slot fetch error:", e);
+                        failCount++;
+                        currentDate.setDate(currentDate.getDate() + 1); 
+                    }
+                }
+                
+                if (failCount >= 100) {
+                    alert('Çok fazla kapalı/dolu gün engeline takıldı. Lütfen daha az seans veya farklı defter seçin.');
+                }
+                
+                renderSeriesTable();
+            });
+        }
+        
+        function renderSeriesTable() {
+            const tbody = document.querySelector('#tblSeriTarihler tbody');
+            tbody.innerHTML = '';
+            
+            document.getElementById('seri_sayac').textContent = `${calculatedSeries.filter(x => x.valid).length} / ${calculatedSeries.length}`;
+            
+            if (calculatedSeries.length === 0) {
+                tbody.innerHTML = '<tr class="empty-row"><td colspan="5" class="text-center text-muted py-4">Satır bulunamadı</td></tr>';
+                btnSeriKaydet.disabled = true;
+                return;
+            }
+            
+            let allValid = true;
+            
+            calculatedSeries.forEach((item, arrIndex) => {
+                if (!item.valid) allValid = false;
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="align-middle">${item.index}</td>
+                    <td class="align-middle">
+                        <input type="date" class="form-control form-control-sm dt-tarih" data-idx="${arrIndex}" value="${item.tarih}">
+                    </td>
+                    <td class="align-middle">
+                        <input type="time" class="form-control form-control-sm dt-saat" data-idx="${arrIndex}" value="${item.saat}">
+                    </td>
+                    <td class="align-middle">
+                        <span class="badge ${item.valid ? 'bg-success' : 'bg-danger'}">${item.durum}</span>
+                    </td>
+                    <td class="text-center align-middle">
+                        <button type="button" class="btn btn-sm text-danger border-0 btnRemoveRow" data-idx="${arrIndex}"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            btnSeriKaydet.disabled = !allValid || calculatedSeries.length === 0;
+            
+            // Event Listeners for new inputs
+            document.querySelectorAll('.dt-tarih, .dt-saat').forEach(el => {
+                el.addEventListener('change', async function() {
+                    const idx = this.getAttribute('data-idx');
+                    calculatedSeries[idx].tarih = document.querySelector(`.dt-tarih[data-idx="${idx}"]`).value;
+                    calculatedSeries[idx].saat = document.querySelector(`.dt-saat[data-idx="${idx}"]`).value;
+                    
+                    // Tekrar kontrol et
+                    const defterId = document.getElementById('defter_id').value;
+                    const sureVal = document.getElementById('sure').value || 60;
+                    try {
+                        const trElement = this.closest('tr');
+                        const statusBadge = trElement.querySelector('.badge');
+                        statusBadge.className = 'badge bg-warning text-dark';
+                        statusBadge.textContent = '⏱ Kontrol...';
+                        
+                        const req = await fetch('{{ url_for("randevu.api_slot_check") }}', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                tarih: calculatedSeries[idx].tarih,
+                                saat: calculatedSeries[idx].saat,
+                                defter_id: parseInt(defterId),
+                                sure: parseInt(sureVal)
+                            })
+                        });
+                        const res = await req.json();
+                        if (res.success && res.available) {
+                            calculatedSeries[idx].valid = true;
+                            calculatedSeries[idx].durum = '✅ Uygun';
+                        } else {
+                            calculatedSeries[idx].valid = false;
+                            calculatedSeries[idx].durum = '⚠️ Dolu/Kapalı';
+                        }
+                        renderSeriesTable(); // refresh
+                    } catch(e) { console.error(e); }
+                });
+            });
+            
+            document.querySelectorAll('.btnRemoveRow').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const idx = this.getAttribute('data-idx');
+                    calculatedSeries.splice(idx, 1);
+                    // reculate indexes
+                    calculatedSeries.forEach((x, i) => x.index = i + 1);
+                    renderSeriesTable();
+                });
+            });
+        }
+        
+        if (btnSeriKaydet) {
+            btnSeriKaydet.addEventListener('click', function() {
+                if (calculatedSeries.length === 0) return;
+                
+                const payload = {
+                    baslik: document.getElementById('seri_baslik').value || 'Seri Randevular',
+                    defter_id: parseInt(document.getElementById('defter_id').value),
+                    musteri_id: parseInt(document.getElementById('secilen_musteri_id').value),
+                    islem_id: parseInt(document.getElementById('islem_id').value) || null,
+                    aciklama: document.getElementById('musteri_notlar').value,
+                    randevular: calculatedSeries.filter(x => x.valid).map(x => ({
+                        tarih: x.tarih,
+                        saat: x.saat,
+                        sure: parseInt(document.getElementById('sure').value || 60)
+                    }))
+                };
+                
+                const btnOriginal = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Kaydediliyor...';
+                this.disabled = true;
+                
+                fetch('{{ url_for("randevu.api_randevu_seri_kaydet") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        alert(res.message);
+                        window.location.href = '{{ url_for("randevu.randevular") }}';
+                    } else {
+                        alert('Hata: ' + res.message);
+                        this.innerHTML = btnOriginal;
+                        this.disabled = false;
+                    }
+                })
+                .catch(err => {
+                    alert('Bir hata oluştu!');
+                    this.innerHTML = btnOriginal;
+                    this.disabled = false;
+                });
+            });
+        }
+    });
+
 </script>
 {% endblock %}

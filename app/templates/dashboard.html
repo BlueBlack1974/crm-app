@@ -1,0 +1,980 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Dashboard') }} - Crandyx CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ _('Dashboard') }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('randevu.randevu_ekle') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-plus me-1"></i>
+                {{ _('New Appointment') }}
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- İstatistik Kartları -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            {{ _('Total Appointments') }}</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ toplam_randevu_sayisi }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            {{ _('This Week') }}</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ bu_hafta_randevu_sayisi }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-calendar-week fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            {{ _('Pending') }}</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ beklemede_sayisi }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            {{ _('Confirmed') }}</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ onaylandi_sayisi }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-check fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Todo Widget -->
+<div class="row mb-4">
+    <!-- Sol Üst: Yapılacaklar Listesi -->
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-tasks me-2"></i>{{ _('My Todos') }}
+                </h6>
+                <div>
+                    <a href="{{ url_for('gorev.todos') }}" class="btn btn-sm btn-outline-primary me-2">
+                        {{ _('View All') }}
+                    </a>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#quickTodoModal">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if user_todos %}
+                <div class="list-group list-group-flush">
+                    {% for todo in user_todos %}{% if todo.Durum != 'Tamamlandı' %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <button class="btn btn-sm btn-outline-success"
+                                    onclick="quickChangeStatus({{ todo.TodoID }}, 'Tamamlandı')" {% if
+                                    todo.Durum=='Tamamlandı' %}disabled{% endif %} title="{{ _('Mark as Completed') }}">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </div>
+                            <div>
+                                <h6
+                                    class="mb-1 {% if todo.Durum == 'Tamamlandı' %}text-decoration-line-through text-muted{% endif %}">
+                                    {{ todo.Baslik }}
+                                </h6>
+                                {% if todo.Aciklama %}
+                                <p class="mb-1 text-muted small">{{ todo.Aciklama[:50] }}{% if todo.Aciklama|length > 50
+                                    %}...{% endif %}</p>
+                                {% endif %}
+                                <small class="text-muted">
+                                    <span
+                                        class="badge bg-{% if todo.Oncelik == 'Yüksek' %}danger{% elif todo.Oncelik == 'Orta' %}warning{% else %}success{% endif %} me-2">
+                                        <span class="oncelik-text">{{ todo.Oncelik }}</span>
+                                    </span>
+                                    {% if todo.durum %}
+                                    <!-- Debug: {{ todo.durum.DurumAdi }} -->
+                                    {% if todo.durum.DurumAdi == 'Beklemede' %}
+                                    <span class="badge bg-warning me-2">
+                                        <span class="durum-text">{{ todo.durum.DurumAdi }}</span>
+                                    </span>
+                                    {% elif todo.durum.DurumAdi == 'Devam Ediyor' %}
+                                    <span class="badge bg-info me-2">
+                                        <span class="durum-text">{{ todo.durum.DurumAdi }}</span>
+                                    </span>
+                                    {% elif todo.durum.DurumAdi == 'Tamamlandı' %}
+                                    <span class="badge bg-success me-2">
+                                        <span class="durum-text">{{ todo.durum.DurumAdi }}</span>
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary me-2">
+                                        <span class="durum-text">{{ todo.durum.DurumAdi }}</span>
+                                    </span>
+                                    {% endif %}
+                                    {% endif %}
+                                    {% if todo.BitisTarihi %}
+                                    <i class="fas fa-calendar-alt me-1"></i>{{ todo.BitisTarihi.strftime('%d.%m.%Y') }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+                                data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="editTodo({{ todo.TodoID }})">
+                                        <i class="fas fa-edit me-2"></i>{{ _('Edit') }}
+                                    </a></li>
+                                <li><a class="dropdown-item text-danger" href="#"
+                                        onclick="deleteTodo({{ todo.TodoID }})">
+                                        <i class="fas fa-trash me-2"></i>{{ _('Delete') }}
+                                    </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    {% endif %}{% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-tasks fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">{{ _('Henüz Yok') }}</p>
+                    <button class="btn btn-sm btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#quickTodoModal">
+                        <i class="fas fa-plus me-1"></i>{{ _('Oluştur') }}
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sağ Üst: Yapılacaklar İstatistikleri -->
+    <div class="col-lg-6">
+        <div class="card shadow mb-3">
+            <div class="card-header py-3">
+                <h6 id="todo-stats-title" class="m-0 font-weight-bold text-primary">{{ _('Todo Statistics') }}</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="h4 text-primary">{{ toplam_todo }}</div>
+                        <small class="text-muted">{{ _('Total') }}</small>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="h4 text-success">{{ tamamlanan_todo }}</div>
+                        <small class="text-muted">{{ _('Completed') }}</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="h4 text-warning">{{ beklemede_todo }}</div>
+                        <small class="text-muted">{{ _('Pending') }}</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="h4 text-info">{{ devam_eden_todo }}</div>
+                        <small class="text-muted">{{ _('In Progress') }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Görevler Widget -->
+<div class="row mb-4">
+    <!-- Sol Alt: Görevler Listesi -->
+    <div class="col-lg-6">
+        <div class="card shadow mb-3">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-success">
+                    <i class="fas fa-clipboard-check me-2"></i>{{ _('My Tasks') }}
+                </h6>
+                <div>
+                    <a href="{{ url_for('gorev.gorevler') }}" class="btn btn-sm btn-outline-success me-2">
+                        <i class="fas fa-list"></i> {{ _('View All') }}
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Aktif (tamamlanmamış) görevleri bul -->
+                {% set aktif_gorevler = [] %}
+                {% if user_gorevler %}
+                {% for gorev in user_gorevler %}
+                {% if not (gorev.durum and gorev.durum.DurumAdi == 'Tamamlandı') %}
+                {% set _ = aktif_gorevler.append(gorev) %}
+                {% endif %}
+                {% endfor %}
+                {% endif %}
+
+                {% if aktif_gorevler %}
+                <div class="list-group list-group-flush">
+                    {% for gorev in aktif_gorevler %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <button class="btn btn-sm btn-outline-success"
+                                    onclick="quickChangeStatus({{ gorev.TodoID }}, 'Tamamlandı')"
+                                    title="{{ _('Mark as Completed') }}">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </div>
+                            <div>
+                                <h6 class="mb-1">
+                                    {{ gorev.Baslik }}
+                                </h6>
+                                {% if gorev.Aciklama %}
+                                <p class="mb-1 text-muted small">{{ gorev.Aciklama[:50] }}{% if gorev.Aciklama|length >
+                                    50 %}...{% endif %}</p>
+                                {% endif %}
+                                <small class="text-muted">
+                                    <span
+                                        class="badge bg-{% if gorev.Oncelik == 'Yüksek' %}danger{% elif gorev.Oncelik == 'Orta' %}warning{% else %}success{% endif %} me-2">
+                                        <span class="oncelik-text">{{ gorev.Oncelik }}</span>
+                                    </span>
+                                    {% if gorev.durum %}
+                                    <span class="badge me-2"
+                                        style="background-color: {{ gorev.durum.Renk if gorev.durum.Renk else '#007bff' }}; color: white;">
+                                        {{ gorev.durum.DurumAdi }}
+                                    </span>
+                                    {% endif %}
+                                    {% if gorev.BitisTarihi %}
+                                    <i class="fas fa-calendar-alt me-1"></i>{{ gorev.BitisTarihi.strftime('%d.%m.%Y') }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+                                data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="editGorev({{ gorev.TodoID }})">
+                                        <i class="fas fa-edit me-2"></i>{{ _('Edit') }}
+                                    </a></li>
+                                <li><a class="dropdown-item text-danger" href="#"
+                                        onclick="deleteGorev({{ gorev.TodoID }})">
+                                        <i class="fas fa-trash me-2"></i>{{ _('Delete') }}
+                                    </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-clipboard-check fa-3x text-muted mb-3" style="opacity: 0.5;"></i>
+                    <h6 class="text-muted font-weight-bold">{{ _('Henüz Yok') }}</h6>
+                    <p class="text-muted small mb-3">{{ _('Şu an bekleyen bir göreviniz bulunmuyor.') }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sağ Alt: Görevler İstatistikleri -->
+    <div class="col-lg-6">
+        <div class="card shadow mb-3">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-success">{{ _('Task Statistics') }}</h6>
+            </div>
+            <div class="card-body">
+                <!-- Toplam görev sayısı -->
+                <div class="row text-center mb-3">
+                    <div class="col-12">
+                        <div class="h4 text-success">{{ toplam_gorev }}</div>
+                        <small class="text-muted">{{ _('Total Tasks') }}</small>
+                    </div>
+                </div>
+
+                <!-- Durumlara göre istatistikler -->
+                {% if gorev_durum_istatistikleri %}
+                <div class="row">
+                    {% for istatistik in gorev_durum_istatistikleri %}
+                    <div class="col-6 mb-2">
+                        <div class="d-flex align-items-center">
+                            <div class="me-2"
+                                style="width: 12px; height: 12px; background-color: {{ istatistik.durum.Renk if istatistik.durum.Renk else '#007bff' }}; border-radius: 50%;">
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="h6 mb-0"
+                                    style="color: {{ istatistik.durum.Renk if istatistik.durum.Renk else '#007bff' }};">
+                                    {{ istatistik.sayi }}</div>
+                                <small class="text-muted">{{ istatistik.durum.DurumAdi }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-chart-pie fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">{{ _('No task status defined yet') }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hızlı Todo Ekleme Modal -->
+<div class="modal fade" id="quickTodoModal" tabindex="-1" aria-labelledby="quickTodoModalLabel" aria-hidden="true"
+    data-bs-backdrop="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="quickTodoModalLabel">{{ _('Quick Add Todo') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div id="quickTodoForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="quickBaslik" class="form-label">{{ _('Title') }} <span
+                                class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="quickBaslik" name="baslik" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quickOncelik" class="form-label">{{ _('Priority') }}</label>
+                        <select class="form-select" id="quickOncelik" name="oncelik">
+                            <option value="Düşük">{{ _('Low') }}</option>
+                            <option value="Orta" selected>{{ _('Medium') }}</option>
+                            <option value="Yüksek">{{ _('High') }}</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quickBitisTarihi" class="form-label">{{ _('Due Date') }}</label>
+                        <input type="date" class="form-control" id="quickBitisTarihi" name="bitis_tarihi">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                    <button type="button" class="btn btn-primary" id="quickAddTodoBtn" onclick="
+                        console.log('Quick Add Todo butonuna tıklandı!');
+                        const data = {
+                            baslik: document.getElementById('quickBaslik').value,
+                            oncelik: document.getElementById('quickOncelik').value,
+                            bitis_tarihi: document.getElementById('quickBitisTarihi').value
+                        };
+                        if (!data.baslik.trim()) {
+                            alert('Başlık gerekli!');
+                            return;
+                        }
+                        fetch('/todos/ekle', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(data)
+                        })
+                        .then(response => response.json())
+                        .then(result => {
+                            if (result.success) {
+                                alert('Görev eklendi!');
+                                location.reload();
+                            } else {
+                                alert('Hata: ' + result.message);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('Bir hata oluştu!');
+                        });
+                    ">{{ _('Add Todo') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Son Randevular -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">{{ _('Recent Appointments') }}</h6>
+    </div>
+    <div class="card-body">
+        {% if randevular %}
+        <div class="table-responsive">
+            <table class="table table-bordered" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>{{ _('Title') }}</th>
+                        <th>{{ _('Customer') }}</th>
+                        <th>{{ _('Date') }}</th>
+                        <th>{{ _('Book') }}</th>
+                        <th>{{ _('Status') }}</th>
+                        <th>{{ _('Actions') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for randevu in randevular %}
+                    <tr>
+                        <td>{{ randevu.RandevuBaslik }}</td>
+                        <td>
+                            {% if randevu.musteri %}
+                            {{ randevu.musteri.tam_adi }}
+                            {% else %}
+                            {{ randevu.MusteriAdi or _('No Customer') }}
+                            {% endif %}
+                        </td>
+                        <td>{{ randevu.RandevuTarihi.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td>
+                            {% if randevu.defter %}
+                            <span class="badge bg-info">{{ randevu.defter.DefterAdi }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if randevu.Durum == 'Beklemede' %}
+                            <span class="badge bg-warning">{{ _('Pending') }}</span>
+                            {% elif randevu.Durum == 'Onaylandi' %}
+                            <span class="badge bg-success">{{ _('Confirmed') }}</span>
+                            {% elif randevu.Durum == 'Iptal' %}
+                            <span class="badge bg-danger">{{ _('Cancelled') }}</span>
+                            {% elif randevu.Durum == 'Tamamlandi' %}
+                            <span class="badge bg-info">{{ _('Completed') }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('randevu.randevu_detay', randevu_id=randevu.RandevuID) }}"
+                                class="btn btn-sm btn-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">{{ _('No appointments found') }}</h5>
+            <p class="text-muted">{{ _('Use the button above to create your first appointment.') }}</p>
+            <a href="{{ url_for('randevu.randevu_ekle') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>
+                {{ _('Create New Appointment') }}
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- AI Asistan Paneli -->
+{% if firma_ai_aktif and kullanici_ai_aktif %}
+<div class="row mb-4" id="aiAsistanPanel">
+    <div class="col-12">
+        <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="card-body text-white p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0"><i class="fas fa-robot me-2"></i>AI Asistan</h5>
+                    {% if firma_ai_limit > 0 %}
+                    <small class="opacity-75">
+                        <i class="fas fa-chart-bar me-1"></i>
+                        Bu ay: <span id="aiDashboardKullanilanBadge">{{ firma_ai_kullanilan }}</span>/{{ firma_ai_limit
+                        }} istek
+                    </small>
+                    {% else %}
+                    <small class="opacity-75"><i class="fas fa-infinity me-1"></i>Sınırsız</small>
+                    {% endif %}
+                </div>
+                <div class="d-flex gap-2 flex-wrap mb-3">
+                    <button class="btn btn-light btn-sm" onclick="aiSorgu('rapor-ozet')" id="btnRaporOzet">
+                        <i class="fas fa-clipboard-list me-1"></i>Aylık Rapor Özeti
+                    </button>
+                    <button class="btn btn-light btn-sm" onclick="aiSorgu('randevu-analiz')" id="btnRandevuAnaliz">
+                        <i class="fas fa-calendar-check me-1"></i>Randevu Analizi
+                    </button>
+                </div>
+                <div id="aiSonuc" class="d-none">
+                    <div class="card bg-white text-dark">
+                        <div class="card-body p-3">
+                            <div id="aiLoading" class="text-center py-2 d-none">
+                                <i class="fas fa-spinner fa-spin me-2"></i>AI yanıt oluşturuyor...
+                            </div>
+                            <div id="aiYanit" style="white-space: pre-wrap; font-size: 0.92rem; line-height: 1.6;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+
+{% block styles %}
+<style>
+    /* Modal stilleri artık base.html'de global olarak tanımlandı */
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Durum ve öncelik çevirileri
+    function translateStatusAndPriority() {
+        const currentLang = document.documentElement.lang || 'tr';
+
+        // Başlık çevirileri
+        const titleTranslations = {
+            'en': {
+                'My Tasks': 'My Tasks',
+                'Task Statistics': 'Task Statistics',
+                'Total Tasks': 'Total Tasks',
+                'Todo Statistics': 'Todo Statistics',
+                'Total': 'Total',
+                'Completed': 'Completed',
+                'Pending': 'Pending',
+                'In Progress': 'In Progress',
+                'Henüz Yok': 'None Yet',
+                'Şu an bekleyen bir göreviniz bulunmuyor.': 'You have no pending tasks at the moment.'
+            },
+            'fr': {
+                'My Tasks': 'Mes Tâches',
+                'Task Statistics': 'Statistiques des Tâches',
+                'Total Tasks': 'Total des Tâches',
+                'Todo Statistics': 'Statistiques des Tâches',
+                'Total': 'Total',
+                'Completed': 'Terminé',
+                'Pending': 'En Attente',
+                'In Progress': 'En Cours',
+                'Henüz Yok': 'Aucun pour le moment',
+                'Şu an bekleyen bir göreviniz bulunmuyor.': 'Vous n\'avez aucune tâche en attente pour le moment.'
+            },
+            'tr': {
+                'My Tasks': 'Görevlerim',
+                'Task Statistics': 'Görev İstatistikleri',
+                'Total Tasks': 'Toplam Görev',
+                'Todo Statistics': 'Yapılacaklar İstatistikleri',
+                'Total': 'Toplam',
+                'Completed': 'Tamamlanan',
+                'Pending': 'Beklemede',
+                'In Progress': 'Devam Ediyor',
+                'Henüz Yok': 'Henüz Yok',
+                'Şu an bekleyen bir göreviniz bulunmuyor.': 'Şu an bekleyen bir göreviniz bulunmuyor.'
+            },
+            'de': {
+                'My Tasks': 'Meine Aufgaben',
+                'Task Statistics': 'Aufgabenstatistiken',
+                'Total Tasks': 'Gesamtaufgaben',
+                'Todo Statistics': 'Todo-Statistiken',
+                'Total': 'Gesamt',
+                'Completed': 'Abgeschlossen',
+                'Pending': 'Ausstehend',
+                'In Progress': 'In Bearbeitung',
+                'Henüz Yok': 'Noch keine',
+                'Şu an bekleyen bir göreviniz bulunmuyor.': 'Sie haben derzeit keine ausstehenden Aufgaben.'
+            }
+        };
+
+        // Başlıkları çevir
+        if (titleTranslations[currentLang]) {
+            Object.keys(titleTranslations[currentLang]).forEach(original => {
+                const translated = titleTranslations[currentLang][original];
+                document.querySelectorAll('*').forEach(element => {
+                    if (element.textContent && element.textContent.trim() === original) {
+                        // Class'ları koruyarak sadece metni değiştir
+                        const originalHTML = element.innerHTML;
+                        element.innerHTML = originalHTML.replace(original, translated);
+                    }
+                });
+            });
+        }
+        // Özelleştirilmiş: Yapılacaklar istatistikleri başlığını dil bazında zorla düzelt
+        try {
+            const todoTitle = document.getElementById('todo-stats-title');
+            if (todoTitle) {
+                if (currentLang.startsWith('tr')) todoTitle.textContent = 'Yapılacaklar İstatistikleri';
+                else if (currentLang.startsWith('fr')) todoTitle.textContent = 'Statistiques des Tâches';
+                else if (currentLang.startsWith('de')) todoTitle.textContent = 'Todo-Statistiken';
+                else todoTitle.textContent = 'Todo Statistics';
+            }
+        } catch (e) { }
+
+        // Durum çevirileri
+        document.querySelectorAll('.durum-text').forEach(element => {
+            const text = element.textContent.trim();
+            switch (currentLang) {
+                case 'en':
+                    switch (text) {
+                        case 'Beklemede':
+                            element.textContent = 'Pending';
+                            break;
+                        case 'Devam Ediyor':
+                            element.textContent = 'In Progress';
+                            break;
+                        case 'Tamamlandı':
+                            element.textContent = 'Completed';
+                            break;
+                    }
+                    break;
+                case 'fr':
+                    switch (text) {
+                        case 'Beklemede':
+                            element.textContent = 'En Attente';
+                            break;
+                        case 'Devam Ediyor':
+                            element.textContent = 'En Cours';
+                            break;
+                        case 'Tamamlandı':
+                            element.textContent = 'Terminé';
+                            break;
+                    }
+                    break;
+                case 'de':
+                    switch (text) {
+                        case 'Beklemede':
+                            element.textContent = 'Ausstehend';
+                            break;
+                        case 'Devam Ediyor':
+                            element.textContent = 'In Bearbeitung';
+                            break;
+                        case 'Tamamlandı':
+                            element.textContent = 'Abgeschlossen';
+                            break;
+                    }
+                    break;
+                default: // tr
+                    switch (text) {
+                        case 'Pending':
+                            element.textContent = 'Beklemede';
+                            break;
+                        case 'In Progress':
+                            element.textContent = 'Devam Ediyor';
+                            break;
+                        case 'Completed':
+                            element.textContent = 'Tamamlandı';
+                            break;
+                    }
+                    break;
+            }
+        });
+
+        // Öncelik çevirileri
+        document.querySelectorAll('.oncelik-text').forEach(element => {
+            const text = element.textContent.trim();
+            switch (currentLang) {
+                case 'en':
+                    switch (text) {
+                        case 'Yüksek':
+                            element.textContent = 'High';
+                            break;
+                        case 'Orta':
+                            element.textContent = 'Medium';
+                            break;
+                        case 'Düşük':
+                            element.textContent = 'Low';
+                            break;
+                    }
+                    break;
+                case 'fr':
+                    switch (text) {
+                        case 'Yüksek':
+                            element.textContent = 'Élevé';
+                            break;
+                        case 'Orta':
+                            element.textContent = 'Moyen';
+                            break;
+                        case 'Düşük':
+                            element.textContent = 'Faible';
+                            break;
+                    }
+                    break;
+                case 'de':
+                    switch (text) {
+                        case 'Yüksek':
+                            element.textContent = 'Hoch';
+                            break;
+                        case 'Orta':
+                            element.textContent = 'Mittel';
+                            break;
+                        case 'Düşük':
+                            element.textContent = 'Niedrig';
+                            break;
+                    }
+                    break;
+                default: // tr
+                    switch (text) {
+                        case 'High':
+                            element.textContent = 'Yüksek';
+                            break;
+                        case 'Medium':
+                            element.textContent = 'Orta';
+                            break;
+                        case 'Low':
+                            element.textContent = 'Düşük';
+                            break;
+                    }
+                    break;
+            }
+        });
+    }
+
+    // DOM yüklendikten sonra event listener'ları ekle
+    document.addEventListener('DOMContentLoaded', function () {
+        // Sayfa yüklendiğinde çevirileri uygula
+        translateStatusAndPriority();
+
+        // Dil değişikliklerini dinle
+        document.addEventListener('languageChanged', function () {
+            translateStatusAndPriority();
+        });
+
+        // Lang attribute değişikliklerini dinle
+        const observer = new MutationObserver(function (mutations) {
+            mutations.forEach(function (mutation) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'lang') {
+                    console.log('Lang attribute değişti:', document.documentElement.lang);
+                    translateStatusAndPriority();
+                }
+            });
+        });
+
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['lang']
+        });
+        // Hızlı todo ekleme - Add Todo butonuna tıklama
+        document.getElementById('quickAddTodoBtn').addEventListener('click', function (e) {
+            console.log('Quick Add Todo butonuna tıklandı!');
+            e.preventDefault();
+
+            // Form verilerini manuel olarak topla
+            const data = {
+                baslik: document.getElementById('quickBaslik').value,
+                oncelik: document.getElementById('quickOncelik').value,
+                bitis_tarihi: document.getElementById('quickBitisTarihi').value
+            };
+
+            fetch('/todos/ekle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(data)
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showAlert('success', result.message);
+                        location.reload();
+                    } else {
+                        showAlert('danger', result.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('danger', 'Bir hata oluştu!');
+                });
+        });
+
+        // Hızlı durum değiştirme
+        function quickChangeStatus(todoId, newStatus) {
+            fetch(`/todos/${todoId}/durum`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ durum: newStatus })
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showAlert('success', result.message);
+                        location.reload();
+                    } else {
+                        showAlert('danger', result.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('danger', 'Bir hata oluştu!');
+                });
+        }
+
+        // Alert gösterme
+        function showAlert(type, message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+            document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.container-fluid').firstChild);
+
+            // 5 saniye sonra otomatik kapat
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+        // Todo düzenleme
+        function editTodo(todoId) {
+            // Todo düzenleme sayfasına yönlendir
+            window.location.href = `/todos/${todoId}/duzenle`;
+        }
+
+        // Todo silme
+        function deleteTodo(todoId) {
+            if (confirm('Bu yapılacak görevi silmek istediğinizden emin misiniz?')) {
+                fetch(`/todos/${todoId}/sil`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            showAlert('success', result.message);
+                            location.reload();
+                        } else {
+                            showAlert('danger', result.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showAlert('danger', 'Bir hata oluştu!');
+                    });
+            }
+        }
+
+        // Görev düzenleme
+        function editGorev(todoId) {
+            // Görev düzenleme sayfasına yönlendir
+            window.location.href = `/gorevler/${todoId}/duzenle`;
+        }
+
+        // Görev silme
+        function deleteGorev(todoId) {
+            if (confirm('Bu görevi silmek istediğinizden emin misiniz?')) {
+                fetch(`/gorevler/${todoId}/sil`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            showAlert('success', result.message);
+                            location.reload();
+                        } else {
+                            showAlert('danger', result.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showAlert('danger', 'Bir hata oluştu!');
+                    });
+            }
+        }
+
+        // Modal temizleme
+        document.getElementById('quickTodoModal').addEventListener('hidden.bs.modal', function () {
+            document.getElementById('quickTodoForm').reset();
+        });
+
+    }); // DOMContentLoaded kapanışı
+
+    // AI Asistan - sorgu fonksiyonu
+    function aiSorgu(endpoint) {
+        const sonucDiv = document.getElementById('aiSonuc');
+        const loadingDiv = document.getElementById('aiLoading');
+        const yanitDiv = document.getElementById('aiYanit');
+
+        sonucDiv.classList.remove('d-none');
+        loadingDiv.classList.remove('d-none');
+        yanitDiv.textContent = '';
+
+        // Butonları devre dışı bırak
+        document.querySelectorAll('#aiAsistanPanel button').forEach(b => b.disabled = true);
+
+        fetch(`/api/ai/${endpoint}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]') ?
+                    document.querySelector('meta[name="csrf-token"]').content : ''
+            }
+        })
+            .then(r => r.json())
+            .then(data => {
+                loadingDiv.classList.add('d-none');
+                if (data.success) {
+                    yanitDiv.textContent = data.yanit;
+                    if (data.limit > 0) {
+                        yanitDiv.textContent += `\n\n— Bu ay ${data.kullanilan}/${data.limit} istek kullanıldı.`;
+
+                        // Güncel limiti üst barda da güncelle
+                        const ozetBadge = document.getElementById('aiDashboardKullanilanBadge');
+                        if (ozetBadge) {
+                            ozetBadge.textContent = data.kullanilan;
+                        }
+                    }
+                } else {
+                    yanitDiv.textContent = '⚠️ ' + data.error;
+                }
+            })
+            .catch(e => {
+                loadingDiv.classList.add('d-none');
+                yanitDiv.textContent = '⚠️ İstek hatası: ' + e.message;
+            })
+            .finally(() => {
+                document.querySelectorAll('#aiAsistanPanel button').forEach(b => b.disabled = false);
+            });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,608 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('User Logs') }} - Crandyx CRM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .log-table {
+        font-size: 0.9rem;
+    }
+    .log-badge {
+        font-size: 0.75rem;
+    }
+    .log-detail {
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .log-data {
+        font-family: monospace;
+        font-size: 0.8rem;
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+    }
+    
+    /* Modal içeriğini daha belirgin yap - sadece gölge */
+    .modal-content {
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        border: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ _('User Activity Logs') }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-download me-1"></i>{{ _('Export') }}
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+                    <li><a class="dropdown-item" href="#" onclick="exportLogs('csv')"><i class="fas fa-file-csv me-2"></i>{{ _('CSV Format') }}</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportLogs('excel')"><i class="fas fa-file-excel me-2"></i>{{ _('Excel Format') }}</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportLogs('pdf')"><i class="fas fa-file-pdf me-2"></i>{{ _('PDF Format') }}</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtreler -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label for="kullanici_id" class="form-label">{{ _('User') }}</label>
+                <select class="form-select" id="kullanici_id" name="kullanici_id">
+                    <option value="">{{ _('All Users') }}</option>
+                    {% for kullanici in kullanicilar %}
+                    <option value="{{ kullanici.KullaniciID }}" {% if request.args.get('kullanici_id')|int == kullanici.KullaniciID %}selected{% endif %}>
+                        {{ kullanici.KullaniciAdi }} ({{ kullanici.Ad }} {{ kullanici.Soyad }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="islem_tipi" class="form-label">{{ _('Action Type') }}</label>
+                <select class="form-select" id="islem_tipi" name="islem_tipi">
+                    <option value="">{{ _('All Actions') }}</option>
+                    <option value="CREATE" {% if request.args.get('islem_tipi') == 'CREATE' %}selected{% endif %}>{{ _('Create') }}</option>
+                    <option value="UPDATE" {% if request.args.get('islem_tipi') == 'UPDATE' %}selected{% endif %}>{{ _('Update') }}</option>
+                    <option value="DELETE" {% if request.args.get('islem_tipi') == 'DELETE' %}selected{% endif %}>{{ _('Delete') }}</option>
+                    <option value="VIEW" {% if request.args.get('islem_tipi') == 'VIEW' %}selected{% endif %}>{{ _('View') }}</option>
+                    <option value="CANCEL" {% if request.args.get('islem_tipi') == 'CANCEL' %}selected{% endif %}>{{ _('Cancel') }}</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="tablo_adi" class="form-label">{{ _('Table') }}</label>
+                <select class="form-select" id="tablo_adi" name="tablo_adi">
+                    <option value="">{{ _('All Tables') }}</option>
+                    <option value="Randevu" {% if request.args.get('tablo_adi') == 'Randevu' %}selected{% endif %}>{{ _('Appointment') }}</option>
+                    <option value="Musteri" {% if request.args.get('tablo_adi') == 'Musteri' %}selected{% endif %}>{{ _('Customer') }}</option>
+                    <option value="Kullanici" {% if request.args.get('tablo_adi') == 'Kullanici' %}selected{% endif %}>{{ _('User') }}</option>
+                    <option value="Sistem" {% if request.args.get('tablo_adi') == 'Sistem' %}selected{% endif %}>{{ _('System') }}</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="tarih_baslangic" class="form-label">{{ _('Start Date') }}</label>
+                <input type="date" class="form-control" id="tarih_baslangic" name="tarih_baslangic" 
+                       value="{{ request.args.get('tarih_baslangic', today) }}">
+            </div>
+            <div class="col-md-2">
+                <label for="tarih_bitis" class="form-label">{{ _('End Date') }}</label>
+                <input type="date" class="form-control" id="tarih_bitis" name="tarih_bitis" 
+                       value="{{ request.args.get('tarih_bitis', today) }}">
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">&nbsp;</label>
+                <div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <a href="{{ url_for('loglar') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Log Tablosu -->
+<div class="card">
+    <div class="card-body">
+        {% if loglar %}
+        <div class="table-responsive">
+            <table class="table table-hover log-table">
+                <thead>
+                    <tr>
+                        <th>{{ _('Date') }}</th>
+                        <th>{{ _('User') }}</th>
+                        <th>{{ _('Action') }}</th>
+                        <th>{{ _('Table') }}</th>
+                        <th>{{ _('Record Info') }}</th>
+                        <th>{{ _('Detail') }}</th>
+                        <th>{{ _('IP Address') }}</th>
+                        <th>{{ _('Data') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in loglar %}
+                    <tr>
+                        <td>
+                            <small class="text-muted">
+                                {{ log.OlusturmaTarihi.strftime('%d.%m.%Y %H:%M:%S') }}
+                            </small>
+                        </td>
+                        <td>
+                            <strong>{{ log.kullanici.KullaniciAdi }}</strong><br>
+                            <small class="text-muted">{{ log.kullanici.Ad }} {{ log.kullanici.Soyad }}</small>
+                        </td>
+                        <td>
+                            {% set badge_class = {
+                                'CREATE': 'bg-primary',
+                                'UPDATE': 'bg-warning',
+                                'DELETE': 'bg-danger',
+                                'VIEW': 'bg-info',
+                                'CANCEL': 'bg-dark'
+                            } %}
+                            <span class="badge log-badge {{ badge_class.get(log.IslemTipi, 'bg-light text-dark') }}" data-action="{{ log.IslemTipi }}">
+                                {{ _(log.IslemTipi) }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark log-badge">{{ log.TabloAdi }}</span>
+                        </td>
+                        <td>
+                            {% if log.record_info %}
+                            <div class="log-detail" title="{{ log.record_info }}">
+                                {{ log.record_info }}
+                            </div>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="log-detail" title="{{ log.IslemDetayi or '' }}" data-detail="{{ log.IslemDetayi or '' }}">
+                                {{ log.IslemDetayi or '-' }}
+                            </div>
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ log.IPAdresi or '-' }}</small>
+                        </td>
+                        <td>
+                            {% if log.EskiVeri or log.YeniVeri %}
+                            <button class="btn btn-sm btn-outline-info log-data-btn" data-log-id="{{ log.LogID }}">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Sayfalama -->
+        {% if total_pages > 1 %}
+        <nav aria-label="Log pagination">
+            <ul class="pagination justify-content-center">
+                {% if page > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('loglar', page=page-1, **request.args) }}">{{ _('Previous') }}</a>
+                </li>
+                {% endif %}
+                
+                {% for p in range([1, page-2]|max, [total_pages+1, page+3]|min) %}
+                <li class="page-item {% if p == page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('loglar', page=p, **request.args) }}">{{ p }}</a>
+                </li>
+                {% endfor %}
+                
+                {% if page < total_pages %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('loglar', page=page+1, **request.args) }}">{{ _('Next') }}</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">{{ _('No logs found') }}</h5>
+            <p class="text-muted">{{ _('Try adjusting your filters') }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Log Data Modal -->
+<div class="modal fade" id="logDataModal" tabindex="-1" data-bs-backdrop="false" data-bs-keyboard="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('Log Data') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="logDataContent"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// İşlem tiplerini ve detayları çevir
+function translateActionTypes() {
+    const currentLang = document.documentElement.lang || 'tr';
+    const actionElements = document.querySelectorAll('[data-action]');
+    const detailElements = document.querySelectorAll('[data-detail]');
+    
+    console.log('Çeviri başlatıldı. Dil:', currentLang);
+    console.log('Bulunan işlem elementleri:', actionElements.length);
+    console.log('Bulunan detay elementleri:', detailElements.length);
+    
+    // Tüm log tablosundaki metinleri çevir
+    const logTable = document.querySelector('.log-table');
+    if (logTable) {
+        const allTextElements = logTable.querySelectorAll('td, span, div, .badge');
+        console.log('Bulunan tüm metin elementleri:', allTextElements.length);
+        
+        allTextElements.forEach((element, index) => {
+            const originalText = element.textContent.trim();
+            if (!originalText || originalText === '-' || originalText.length < 3) return;
+            
+            let translatedText = originalText;
+            
+            if (currentLang === 'fr') {
+                // Türkçe metinleri Fransızca'ya çevir
+                translatedText = translatedText.replace(/durumu değiştirildi/g, 'statut modifié');
+                translatedText = translatedText.replace(/oluşturuldu/g, 'créé');
+                translatedText = translatedText.replace(/tamamlandı/g, 'terminé');
+                translatedText = translatedText.replace(/silindi/g, 'supprimé');
+                translatedText = translatedText.replace(/güncellendi/g, 'mis à jour');
+                translatedText = translatedText.replace(/ve silindi/g, 'et supprimé');
+                translatedText = translatedText.replace(/randevu hatırlatma/g, 'rappel de rendez-vous');
+                translatedText = translatedText.replace(/Başlık:/g, 'Titre:');
+                translatedText = translatedText.replace(/Açıklama:/g, 'Description:');
+                translatedText = translatedText.replace(/Beklemede/g, 'En Attente');
+                translatedText = translatedText.replace(/Devam Ediyor/g, 'En Cours');
+                translatedText = translatedText.replace(/Tamamlandı/g, 'Terminé');
+                translatedText = translatedText.replace(/\bTodo\b/g, 'Tâche');
+                translatedText = translatedText.replace(/\bTodos\b/g, 'Tâches');
+                translatedText = translatedText.replace(/Randevu/g, 'Rendez-vous');
+                translatedText = translatedText.replace(/Müşteri/g, 'Client');
+            } else if (currentLang === 'de') {
+                // Türkçe metinleri Almanca'ya çevir
+                translatedText = translatedText.replace(/durumu değiştirildi/g, 'Status geändert');
+                translatedText = translatedText.replace(/oluşturuldu/g, 'erstellt');
+                translatedText = translatedText.replace(/tamamlandı/g, 'abgeschlossen');
+                translatedText = translatedText.replace(/silindi/g, 'gelöscht');
+                translatedText = translatedText.replace(/güncellendi/g, 'aktualisiert');
+                translatedText = translatedText.replace(/ve silindi/g, 'und gelöscht');
+                translatedText = translatedText.replace(/randevu hatırlatma/g, 'Terminerinnerung');
+                translatedText = translatedText.replace(/Başlık:/g, 'Titel:');
+                translatedText = translatedText.replace(/Açıklama:/g, 'Beschreibung:');
+                translatedText = translatedText.replace(/Beklemede/g, 'Ausstehend');
+                translatedText = translatedText.replace(/Devam Ediyor/g, 'In Bearbeitung');
+                translatedText = translatedText.replace(/Tamamlandı/g, 'Abgeschlossen');
+                translatedText = translatedText.replace(/\bTodo\b/g, 'Aufgabe');
+                translatedText = translatedText.replace(/\bTodos\b/g, 'Aufgaben');
+                translatedText = translatedText.replace(/Randevu/g, 'Termin');
+                translatedText = translatedText.replace(/Müşteri/g, 'Kunde');
+            } else if (currentLang === 'en') {
+                // Türkçe'den İngilizce'ye çevir
+                translatedText = translatedText.replace(/durumu değiştirildi/g, 'status changed');
+                translatedText = translatedText.replace(/oluşturuldu/g, 'created');
+                translatedText = translatedText.replace(/tamamlandı/g, 'completed');
+                translatedText = translatedText.replace(/silindi/g, 'deleted');
+                translatedText = translatedText.replace(/güncellendi/g, 'updated');
+                translatedText = translatedText.replace(/ve silindi/g, 'and deleted');
+                translatedText = translatedText.replace(/randevu hatırlatma/g, 'appointment reminder');
+                translatedText = translatedText.replace(/Başlık:/g, 'Title:');
+                translatedText = translatedText.replace(/Açıklama:/g, 'Description:');
+                translatedText = translatedText.replace(/Beklemede/g, 'Pending');
+                translatedText = translatedText.replace(/Devam Ediyor/g, 'In Progress');
+                translatedText = translatedText.replace(/Tamamlandı/g, 'Completed');
+                translatedText = translatedText.replace(/\bTodo\b/g, 'Todo');
+                translatedText = translatedText.replace(/\bTodos\b/g, 'Todos');
+                translatedText = translatedText.replace(/Randevu/g, 'Appointment');
+                translatedText = translatedText.replace(/Müşteri/g, 'Customer');
+            } else {
+                // İngilizce/Fransızca/Almanca'dan Türkçe'ye çevir
+                translatedText = translatedText.replace(/status changed|statut modifié|Status geändert/g, 'durumu değiştirildi');
+                translatedText = translatedText.replace(/created|créé|erstellt/g, 'oluşturuldu');
+                translatedText = translatedText.replace(/completed|terminé|abgeschlossen/g, 'tamamlandı');
+                translatedText = translatedText.replace(/deleted|supprimé|gelöscht/g, 'silindi');
+                translatedText = translatedText.replace(/updated|mis à jour|aktualisiert/g, 'güncellendi');
+                translatedText = translatedText.replace(/and deleted|et supprimé|und gelöscht/g, 've silindi');
+                translatedText = translatedText.replace(/appointment reminder|rappel de rendez-vous|Terminerinnerung/g, 'randevu hatırlatma');
+                translatedText = translatedText.replace(/Title:|Titre:|Titel:/g, 'Başlık:');
+                translatedText = translatedText.replace(/Description:|Beschreibung:/g, 'Açıklama:');
+            }
+            
+            if (translatedText !== originalText) {
+                console.log(`Genel çeviri ${index}: "${originalText}" → "${translatedText}"`);
+                element.textContent = translatedText;
+            }
+        });
+    }
+    
+    // İşlem tiplerini çevir
+    actionElements.forEach((element, index) => {
+        const action = element.getAttribute('data-action');
+        let translatedText = action;
+        
+        console.log(`İşlem ${index}: "${action}"`);
+        
+        if (currentLang === 'fr') {
+            // İngilizce action tiplerini Fransızca'ya çevir
+            switch(action) {
+                case 'CREATE': translatedText = 'CRÉER'; break;
+                case 'UPDATE': translatedText = 'MODIFIER'; break;
+                case 'DELETE': translatedText = 'SUPPRIMER'; break;
+                case 'VIEW': translatedText = 'AFFICHER'; break;
+                case 'CANCEL': translatedText = 'ANNULER'; break;
+            }
+        } else if (currentLang === 'de') {
+            // İngilizce action tiplerini Almanca'ya çevir
+            switch(action) {
+                case 'CREATE': translatedText = 'ERSTELLEN'; break;
+                case 'UPDATE': translatedText = 'AKTUALISIEREN'; break;
+                case 'DELETE': translatedText = 'LÖSCHEN'; break;
+                case 'VIEW': translatedText = 'ANZEIGEN'; break;
+                case 'CANCEL': translatedText = 'ABBRECHEN'; break;
+            }
+        } else if (currentLang === 'en') {
+            // İngilizce olarak bırak
+            translatedText = action;
+        } else {
+            // Türkçe
+            switch(action) {
+                case 'CREATE': translatedText = 'OLUŞTUR'; break;
+                case 'UPDATE': translatedText = 'GÜNCELLE'; break;
+                case 'DELETE': translatedText = 'SİL'; break;
+                case 'VIEW': translatedText = 'GÖRÜNTÜLE'; break;
+                case 'CANCEL': translatedText = 'İPTAL'; break;
+            }
+        }
+        
+        if (translatedText !== action) {
+            console.log(`İşlem çevrildi: "${action}" → "${translatedText}"`);
+        }
+        
+        element.textContent = translatedText;
+    });
+    
+    // İşlem detaylarını çevir
+    detailElements.forEach((element, index) => {
+        const detail = element.getAttribute('data-detail');
+        if (!detail || detail === '-') {
+            console.log(`Detay ${index}: Boş veya '-'`);
+            return;
+        }
+        
+        console.log(`Detay ${index}: "${detail}"`);
+        let translatedText = detail;
+        
+        if (currentLang === 'en') {
+            // Türkçe'den İngilizce'ye çevir
+            let hasTranslation = false;
+            
+            translatedText = translatedText.replace(/randevu hatırlatma/g, 'appointment reminder');
+            translatedText = translatedText.replace(/Başlık:/g, 'Title:');
+            translatedText = translatedText.replace(/Açıklama:/g, 'Description:');
+            translatedText = translatedText.replace(/oluşturuldu/g, 'created');
+            translatedText = translatedText.replace(/tamamlandı/g, 'completed');
+            translatedText = translatedText.replace(/silindi/g, 'deleted');
+            translatedText = translatedText.replace(/güncellendi/g, 'updated');
+            translatedText = translatedText.replace(/Todo/g, 'Todo');
+            translatedText = translatedText.replace(/Randevu/g, 'Appointment');
+            translatedText = translatedText.replace(/Müşteri/g, 'Customer');
+            translatedText = translatedText.replace(/Beklemede/g, 'Pending');
+            translatedText = translatedText.replace(/Devam Ediyor/g, 'In Progress');
+            translatedText = translatedText.replace(/Tamamlandı/g, 'Completed');
+            
+            if (translatedText !== detail) {
+                hasTranslation = true;
+                console.log(`Çevrildi: "${detail}" → "${translatedText}"`);
+            }
+            
+            if (!hasTranslation) {
+                console.log(`Çeviri bulunamadı: "${detail}"`);
+            }
+        } else if (currentLang === 'fr') {
+            // Türkçe'den Fransızca'ya çevir
+            let hasTranslation = false;
+            
+            translatedText = translatedText.replace(/randevu hatırlatma/g, 'rappel de rendez-vous');
+            translatedText = translatedText.replace(/Başlık:/g, 'Titre:');
+            translatedText = translatedText.replace(/Açıklama:/g, 'Description:');
+            translatedText = translatedText.replace(/oluşturuldu/g, 'créé');
+            translatedText = translatedText.replace(/tamamlandı/g, 'terminé');
+            translatedText = translatedText.replace(/silindi/g, 'supprimé');
+            translatedText = translatedText.replace(/güncellendi/g, 'mis à jour');
+            translatedText = translatedText.replace(/Todo/g, 'Tâche');
+            translatedText = translatedText.replace(/Randevu/g, 'Rendez-vous');
+            translatedText = translatedText.replace(/Müşteri/g, 'Client');
+            translatedText = translatedText.replace(/Beklemede/g, 'En Attente');
+            translatedText = translatedText.replace(/Devam Ediyor/g, 'En Cours');
+            translatedText = translatedText.replace(/Tamamlandı/g, 'Terminé');
+            
+            if (translatedText !== detail) {
+                hasTranslation = true;
+                console.log(`Çevrildi: "${detail}" → "${translatedText}"`);
+            }
+            
+            if (!hasTranslation) {
+                console.log(`Çeviri bulunamadı: "${detail}"`);
+            }
+        } else if (currentLang === 'de') {
+            // Türkçe'den Almanca'ya çevir
+            let hasTranslation = false;
+            
+            translatedText = translatedText.replace(/randevu hatırlatma/g, 'Terminerinnerung');
+            translatedText = translatedText.replace(/Başlık:/g, 'Titel:');
+            translatedText = translatedText.replace(/Açıklama:/g, 'Beschreibung:');
+            translatedText = translatedText.replace(/oluşturuldu/g, 'erstellt');
+            translatedText = translatedText.replace(/tamamlandı/g, 'abgeschlossen');
+            translatedText = translatedText.replace(/silindi/g, 'gelöscht');
+            translatedText = translatedText.replace(/güncellendi/g, 'aktualisiert');
+            translatedText = translatedText.replace(/Todo/g, 'Aufgabe');
+            translatedText = translatedText.replace(/Randevu/g, 'Termin');
+            translatedText = translatedText.replace(/Müşteri/g, 'Kunde');
+            translatedText = translatedText.replace(/Beklemede/g, 'Wartend');
+            translatedText = translatedText.replace(/Devam Ediyor/g, 'In Bearbeitung');
+            translatedText = translatedText.replace(/Tamamlandı/g, 'Abgeschlossen');
+            
+            if (translatedText !== detail) {
+                hasTranslation = true;
+                console.log(`Çevrildi: "${detail}" → "${translatedText}"`);
+            }
+            
+            if (!hasTranslation) {
+                console.log(`Çeviri bulunamadı: "${detail}"`);
+            }
+        } else {
+            // İngilizce'den Türkçe'ye çevir
+            let hasTranslation = false;
+            
+            translatedText = translatedText.replace(/appointment reminder/g, 'randevu hatırlatma');
+            translatedText = translatedText.replace(/Title:/g, 'Başlık:');
+            translatedText = translatedText.replace(/Description:/g, 'Açıklama:');
+            translatedText = translatedText.replace(/created/g, 'oluşturuldu');
+            translatedText = translatedText.replace(/completed/g, 'tamamlandı');
+            translatedText = translatedText.replace(/deleted/g, 'silindi');
+            translatedText = translatedText.replace(/updated/g, 'güncellendi');
+            translatedText = translatedText.replace(/Appointment/g, 'Randevu');
+            translatedText = translatedText.replace(/Customer/g, 'Müşteri');
+            
+            if (translatedText !== detail) {
+                hasTranslation = true;
+                console.log(`Çevrildi: "${detail}" → "${translatedText}"`);
+            }
+            
+            if (!hasTranslation) {
+                console.log(`Çeviri bulunamadı: "${detail}"`);
+            }
+        }
+        
+        element.textContent = translatedText;
+        element.setAttribute('title', translatedText);
+    });
+}
+
+// Sayfa yüklendiğinde çevir
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Loglar sayfası yüklendi, çeviri başlatılıyor...');
+    translateActionTypes();
+});
+
+// Dil değiştiğinde çevir
+document.addEventListener('languageChanged', function() {
+    console.log('Dil değişti, çeviri güncelleniyor...');
+    translateActionTypes();
+});
+
+// Sayfa yüklendikten sonra da çevir (güvenlik için)
+setTimeout(function() {
+    console.log('Gecikmeli çeviri başlatılıyor...');
+    translateActionTypes();
+}, 1000);
+
+// Tablo yüklendikten sonra çevir
+setTimeout(function() {
+    console.log('Tablo yüklendikten sonra çeviri başlatılıyor...');
+    translateActionTypes();
+}, 2000);
+
+// Her 2 saniyede bir kontrol et (tablo dinamik yükleniyorsa)
+setInterval(function() {
+    const actionElements = document.querySelectorAll('[data-action]');
+    const detailElements = document.querySelectorAll('[data-detail]');
+    
+    if (actionElements.length > 0 || detailElements.length > 0) {
+        console.log('Tablo verileri bulundu, çeviri başlatılıyor...');
+        translateActionTypes();
+    }
+}, 2000);
+
+// Tablo verilerini kontrol et ve çevir
+function checkAndTranslateTableData() {
+    const actionElements = document.querySelectorAll('[data-action]');
+    const detailElements = document.querySelectorAll('[data-detail]');
+    
+    console.log(`Tablo verileri kontrol ediliyor: ${actionElements.length} işlem, ${detailElements.length} detay`);
+    
+    if (actionElements.length > 0 || detailElements.length > 0) {
+        console.log('Tablo verileri bulundu, çeviri başlatılıyor...');
+        translateActionTypes();
+        return true;
+    }
+    return false;
+}
+
+// Sayfa yüklendikten sonra tablo verilerini kontrol et
+setTimeout(function() {
+    console.log('Tablo verileri kontrol ediliyor...');
+    checkAndTranslateTableData();
+}, 3000);
+
+// Her 3 saniyede bir kontrol et
+setInterval(function() {
+    checkAndTranslateTableData();
+}, 3000);
+
+// Log data butonları için event listener
+document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.log-data-btn')) {
+            const btn = e.target.closest('.log-data-btn');
+            const logId = btn.getAttribute('data-log-id');
+            if (logId) {
+                showLogData(logId);
+            }
+        }
+    });
+});
+
+function showLogData(logId) {
+    // Bu fonksiyon AJAX ile log detaylarını getirecek
+    fetch(`/api/loglar/${logId}/data`)
+        .then(response => response.json())
+        .then(data => {
+            let content = '';
+            if (data.old_data) {
+                content += '<h6>{{ _("Old Data") }}:</h6>';
+                content += '<pre class="log-data">' + JSON.stringify(data.old_data, null, 2) + '</pre>';
+            }
+            if (data.new_data) {
+                content += '<h6>{{ _("New Data") }}:</h6>';
+                content += '<pre class="log-data">' + JSON.stringify(data.new_data, null, 2) + '</pre>';
+            }
+            document.getElementById('logDataContent').innerHTML = content;
+            new bootstrap.Modal(document.getElementById('logDataModal')).show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('{{ _("Error loading log data") }}');
+        });
+}
+
+function exportLogs(format) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('export', format);
+    window.location.href = '{{ url_for("loglar") }}?' + params.toString();
+}
+</script>
+{% endblock %}

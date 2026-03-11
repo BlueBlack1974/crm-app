@@ -1,0 +1,1231 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Appointments') }} - Crandyx CRM{% endblock %}
+
+{% block content %}
+<style>
+    /* Modal stilleri artık base.html'de global olarak tanımlandı */
+
+    /* Mobile-friendly styles - only for mobile */
+    @media (max-width: 768px) {
+
+        /* Hide desktop filter form on mobile */
+        .btn-toolbar {
+            display: none !important;
+        }
+
+        /* Show mobile filter form */
+        .mobile-filters {
+            display: block !important;
+        }
+
+        /* Compact table on mobile */
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+
+        .table th,
+        .table td {
+            padding: 0.5rem 0.25rem;
+            vertical-align: middle;
+        }
+
+        /* Hide less important columns on mobile */
+        .table .d-none-mobile {
+            display: none !important;
+        }
+
+        /* Make action buttons smaller on mobile */
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        /* Make form controls more compact on mobile */
+        .form-select-sm,
+        .form-control-sm {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.375rem;
+        }
+
+        /* Mobile filter layout */
+        .mobile-filters .row {
+            margin-bottom: 0.5rem;
+        }
+
+        .mobile-filters .col-4 {
+            padding: 0 0.25rem;
+        }
+
+        .mobile-filters .col-6 {
+            padding: 0 0.25rem;
+        }
+
+        .mobile-filters .col-12 {
+            padding: 0 0.25rem;
+        }
+
+        /* Mobile status container - stack vertically */
+        .mobile-status-container {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 0.25rem !important;
+        }
+
+        /* Make status select smaller on mobile */
+        .mobile-status-container .form-select-sm {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.3rem;
+            min-width: 80px;
+        }
+
+        /* Make badges smaller on mobile */
+        .mobile-status-container .badge {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.4rem;
+        }
+
+        /* Make table cells more compact */
+        .table td {
+            font-size: 0.8rem;
+            line-height: 1.2;
+            padding: 0.4rem 0.25rem;
+        }
+
+        /* Make customer name shorter on mobile */
+        .table td:nth-child(2) {
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Mobile actions - buttons side by side */
+        .mobile-actions {
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+
+        .mobile-actions .btn {
+            padding: 0.2rem 0.4rem;
+            font-size: 0.7rem;
+            min-width: 32px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mobile-actions .btn i {
+            font-size: 0.7rem;
+        }
+    }
+
+    /* Hide mobile filters on desktop */
+    @media (min-width: 769px) {
+        .mobile-filters {
+            display: none !important;
+        }
+    }
+
+    /* Default: hide mobile filters */
+    .mobile-filters {
+        display: none;
+    }
+</style>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ _('Appointments') }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <form class="d-flex gap-2" method="GET" id="filterForm">
+            <select class="form-select form-select-sm" name="referans_id" id="referansFilter">
+                <option value="">{{ _('All References') }}</option>
+                {% for ref in referanslar %}
+                <option value="{{ ref.ReferansID }}" {% if selected_referans_id==ref.ReferansID %}selected{% endif %}>{{
+                    ref.Ad }}</option>
+                {% endfor %}
+            </select>
+            <select class="form-select form-select-sm" name="defter_id" id="defterFilter">
+                <option value="">{{ _('All Books') }}</option>
+                {% for defter in defterler %}
+                <option value="{{ defter.AyarID }}" {% if selected_defter_id==defter.AyarID %}selected{% endif %}>{{
+                    defter.DefterAdi }}</option>
+                {% endfor %}
+            </select>
+            <select class="form-select form-select-sm" name="durum" id="durumFilter">
+                <option value="">{{ _('All Statuses') }}</option>
+                <option value="Beklemede" {% if selected_durum=='Beklemede' %}selected{% endif %}>{{ _('Pending') }}
+                </option>
+                <option value="Onaylandi" {% if selected_durum=='Onaylandi' %}selected{% endif %}>{{ _('Confirmed') }}
+                </option>
+                <option value="Iptal" {% if selected_durum=='Iptal' %}selected{% endif %}>{{ _('Cancelled') }}</option>
+                <option value="Tamamlandi" {% if selected_durum=='Tamamlandi' %}selected{% endif %}>{{ _('Completed') }}
+                </option>
+            </select>
+            <select class="form-select form-select-sm" name="olusturan_id" id="olusturanFilter">
+                <option value="">{{ _('All Users') }}</option>
+                {% for kullanici in kullanicilar %}
+                <option value="{{ kullanici.KullaniciID }}" {% if selected_olusturan_id==kullanici.KullaniciID
+                    %}selected{% endif %}>{{ kullanici.Ad }} {{ kullanici.Soyad }}</option>
+                {% endfor %}
+            </select>
+            <select class="form-select form-select-sm" id="quickDateSelect" onchange="setQuickDate()">
+                <option value="">{{ _('Custom') }}</option>
+                <option value="today" {% if not selected_baslangic and not selected_bitis %}selected{% endif %}>{{
+                    _('Today') }}</option>
+                <option value="week">{{ _('This Week') }}</option>
+                <option value="month">{{ _('This Month') }}</option>
+                <option value="year">{{ _('This Year') }}</option>
+            </select>
+            <input type="date" class="form-control form-control-sm" name="baslangic" id="baslangic"
+                value="{{ selected_baslangic }}" placeholder="{{ _('Start Date') }}">
+            <input type="date" class="form-control form-control-sm" name="bitis" id="bitis" value="{{ selected_bitis }}"
+                placeholder="{{ _('End Date') }}">
+            <a href="{{ url_for('randevu.randevu_ekle') }}" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus me-1"></i>
+                {{ _('New Appointment') }}
+            </a>
+        </form>
+    </div>
+</div>
+
+<!-- Mobile Filter Form -->
+<div class="mobile-filters">
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="GET" id="mobileFilterForm">
+                <!-- First row: Defter, Referans, Durum (3 columns) -->
+                <div class="row">
+                    <div class="col-4">
+                        <label for="mobileDefterFilter" class="form-label small">{{ _('Book') }}</label>
+                        <select class="form-select form-select-sm" name="defter_id" id="mobileDefterFilter">
+                            <option value="">{{ _('All') }}</option>
+                            {% for defter in defterler %}
+                            <option value="{{ defter.AyarID }}" {% if selected_defter_id==defter.AyarID %}selected{%
+                                endif %}>{{ defter.DefterAdi }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <label for="mobileReferansFilter" class="form-label small">{{ _('Reference') }}</label>
+                        <select class="form-select form-select-sm" name="referans_id" id="mobileReferansFilter">
+                            <option value="">{{ _('All') }}</option>
+                            {% for ref in referanslar %}
+                            <option value="{{ ref.ReferansID }}" {% if selected_referans_id==ref.ReferansID %}selected{%
+                                endif %}>{{ ref.Ad }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <label for="mobileDurumFilter" class="form-label small">{{ _('Status') }}</label>
+                        <select class="form-select form-select-sm" name="durum" id="mobileDurumFilter">
+                            <option value="">{{ _('All') }}</option>
+                            <option value="Beklemede" {% if selected_durum=='Beklemede' %}selected{% endif %}>{{
+                                _('Pending') }}</option>
+                            <option value="Onaylandi" {% if selected_durum=='Onaylandi' %}selected{% endif %}>{{
+                                _('Confirmed') }}</option>
+                            <option value="Iptal" {% if selected_durum=='Iptal' %}selected{% endif %}>{{ _('Cancelled')
+                                }}</option>
+                            <option value="Tamamlandi" {% if selected_durum=='Tamamlandi' %}selected{% endif %}>{{
+                                _('Completed') }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Second row: Quick Date, Start Date, End Date -->
+                <div class="row">
+                    <div class="col-4">
+                        <label for="mobileQuickDateSelect" class="form-label small">{{ _('Quick Date') }}</label>
+                        <select class="form-select form-select-sm" id="mobileQuickDateSelect"
+                            onchange="setMobileQuickDate()">
+                            <option value="">{{ _('Custom') }}</option>
+                            <option value="today" {% if not selected_baslangic and not selected_bitis %}selected{% endif
+                                %}>{{ _('Today') }}</option>
+                            <option value="week">{{ _('This Week') }}</option>
+                            <option value="month">{{ _('This Month') }}</option>
+                            <option value="year">{{ _('This Year') }}</option>
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <label for="mobileBaslangic" class="form-label small">{{ _('Start Date') }}</label>
+                        <input type="date" class="form-control form-control-sm" name="baslangic" id="mobileBaslangic"
+                            value="{{ selected_baslangic }}">
+                    </div>
+                    <div class="col-4">
+                        <label for="mobileBitis" class="form-label small">{{ _('End Date') }}</label>
+                        <input type="date" class="form-control form-control-sm" name="bitis" id="mobileBitis"
+                            value="{{ selected_bitis }}">
+                    </div>
+                </div>
+
+                <!-- Third row: Created By -->
+                <div class="row">
+                    <div class="col-12">
+                        <label for="mobileOlusturanFilter" class="form-label small">{{ _('Created By') }}</label>
+                        <select class="form-select form-select-sm" name="olusturan_id" id="mobileOlusturanFilter">
+                            <option value="">{{ _('All Users') }}</option>
+                            {% for kullanici in kullanicilar %}
+                            <option value="{{ kullanici.KullaniciID }}" {% if
+                                selected_olusturan_id==kullanici.KullaniciID %}selected{% endif %}>{{ kullanici.Ad }} {{
+                                kullanici.Soyad }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Fourth row: New Appointment Button -->
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <div class="d-grid">
+                            <a href="{{ url_for('randevu.randevu_ekle') }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-plus me-1"></i>{{ _('New Appointment') }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">{{ _('Appointment List') }}</h6>
+    </div>
+    <div class="card-body">
+        {% if randevular %}
+        <div class="table-responsive">
+            <table class="table table-bordered" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>{{ _('Reference') }}</th>
+                        <th>{{ _('Customer') }}</th>
+                        <th class="d-none-mobile">{{ _('Phone') }}</th>
+                        <th>{{ _('Date') }}</th>
+                        <th class="d-none-mobile">{{ _('Duration') }}</th>
+                        <th class="d-none-mobile">{{ _('Book') }}</th>
+                        <th>{{ _('Status') }}</th>
+                        <th class="d-none-mobile">{{ _('Created By') }}</th>
+                        <th>{{ _('Actions') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for randevu in randevular %}
+                    <tr data-randevu-id="{{ randevu.RandevuID }}" data-randevu-baslik="{{ randevu.RandevuBaslik }}"
+                        data-musteri-adi="{{ randevu.MusteriAdi or (randevu.musteri.Ad if randevu.musteri else '') }}"
+                        data-musteri-soyadi="{{ randevu.MusteriSoyadi or (randevu.musteri.Soyad if randevu.musteri else '') }}"
+                        data-musteri-telefon="{{ randevu.MusteriTelefon or (randevu.musteri.Telefon if randevu.musteri else '') }}"
+                        data-musteri-email="{{ randevu.MusteriEmail or (randevu.musteri.Email if randevu.musteri else '') }}"
+                        data-randevu-suresi="{{ randevu.RandevuSuresi }}">
+                        <td>
+                            {% if randevu.SeriID %}
+                            <span class="badge bg-info p-1 me-1" title="Seri Randevu" data-bs-toggle="tooltip">
+                                <i class="fas fa-link"></i>
+                            </span>
+                            {% endif %}
+                            {{ randevu.RandevuBaslik }}
+                        </td>
+                        <td>
+                            {% if randevu.musteri %}
+                            {{ randevu.musteri.tam_adi }}
+                            {% else %}
+                            {{ (randevu.MusteriAdi + ' ' + randevu.MusteriSoyadi) if randevu.MusteriAdi else _('No
+                            Customer') }}
+                            {% endif %}
+                        </td>
+                        <td class="d-none-mobile">
+                            {% if randevu.musteri %}
+                            {{ randevu.musteri.Telefon or '-' }}
+                            {% else %}
+                            {{ randevu.MusteriTelefon or '-' }}
+                            {% endif %}
+                        </td>
+                        <td>{{ randevu.RandevuTarihi.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td class="d-none-mobile">{{ randevu.RandevuSuresi }} dk</td>
+                        <td class="d-none-mobile">
+                            {% if randevu.defter %}
+                            <span class="badge bg-info">{{ randevu.defter.DefterAdi }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2 mobile-status-container">
+                                {% if randevu.Durum == 'Beklemede' %}
+                                <span class="badge bg-warning">{{ _('Pending') }}</span>
+                                {% elif randevu.Durum == 'Onaylandi' %}
+                                <span class="badge bg-success">{{ _('Confirmed') }}</span>
+                                {% elif randevu.Durum == 'Iptal' %}
+                                <span class="badge bg-danger">{{ _('Cancelled') }}</span>
+                                {% elif randevu.Durum == 'Tamamlandi' %}
+                                <span class="badge bg-info">{{ _('Completed') }}</span>
+                                {% endif %}
+                                <form action="{{ url_for('randevu.randevu_durum', randevu_id=randevu.RandevuID) }}"
+                                    method="POST" class="m-0">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <select name="durum" class="form-select form-select-sm"
+                                        onchange="this.form.submit()">
+                                        <option value="Beklemede" {% if randevu.Durum=='Beklemede' %}selected{% endif
+                                            %}>{{ _('Pending') }}</option>
+                                        <option value="Onaylandi" {% if randevu.Durum=='Onaylandi' %}selected{% endif
+                                            %}>{{ _('Confirmed') }}</option>
+                                        <option value="Iptal" {% if randevu.Durum=='Iptal' %}selected{% endif %}>{{
+                                            _('Cancelled') }}</option>
+                                        <option value="Tamamlandi" {% if randevu.Durum=='Tamamlandi' %}selected{% endif
+                                            %}>{{ _('Completed') }}</option>
+                                    </select>
+                                </form>
+                            </div>
+                        </td>
+                        <td class="d-none-mobile">{{ randevu.olusturan_kullanici.Ad }} {{
+                            randevu.olusturan_kullanici.Soyad }}</td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1 mobile-actions">
+                                <a href="{{ url_for('randevu.randevu_detay', randevu_id=randevu.RandevuID) }}"
+                                    class="btn btn-sm btn-primary" title="{{ _('View') }}">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button class="btn btn-sm btn-success" title="{{ _('New Appointment') }}"
+                                    onclick="openNewAppointmentModal({{ randevu.RandevuID }})">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                <button class="btn btn-sm btn-info" title="{{ _('Add to Tasks') }}"
+                                    onclick='addToTasks({{ randevu.RandevuID }}, {{ (randevu.musteri.tam_adi if randevu.musteri else (randevu.MusteriAdi ~ " " ~ randevu.MusteriSoyadi))|tojson|forceescape }}, {{ randevu.RandevuBaslik|tojson|forceescape }}, {{ randevu.RandevuTarihi|string|tojson|forceescape }}, {{ (randevu.defter.DefterAdi if randevu.defter else "Defter")|tojson|forceescape }})'>
+                                    <i class="fas fa-tasks"></i>
+                                </button>
+                                {% if session.is_admin or randevu.OlusturanKullaniciID == session.user_id %}
+                                <a href="{{ url_for('randevu.randevu_duzenle', randevu_id=randevu.RandevuID) }}"
+                                    class="btn btn-sm btn-warning" title="{{ _('Edit') }}">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{{ url_for('randevu.randevu_sil', randevu_id=randevu.RandevuID) }}"
+                                    method="POST" class="d-inline"
+                                    onsubmit="return confirm({{ _('Are you sure you want to delete this appointment?')|tojson }})">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button class="btn btn-sm btn-danger" title="{{ _('Delete') }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">{{ _('No appointments found') }}</h5>
+            <p class="text-muted">{{ _('Use the button above to create your first appointment.') }}</p>
+            <a href="{{ url_for('randevu.randevu_ekle') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>
+                {{ _('Create New Appointment') }}
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Yeni Randevu Modal -->
+<div class="modal fade" id="newAppointmentModal" tabindex="-1" aria-labelledby="newAppointmentModalLabel"
+    aria-hidden="true" data-bs-backdrop="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newAppointmentModalLabel">{{ _('New Appointment') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="newAppointmentForm" method="POST" action="{{ url_for('randevu.randevu_ekle') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_defter_id" class="form-label">{{ _('Appointment Book') }} *</label>
+                                <select class="form-select" id="modal_defter_id" name="defter_id" required>
+                                    <option value="">{{ _('Select Book') }}...</option>
+                                    {% for defter in defterler %}
+                                    <option value="{{ defter.AyarID }}">
+                                        {{ defter.DefterAdi }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_randevu_baslik" class="form-label">{{ _('Title') }} *</label>
+                                <input type="text" class="form-control" id="modal_randevu_baslik" name="randevu_baslik"
+                                    required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_tarih_gun" class="form-label">{{ _('Date') }} *</label>
+                                <input type="date" class="form-control" id="modal_tarih_gun" name="tarih_gun" required
+                                    onchange="loadModalSlots()">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_randevu_suresi" class="form-label">{{ _('Duration') }} ({{
+                                    _('minutes') }}) *</label>
+                                <input type="number" class="form-control" id="modal_randevu_suresi" name="sure"
+                                    value="60" min="15" step="15" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label class="form-label">{{ _('Available Times') }} *</label>
+                                <div id="modalSlotContainer" class="border rounded p-3" style="min-height: 100px;">
+                                    <div class="text-muted small">{{ _('Select date and book first') }}</div>
+                                </div>
+                                <input type="hidden" id="modal_saat" name="saat" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_musteri_adi" class="form-label">{{ _('Customer Name') }} *</label>
+                                <input type="text" class="form-control" id="modal_musteri_adi" name="musteri_adi"
+                                    required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_musteri_soyadi" class="form-label">{{ _('Customer Surname') }}
+                                    *</label>
+                                <input type="text" class="form-control" id="modal_musteri_soyadi" name="musteri_soyadi"
+                                    required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_musteri_telefon" class="form-label">{{ _('Phone') }}</label>
+                                <input type="text" class="form-control" id="modal_musteri_telefon"
+                                    name="musteri_telefon">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_musteri_email" class="form-label">{{ _('Email') }}</label>
+                                <input type="email" class="form-control" id="modal_musteri_email" name="musteri_email">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="modal_randevu_aciklamasi" class="form-label">{{ _('Description') }}</label>
+                        <textarea class="form-control" id="modal_randevu_aciklamasi" name="randevu_aciklamasi"
+                            rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('Create Appointment') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Todo Ekleme Modal -->
+<div class="modal fade" id="todoModal" tabindex="-1" aria-labelledby="todoModalLabel" aria-hidden="true"
+    data-bs-backdrop="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="todoModalLabel">{{ _('New Todo') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div id="todoForm">
+                <div class="modal-body">
+                    <input type="hidden" id="todoId" name="todo_id">
+
+                    <div class="mb-3">
+                        <label for="todoBaslik" class="form-label">{{ _('Title') }} <span
+                                class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="todoBaslik" name="baslik" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="todoAciklama" class="form-label">{{ _('Description') }}</label>
+                        <textarea class="form-control" id="todoAciklama" name="aciklama" rows="3"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="todoOncelik" class="form-label">{{ _('Priority') }}</label>
+                                <select class="form-select" id="todoOncelik" name="oncelik">
+                                    <option value="Düşük">{{ _('Low') }}</option>
+                                    <option value="Orta" selected>{{ _('Medium') }}</option>
+                                    <option value="Yüksek">{{ _('High') }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="todoDurum" class="form-label">{{ _('Status') }}</label>
+                                <select class="form-select" id="todoDurum" name="durum">
+                                    <option value="Beklemede" selected>{{ _('Pending') }}</option>
+                                    <option value="Devam Ediyor">{{ _('In Progress') }}</option>
+                                    <option value="Tamamlandı">{{ _('Completed') }}</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="todoBitisTarihi" class="form-label">{{ _('Due Date') }}</label>
+                                <input type="date" class="form-control" id="todoBitisTarihi" name="bitis_tarihi">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="todoHatirlatmaTarihi" class="form-label">{{ _('Reminder Date') }}</label>
+                                <input type="date" class="form-control" id="todoHatirlatmaTarihi"
+                                    name="hatirlatma_tarihi">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                    <button type="button" class="btn btn-primary" id="saveTodoBtn"
+                        onclick="saveTodoFromAppointment()">{{ _('Save') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function setQuickDate() {
+        const quickSelect = document.getElementById('quickDateSelect');
+        const baslangic = document.getElementById('baslangic');
+        const bitis = document.getElementById('bitis');
+
+        const today = new Date();
+        let startDate, endDate;
+
+        switch (quickSelect.value) {
+            case 'today':
+                startDate = endDate = today;
+                break;
+            case 'week':
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - today.getDay()); // Pazartesi
+                endDate = new Date(startDate);
+                endDate.setDate(startDate.getDate() + 6); // Pazar
+                break;
+            case 'month':
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                break;
+            case 'year':
+                startDate = new Date(today.getFullYear(), 0, 1);
+                endDate = new Date(today.getFullYear(), 11, 31);
+                break;
+            default:
+                return;
+        }
+
+        baslangic.value = startDate.toISOString().split('T')[0];
+        bitis.value = endDate.toISOString().split('T')[0];
+
+        // Formu otomatik submit et
+        document.getElementById('filterForm').submit();
+    }
+
+    function setMobileQuickDate() {
+        const quickSelect = document.getElementById('mobileQuickDateSelect');
+        const baslangic = document.getElementById('mobileBaslangic');
+        const bitis = document.getElementById('mobileBitis');
+
+        if (!quickSelect || !baslangic || !bitis) return;
+
+        const today = new Date();
+        let startDate, endDate;
+
+        switch (quickSelect.value) {
+            case 'today':
+                startDate = endDate = today;
+                break;
+            case 'week':
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - today.getDay()); // Pazartesi
+                endDate = new Date(startDate);
+                endDate.setDate(startDate.getDate() + 6); // Pazar
+                break;
+            case 'month':
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                break;
+            case 'year':
+                startDate = new Date(today.getFullYear(), 0, 1);
+                endDate = new Date(today.getFullYear(), 11, 31);
+                break;
+            default:
+                return;
+        }
+
+        baslangic.value = startDate.toISOString().split('T')[0];
+        bitis.value = endDate.toISOString().split('T')[0];
+
+        // Formu otomatik submit et
+        document.getElementById('mobileFilterForm').submit();
+    }
+
+    function openNewAppointmentModal(randevuId) {
+        // Randevu bilgilerini data attribute'lardan al
+        const randevuRow = document.querySelector(`tr[data-randevu-id="${randevuId}"]`);
+        const randevuBaslik = randevuRow.dataset.randevuBaslik;
+        const musteriAdi = randevuRow.dataset.musteriAdi;
+        const musteriSoyadi = randevuRow.dataset.musteriSoyadi;
+        const musteriTelefon = randevuRow.dataset.musteriTelefon;
+        const musteriEmail = randevuRow.dataset.musteriEmail;
+        const randevuSuresi = randevuRow.dataset.randevuSuresi;
+
+        // Modal alanlarını doldur
+        document.getElementById('modal_randevu_baslik').value = randevuBaslik;
+        document.getElementById('modal_musteri_adi').value = musteriAdi || '';
+        document.getElementById('modal_musteri_soyadi').value = musteriSoyadi || 'Müşteri';
+        document.getElementById('modal_musteri_telefon').value = musteriTelefon || '';
+        document.getElementById('modal_musteri_email').value = musteriEmail || '';
+        document.getElementById('modal_randevu_suresi').value = randevuSuresi;
+
+        // Tarihi bugün + 1 gün olarak ayarla
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const dateString = tomorrow.toISOString().slice(0, 10);
+        document.getElementById('modal_tarih_gun').value = dateString;
+
+        // Slot container'ı temizle
+        document.getElementById('modalSlotContainer').innerHTML = '<div class="text-muted small">{{ _("Select date and book first") }}</div>';
+        document.getElementById('modal_saat').value = '';
+
+        // Modal'ı aç
+        const modal = new bootstrap.Modal(document.getElementById('newAppointmentModal'));
+        modal.show();
+
+        // Modal açıldıktan sonra slotları yükle
+        setTimeout(() => {
+            const defterId = document.getElementById('modal_defter_id').value;
+            if (defterId) {
+                loadModalSlots();
+            }
+        }, 500);
+    }
+
+    function loadModalSlots() {
+        const date = document.getElementById('modal_tarih_gun').value;
+        const defterId = document.getElementById('modal_defter_id').value;
+        const container = document.getElementById('modalSlotContainer');
+
+        console.log('loadModalSlots called with:', { date, defterId });
+
+        if (!date || !defterId) {
+            container.innerHTML = '<div class="text-muted small">{{ _("Select date and book first") }}</div>';
+            return;
+        }
+
+        container.innerHTML = '<div class="text-muted small">{{ _("Loading available times") }}...</div>';
+        console.log('Loading slots for date:', date, 'defter_id:', defterId);
+        fetch(`{{ url_for('randevu.api_slots') }}?date=${date}&defter_id=${defterId}&all=1`, {
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(r => {
+                if (r.status === 401) {
+                    alert('{{ _("Session expired. Please login again.") }}');
+                    return Promise.reject(new Error('Unauthorized'));
+                }
+                console.log('API response status:', r.status);
+                return r.json();
+            })
+            .then(data => {
+                console.log('API response data:', data);
+                if (!data.slots || data.slots.length === 0) {
+                    container.innerHTML = `
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        {{ _("No available times for this date. Please select another date.") }}
+                    </div>
+                `;
+                    return;
+                }
+
+                // Container'ı temizle
+                container.innerHTML = '';
+
+                // Slotları render et
+                const wrap = document.createElement('div');
+                wrap.className = 'd-flex flex-wrap gap-2';
+                wrap.style.marginTop = '10px';
+
+                // Açıklama/legend
+                const legend = document.createElement('div');
+                legend.className = 'w-100 small text-muted mb-1';
+                legend.innerHTML = '<span class="badge bg-primary me-2">{{ _("Available") }}</span><span class="badge bg-secondary">{{ _("Closed/Busy") }}</span>';
+                wrap.appendChild(legend);
+
+                data.slots.forEach(s => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-sm ' + (s.available ? 'btn-outline-primary' : 'btn-outline-secondary');
+                    btn.textContent = s.time;
+                    btn.disabled = !s.available;
+                    btn.style.margin = '2px';
+                    if (!s.available) {
+                        btn.title = '{{ _("Closed/Busy") }}';
+                        btn.style.cursor = 'not-allowed';
+                        btn.style.opacity = '0.35';
+                        btn.style.filter = 'grayscale(100%)';
+                        btn.setAttribute('aria-disabled', 'true');
+                        btn.classList.add('disabled', 'pe-none');
+                        btn.classList.remove('btn-outline-primary');
+                        btn.classList.add('btn-outline-secondary');
+                    }
+                    if (s.available) {
+                        btn.addEventListener('click', () => selectModalSlot(s.time));
+                    }
+                    wrap.appendChild(btn);
+                });
+
+                container.appendChild(wrap);
+            })
+            .catch(err => {
+                console.error('Slot yükleme hatası:', err);
+                container.innerHTML = `
+                <div class="alert alert-danger mb-0">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    {{ _("Failed to load slots") }}: ${err.message}
+                </div>
+            `;
+            });
+    }
+
+    function selectModalSlot(time) {
+        document.getElementById('modal_saat').value = time;
+
+        // Seçili slot'u vurgula
+        const container = document.getElementById('modalSlotContainer');
+        const buttons = container.querySelectorAll('button');
+        buttons.forEach(btn => {
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-outline-primary');
+        });
+
+        // Seçili butonu vurgula
+        const selectedBtn = Array.from(buttons).find(btn => btn.textContent === time);
+        if (selectedBtn) {
+            selectedBtn.classList.remove('btn-outline-primary');
+            selectedBtn.classList.add('btn-primary');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const referansFilter = document.getElementById('referansFilter');
+        const defterFilter = document.getElementById('defterFilter');
+        const durumFilter = document.getElementById('durumFilter');
+        const olusturanFilter = document.getElementById('olusturanFilter');
+        const baslangic = document.getElementById('baslangic');
+        const bitis = document.getElementById('bitis');
+        const filterForm = document.getElementById('filterForm');
+
+        // Filtre değişikliklerinde formu otomatik submit et
+        if (referansFilter) {
+            referansFilter.addEventListener('change', function () {
+                filterForm.submit();
+            });
+        }
+
+        if (defterFilter) {
+            defterFilter.addEventListener('change', function () {
+                filterForm.submit();
+            });
+        }
+
+        if (durumFilter) {
+            durumFilter.addEventListener('change', function () {
+                filterForm.submit();
+            });
+        }
+
+        if (olusturanFilter) {
+            olusturanFilter.addEventListener('change', function () {
+                filterForm.submit();
+            });
+        }
+
+        if (baslangic) {
+            baslangic.addEventListener('change', function () {
+                filterForm.submit();
+            });
+        }
+
+        if (bitis) {
+            bitis.addEventListener('change', function () {
+                filterForm.submit();
+            });
+        }
+
+        // Sayfa yüklendiğinde bugün seçili olsun (eğer tarih filtresi boşsa)
+        const quickSelect = document.getElementById('quickDateSelect');
+        if (!baslangic.value && !bitis.value) {
+            quickSelect.value = 'today';
+            // setQuickDate() çağrılmıyor - sadece dropdown'da seçili gösteriliyor
+            // Kullanıcı isterse dropdown'dan seçim yapabilir
+        }
+
+        // Mobile form event listeners
+        const mobileReferansFilter = document.getElementById('mobileReferansFilter');
+        const mobileDefterFilter = document.getElementById('mobileDefterFilter');
+        const mobileDurumFilter = document.getElementById('mobileDurumFilter');
+        const mobileOlusturanFilter = document.getElementById('mobileOlusturanFilter');
+        const mobileBaslangic = document.getElementById('mobileBaslangic');
+        const mobileBitis = document.getElementById('mobileBitis');
+        const mobileFilterForm = document.getElementById('mobileFilterForm');
+
+        if (mobileReferansFilter) {
+            mobileReferansFilter.addEventListener('change', function () {
+                mobileFilterForm.submit();
+            });
+        }
+
+        if (mobileDefterFilter) {
+            mobileDefterFilter.addEventListener('change', function () {
+                mobileFilterForm.submit();
+            });
+        }
+
+        if (mobileDurumFilter) {
+            mobileDurumFilter.addEventListener('change', function () {
+                mobileFilterForm.submit();
+            });
+        }
+
+        if (mobileOlusturanFilter) {
+            mobileOlusturanFilter.addEventListener('change', function () {
+                mobileFilterForm.submit();
+            });
+        }
+
+        if (mobileBaslangic) {
+            mobileBaslangic.addEventListener('change', function () {
+                mobileFilterForm.submit();
+            });
+        }
+
+        if (mobileBitis) {
+            mobileBitis.addEventListener('change', function () {
+                mobileFilterForm.submit();
+            });
+        }
+
+        // Modal form gönderimini dinle
+        const newAppointmentForm = document.getElementById('newAppointmentForm');
+        if (newAppointmentForm) {
+            newAppointmentForm.addEventListener('submit', function (e) {
+                // Form gönderildikten sonra modal'ı kapat ve sayfayı yenile
+                setTimeout(function () {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('newAppointmentModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    // Sayfayı yenile
+                    window.location.reload();
+                }, 1000);
+            });
+        }
+
+        // Modal defter seçimi değiştiğinde slotları yükle
+        const modalDefterSelect = document.getElementById('modal_defter_id');
+        if (modalDefterSelect) {
+            modalDefterSelect.addEventListener('change', function () {
+                console.log('Defter seçimi değişti:', this.value);
+                loadModalSlots();
+            });
+        }
+
+        // Modal tarih seçimi değiştiğinde slotları yükle
+        const modalTarihSelect = document.getElementById('modal_tarih_gun');
+        if (modalTarihSelect) {
+            modalTarihSelect.addEventListener('change', function () {
+                console.log('Tarih seçimi değişti:', this.value);
+                loadModalSlots();
+            });
+        }
+    });
+
+    // Randevuyu görevlere ekleme fonksiyonu
+    function addToTasks(randevuId, musteriAdi, randevuBaslik, randevuTarihi, defterAdi) {
+        // Görev ekleme modal'ını aç
+        const todoModal = new bootstrap.Modal(document.getElementById('todoModal'));
+
+        // Tarih formatını düzenle (YYYY-MM-DD'den DD/MM/YYYY'ye)
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        // Form alanlarını doldur
+        const currentLang = document.documentElement.lang || 'tr';
+
+        // Başlık
+        let baslik;
+        if (currentLang === 'en') {
+            baslik = musteriAdi + ' appointment reminder';
+        } else {
+            baslik = musteriAdi + ' randevu hatırlatma';
+        }
+        document.getElementById('todoBaslik').value = baslik;
+
+        // Açıklama
+        let aciklama;
+        if (currentLang === 'en') {
+            aciklama = musteriAdi + ' has ' + defterAdi + ' appointment.';
+        } else {
+            aciklama = musteriAdi + ' ' + defterAdi + ' randevusu var.';
+        }
+        document.getElementById('todoAciklama').value = aciklama;
+
+        // Randevu tarihini bitiş tarihi olarak ayarla
+        if (randevuTarihi) {
+            const dateOnly = randevuTarihi.split(' ')[0]; // Sadece tarih kısmını al
+            document.getElementById('todoBitisTarihi').value = dateOnly;
+            document.getElementById('todoHatirlatmaTarihi').value = dateOnly;
+        }
+
+        // Modal'ı aç
+        todoModal.show();
+    }
+
+    // Randevudan görev kaydetme fonksiyonu
+    function saveTodoFromAppointment() {
+        const data = {
+            baslik: document.getElementById('todoBaslik').value,
+            aciklama: document.getElementById('todoAciklama').value,
+            oncelik: document.getElementById('todoOncelik').value,
+            durum: document.getElementById('todoDurum').value,
+            bitis_tarihi: document.getElementById('todoBitisTarihi').value,
+            hatirlatma_tarihi: document.getElementById('todoHatirlatmaTarihi').value
+        };
+
+        if (!data.baslik.trim()) {
+            const currentLang = document.documentElement.lang || 'tr';
+            const message = currentLang === 'en' ? 'Title is required!' : 'Başlık gerekli!';
+            alert(message);
+            return;
+        }
+
+        fetch('/todos/ekle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    const currentLang = document.documentElement.lang || 'tr';
+                    const message = currentLang === 'en' ? 'Task created successfully!' : 'Görev başarıyla oluşturuldu!';
+                    alert(message);
+                    // Modal'ı kapat
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('todoModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    // Formu temizle
+                    document.getElementById('todoBaslik').value = '';
+                    document.getElementById('todoAciklama').value = '';
+                    document.getElementById('todoOncelik').value = 'Orta';
+                    document.getElementById('todoDurum').value = 'Beklemede';
+                    document.getElementById('todoBitisTarihi').value = '';
+                    document.getElementById('todoHatirlatmaTarihi').value = '';
+
+                    // Hatırlatma sayısını güncelle
+                    if (typeof checkReminderCount === 'function') {
+                        checkReminderCount();
+                    }
+                } else {
+                    const currentLang = document.documentElement.lang || 'tr';
+                    const errorMessage = currentLang === 'en' ? 'Error: ' : 'Hata: ';
+                    alert(errorMessage + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                const currentLang = document.documentElement.lang || 'tr';
+                const errorMessage = currentLang === 'en' ? 'An error occurred: ' : 'Bir hata oluştu: ';
+                alert(errorMessage + error.message);
+            });
+    }
+
+    // Durum ve öncelik çevirileri
+    function translateStatusAndPriority() {
+        const currentLang = document.documentElement.lang || 'tr';
+
+        // Durum çevirileri
+        document.querySelectorAll('.durum-text').forEach(element => {
+            const text = element.textContent.trim();
+            switch (currentLang) {
+                case 'en':
+                    switch (text) {
+                        case 'Beklemede':
+                            element.textContent = 'Pending';
+                            break;
+                        case 'Devam Ediyor':
+                            element.textContent = 'In Progress';
+                            break;
+                        case 'Tamamlandı':
+                            element.textContent = 'Completed';
+                            break;
+                    }
+                    break;
+                case 'fr':
+                    switch (text) {
+                        case 'Beklemede':
+                            element.textContent = 'En Attente';
+                            break;
+                        case 'Devam Ediyor':
+                            element.textContent = 'En Cours';
+                            break;
+                        case 'Tamamlandı':
+                            element.textContent = 'Terminé';
+                            break;
+                    }
+                    break;
+                case 'de':
+                    switch (text) {
+                        case 'Beklemede':
+                            element.textContent = 'Ausstehend';
+                            break;
+                        case 'Devam Ediyor':
+                            element.textContent = 'In Bearbeitung';
+                            break;
+                        case 'Tamamlandı':
+                            element.textContent = 'Abgeschlossen';
+                            break;
+                    }
+                    break;
+                default: // tr
+                    switch (text) {
+                        case 'Pending':
+                            element.textContent = 'Beklemede';
+                            break;
+                        case 'In Progress':
+                            element.textContent = 'Devam Ediyor';
+                            break;
+                        case 'Completed':
+                            element.textContent = 'Tamamlandı';
+                            break;
+                    }
+                    break;
+            }
+        });
+
+        // Öncelik çevirileri
+        document.querySelectorAll('.oncelik-text').forEach(element => {
+            const text = element.textContent.trim();
+            switch (currentLang) {
+                case 'en':
+                    switch (text) {
+                        case 'Yüksek':
+                            element.textContent = 'High';
+                            break;
+                        case 'Orta':
+                            element.textContent = 'Medium';
+                            break;
+                        case 'Düşük':
+                            element.textContent = 'Low';
+                            break;
+                    }
+                    break;
+                case 'fr':
+                    switch (text) {
+                        case 'Yüksek':
+                            element.textContent = 'Élevé';
+                            break;
+                        case 'Orta':
+                            element.textContent = 'Moyen';
+                            break;
+                        case 'Düşük':
+                            element.textContent = 'Faible';
+                            break;
+                    }
+                    break;
+                case 'de':
+                    switch (text) {
+                        case 'Yüksek':
+                            element.textContent = 'Hoch';
+                            break;
+                        case 'Orta':
+                            element.textContent = 'Mittel';
+                            break;
+                        case 'Düşük':
+                            element.textContent = 'Niedrig';
+                            break;
+                    }
+                    break;
+                default: // tr
+                    switch (text) {
+                        case 'High':
+                            element.textContent = 'Yüksek';
+                            break;
+                        case 'Medium':
+                            element.textContent = 'Orta';
+                            break;
+                        case 'Low':
+                            element.textContent = 'Düşük';
+                            break;
+                    }
+                    break;
+            }
+        });
+    }
+
+    // DOM yüklendikten sonra çevirileri uygula
+    document.addEventListener('DOMContentLoaded', function () {
+        translateStatusAndPriority();
+
+        // Dil değişikliklerini dinle
+        document.addEventListener('languageChanged', function () {
+            translateStatusAndPriority();
+        });
+
+        // Lang attribute değişikliklerini dinle
+        const observer = new MutationObserver(function (mutations) {
+            mutations.forEach(function (mutation) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'lang') {
+                    console.log('Lang attribute değişti:', document.documentElement.lang);
+                    translateStatusAndPriority();
+                }
+            });
+        });
+
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['lang']
+        });
+    });
+</script>
+{% endblock %}

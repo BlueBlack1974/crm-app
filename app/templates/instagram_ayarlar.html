@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Instagram Settings') }} - Crandyx CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ _('Instagram Settings') }}</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Connection Settings') }}</h6>
+            </div>
+            <div class="card-body">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <label for="facebook_page_id" class="form-label">{{ _('Facebook Page ID') }}</label>
+                        <input type="text" class="form-control" id="facebook_page_id" name="facebook_page_id"
+                            value="{{ ayar.FacebookPageID if ayar else '' }}" required>
+                        <div class="form-text">{{ _('ID of the Facebook Page connected to Instagram.') }}</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="instagram_account_id" class="form-label">{{ _('Instagram Business Account ID')
+                            }}</label>
+                        <input type="text" class="form-control" id="instagram_account_id" name="instagram_account_id"
+                            value="{{ ayar.InstagramBusinessAccountID if ayar else '' }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="access_token" class="form-label">{{ _('Access Token') }}</label>
+                        <textarea class="form-control" id="access_token" name="access_token" rows="3"
+                            required>{{ ayar.AccessToken if ayar else '' }}</textarea>
+                        <div class="form-text">{{ _('Long-lived User Access Token from Meta Developer Console.') }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="webhook_secret" class="form-label">{{ _('Webhook Secret') }}</label>
+                        <input type="text" class="form-control" id="webhook_secret" name="webhook_secret"
+                            value="{{ ayar.WebhookSecret if ayar else '' }}">
+                        <div class="form-text">{{ _('Verification token used for Webhook callback.') }}</div>
+                    </div>
+
+                    <div class="mb-3 form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="aktif" name="aktif" {% if not ayar or
+                            ayar.Aktif %}checked{% endif %}>
+                        <label class="form-check-label" for="aktif">{{ _('Active') }}</label>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>{{ _('Save Settings') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-info">{{ _('How to configure?') }}</h6>
+            </div>
+            <div class="card-body">
+                <ol>
+                    <li>{{ _('Create a Meta Developer Account and App.') }}</li>
+                    <li>{{ _('Add "Instagram Graph API" to your app.') }}</li>
+                    <li>{{ _('Connect your Instagram Business Account to a Facebook Page.') }}</li>
+                    <li>{{ _('Generate a Long-Lived Access Token with `instagram_basic` and `instagram_manage_messages`
+                        permissions.') }}</li>
+                    <li>{{ _('Enter the IDs and Token above.') }}</li>
+                    <li>{{ _('Configure Webhook URL:') }} <code>{{ request.url_root }}instagram/webhook</code></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

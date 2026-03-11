@@ -1,0 +1,853 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Görev Raporları') }} - Crandyx CRM{% endblock %}
+
+{% block head %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- moment.js kaldırıldı: native Date kullanılacak -->
+<!-- Export Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+    .report-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid #007bff;
+    }
+
+    .report-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin: 20px 0;
+    }
+
+    .filter-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+
+    .export-buttons {
+        margin: 20px 0;
+    }
+
+    .stat-card {
+        background: #ffffff;
+        color: #212529;
+        border-radius: 12px;
+        padding: 24px 20px;
+        margin: 10px 0;
+        text-align: center;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, .15) !important;
+        border: 1px solid #dee2e6 !important;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .stat-card h3 {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 0;
+        text-align: center;
+        width: 100%;
+    }
+
+    .stat-card p {
+        margin: 5px 0 0 0;
+        color: #6c757d;
+        text-align: center;
+        width: 100%;
+    }
+
+    /* İstatistik kartlarına özel stil - maksimum öncelik */
+    div#totalTasksCard.stat-card.shadow-lg {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        background-color: #667eea !important;
+        border: 2px solid #667eea !important;
+        box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, .2) !important;
+    }
+
+    div#totalTasksCard.stat-card.shadow-lg,
+    div#totalTasksCard.stat-card.shadow-lg h3,
+    div#totalTasksCard.stat-card.shadow-lg p {
+        color: #ffffff !important;
+    }
+
+    div#completedTasksCard.stat-card.shadow-lg {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+        background-color: #28a745 !important;
+        border: 2px solid #28a745 !important;
+        box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, .2) !important;
+    }
+
+    div#completedTasksCard.stat-card.shadow-lg,
+    div#completedTasksCard.stat-card.shadow-lg h3,
+    div#completedTasksCard.stat-card.shadow-lg p {
+        color: #ffffff !important;
+    }
+
+    div#pendingTasksCard.stat-card.shadow-lg {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+        background-color: #007bff !important;
+        border: 2px solid #007bff !important;
+        box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, .2) !important;
+    }
+
+    div#pendingTasksCard.stat-card.shadow-lg,
+    div#pendingTasksCard.stat-card.shadow-lg h3,
+    div#pendingTasksCard.stat-card.shadow-lg p {
+        color: #ffffff !important;
+    }
+
+    div#completionRateCard.stat-card.shadow-lg {
+        background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%) !important;
+        background-color: #6f42c1 !important;
+        border: 2px solid #6f42c1 !important;
+        box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, .2) !important;
+    }
+
+    div#completionRateCard.stat-card.shadow-lg,
+    div#completionRateCard.stat-card.shadow-lg h3,
+    div#completionRateCard.stat-card.shadow-lg p {
+        color: #ffffff !important;
+    }
+
+    .table-responsive {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 50px;
+        color: #6c757d;
+    }
+
+    .no-data {
+        text-align: center;
+        padding: 50px;
+        color: #6c757d;
+        font-style: italic;
+    }
+
+    /* Chart cards shadow */
+    .card {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, .15) !important;
+        border: 1px solid #dee2e6 !important;
+        border-radius: 12px !important;
+        background-color: #ffffff !important;
+        margin-bottom: 20px;
+    }
+
+    .card .card-header {
+        background-color: #f8f9fa !important;
+        border-bottom: 1px solid #dee2e6 !important;
+        border-radius: 12px 12px 0 0 !important;
+    }
+
+    /* Öncelik ve Durum Dağılımı grafik kartlarına özel gölge */
+    .chart-card-priority,
+    .chart-card-status {
+        box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, .2) !important;
+        border: 1px solid #dee2e6 !important;
+        transition: all 0.3s ease;
+    }
+
+    .chart-card-priority:hover,
+    .chart-card-status:hover {
+        box-shadow: 0 1rem 2rem rgba(0, 0, 0, .25) !important;
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">{{ _('Görev Raporları') }}</h1>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-primary" onclick="exportToExcel()">
+                        <i class="fas fa-file-excel"></i> {{ _('Excel') }}
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" onclick="exportToPDF()">
+                        <i class="fas fa-file-pdf"></i> {{ _('PDF') }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filtreleme Bölümü -->
+            <div class="filter-section">
+                <div class="row g-2 align-items-end flex-wrap">
+                    <div class="col-md-auto">
+                        <label class="form-label">{{ _('Başlangıç Tarihi') }}</label>
+                        <input type="date" class="form-control" id="startDate" style="min-width:180px">
+                    </div>
+                    <div class="col-md-auto">
+                        <label class="form-label">{{ _('Bitiş Tarihi') }}</label>
+                        <input type="date" class="form-control" id="endDate" style="min-width:180px">
+                    </div>
+                    <div class="col-md-auto col-sm-6">
+                        <label for="statusFilter" class="form-label">{{ _('Durum') }}</label>
+                        <select class="form-select" id="statusFilter" style="min-width:160px">
+                            <option value="all">{{ _('Tümü') }}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-auto col-sm-6">
+                        <label for="userFilter" class="form-label">{{ _('Kullanıcı') }}</label>
+                        <select class="form-select" id="userFilter" style="min-width:160px">
+                            <option value="all">{{ _('Tümü') }}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-auto col-sm-6">
+                        <label for="priorityFilter" class="form-label">{{ _('Öncelik') }}</label>
+                        <select class="form-select" id="priorityFilter" style="min-width:160px">
+                            <option value="all">{{ _('Tümü') }}</option>
+                            <option value="Düşük">{{ _('Düşük') }}</option>
+                            <option value="Orta">{{ _('Orta') }}</option>
+                            <option value="Yüksek">{{ _('Yüksek') }}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-auto col-sm-6">
+                        <label for="typeFilter" class="form-label">{{ _('Tip') }}</label>
+                        <select class="form-select" id="typeFilter" style="min-width:160px">
+                            <option value="all">{{ _('Tümü') }}</option>
+                            <option value="Kisisel">{{ _('Kişisel') }}</option>
+                            <option value="Randevu">{{ _('Randevu') }}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-auto">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="button" class="btn btn-primary" onclick="generateReport()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- İstatistik Kartları -->
+            <div class="row" id="statsCards" style="margin-top: 30px; margin-bottom: 24px;">
+                <div class="col-md-3">
+                    <div class="stat-card shadow-lg text-center" id="totalTasksCard"
+                        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important; border: 2px solid #667eea !important; color: #ffffff !important;">
+                        <h3 id="totalTasks" class="text-center" style="color: #ffffff !important;">-</h3>
+                        <p class="text-center" style="color: #ffffff !important;">{{ _('Toplam Görev') }}</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card shadow-lg text-center" id="completedTasksCard"
+                        style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important; border: 2px solid #28a745 !important; color: #ffffff !important;">
+                        <h3 id="completedTasks" class="text-center" style="color: #ffffff !important;">-</h3>
+                        <p class="text-center" style="color: #ffffff !important;">{{ _('Tamamlanan') }}</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card shadow-lg text-center" id="pendingTasksCard"
+                        style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important; border: 2px solid #007bff !important; color: #ffffff !important;">
+                        <h3 id="pendingTasks" class="text-center" style="color: #ffffff !important;">-</h3>
+                        <p class="text-center" style="color: #ffffff !important;">{{ _('Bekleyen') }}</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card shadow-lg text-center" id="completionRateCard"
+                        style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%) !important; border: 2px solid #6f42c1 !important; color: #ffffff !important;">
+                        <h3 id="completionRate" class="text-center" style="color: #ffffff !important;">-%</h3>
+                        <p class="text-center" style="color: #ffffff !important;">{{ _('Tamamlanma Oranı') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grafikler -->
+            <div class="row" style="margin-top: 8px;">
+                <div class="col-md-6">
+                    <div class="card chart-card-priority shadow-lg">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">{{ _('Öncelik Dağılımı') }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="priorityChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card chart-card-status shadow-lg">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">{{ _('Durum Dağılımı') }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="statusChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card shadow-lg">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">{{ _('Kullanıcı Bazlı Dağılım') }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="userChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card shadow-lg">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">{{ _('Kullanıcı Tamamlanan Görevler') }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="userCompletedChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="card shadow-lg">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">{{ _('Aylık Trend') }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="trendChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detaylı Tablo -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">{{ _('Detaylı Görev Listesi') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="tasksTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>{{ _('Görev') }}</th>
+                                    <th>{{ _('Durum') }}</th>
+                                    <th>{{ _('Öncelik') }}</th>
+                                    <th>{{ _('Kullanıcı') }}</th>
+                                    <th>{{ _('Oluşturma') }}</th>
+                                    <th>{{ _('Bitiş Tarihi') }}</th>
+                                    <th>{{ _('Müşteri') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tasksTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center loading">
+                                        <i class="fas fa-spinner fa-spin"></i> {{ _('Rapor yükleniyor...') }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let reportData = null;
+    let charts = {};
+
+    // Basit çeviri nesnesi (Jinja ile doldurulur)
+    const t = {
+        statusDistribution: "{{ _('Durum Dağılımı') }}",
+        priorityDistribution: "{{ _('Öncelik Dağılımı') }}",
+        userDistribution: "{{ _('Kullanıcı Bazlı Dağılım') }}",
+        userCompleted: "{{ _('Kullanıcı Tamamlanan Görevler') }}",
+        monthlyTrend: "{{ _('Aylık Trend') }}",
+        taskCount: "{{ _('Görev Sayısı') }}",
+        completedTasks: "{{ _('Tamamlanan Görevler') }}",
+        createdTasks: "{{ _('Oluşturulan Görevler') }}",
+        noData: "{{ _('Veri bulunamadı') }}",
+        loadingReport: "{{ _('Rapor yükleniyor...') }}",
+        reportTitle: "{{ _('Görev Raporu') }}",
+        reportDate: "{{ _('Rapor Tarihi') }}",
+        exportFirst: "{{ _('Önce rapor oluşturun') }}",
+        columnTask: "{{ _('Görev') }}",
+        columnStatus: "{{ _('Durum') }}",
+        columnPriority: "{{ _('Öncelik') }}",
+        columnUser: "{{ _('Kullanıcı') }}",
+        columnCreated: "{{ _('Oluşturma') }}",
+        columnEnd: "{{ _('Bitiş') }}",
+        columnCustomer: "{{ _('Müşteri') }}",
+    };
+
+    function getCurrentLang() {
+        return (document.documentElement.lang || 'tr').toLowerCase();
+    }
+
+    function translateStatusName(name) {
+        // Do not translate status values on reports page; keep original entries
+        return String(name || '').trim();
+    }
+
+    function translatePriorityName(name) {
+        const lang = getCurrentLang();
+        const original = String(name || '').trim();
+        const tr = { 'Düşük': 'Düşük', 'Orta': 'Orta', 'Yüksek': 'Yüksek' };
+        const en = { 'Düşük': 'Low', 'Orta': 'Medium', 'Yüksek': 'High' };
+        const fr = { 'Düşük': 'Faible', 'Orta': 'Moyen', 'Yüksek': 'Élevé' };
+        const de = { 'Düşük': 'Niedrig', 'Orta': 'Mittel', 'Yüksek': 'Hoch' };
+        const maps = { tr, en, fr, de };
+        const m = maps[lang] || tr;
+        return m[original] || original;
+    }
+
+    // Sayfa yüklendiğinde
+    document.addEventListener('DOMContentLoaded', function () {
+        initializeFilters();
+        // Varsayılan tarihleri son 30 gün olarak ayarla
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - 30);
+        document.getElementById('startDate').value = start.toISOString().slice(0, 10);
+        document.getElementById('endDate').value = end.toISOString().slice(0, 10);
+        generateReport();
+    });
+
+    // Filtreleri yükle
+    async function initializeFilters() {
+        try {
+            // Durumları yükle
+            const statusResponse = await fetch("{{ url_for('gorev.api_gorev_durumlar') }}");
+            const statusData = await statusResponse.json();
+
+            if (statusData.success) {
+                const statusSelect = document.getElementById('statusFilter');
+                statusData.durumlar.forEach(durum => {
+                    const option = document.createElement('option');
+                    option.value = durum.DurumID;
+                    option.textContent = translateStatusName(durum.DurumAdi);
+                    statusSelect.appendChild(option);
+                });
+            }
+
+            // Kullanıcıları yükle
+            const userResponse = await fetch("{{ url_for('api.api_kullanicilar') }}");
+            const userData = await userResponse.json();
+
+            if (userData.success) {
+                const userSelect = document.getElementById('userFilter');
+                (userData.kullanicilar || []).forEach(kullanici => {
+                    const option = document.createElement('option');
+                    // Backend iki farklı formatta dönebilir: {KullaniciID, Ad, Soyad} veya {id, adi, soyadi, tam_adi}
+                    const id = kullanici.KullaniciID || kullanici.id;
+                    const displayName = kullanici.tam_adi || [kullanici.Ad || kullanici.adi || '', kullanici.Soyad || kullanici.soyadi || ''].join(' ').trim();
+                    option.value = id;
+                    option.textContent = displayName || '-';
+                    userSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Filtre yükleme hatası:', error);
+        }
+    }
+
+    // Rapor oluştur
+    async function generateReport() {
+        try {
+            showLoading();
+
+            const filters = getFilters();
+            console.log('Rapor filtreleri:', filters);
+            const response = await fetch("{{ url_for('gorev.api_gorev_raporlar') }}?" + new URLSearchParams(filters));
+            const data = await response.json();
+            console.log('Rapor API yanıtı:', data);
+
+            if (data && data.success) {
+                reportData = data;
+                updateStatsCards(data.stats || {});
+                updateCharts(data || {});
+                updateTasksTable(data.tasks || []);
+            } else {
+                showError(data.message || 'Rapor oluşturulurken hata oluştu');
+            }
+        } catch (error) {
+            console.error('Rapor oluşturma hatası:', error);
+            showError('Rapor oluşturulurken hata oluştu');
+        }
+    }
+
+    // Filtreleri al
+    function getFilters() {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        return {
+            start_date: startDate || '',
+            end_date: endDate || '',
+            status: document.getElementById('statusFilter').value,
+            user: document.getElementById('userFilter').value,
+            priority: document.getElementById('priorityFilter').value,
+            type: document.getElementById('typeFilter').value
+        };
+    }
+
+    // İstatistik kartlarını güncelle
+    function updateStatsCards(stats) {
+        document.getElementById('totalTasks').textContent = stats.total_tasks || 0;
+        document.getElementById('completedTasks').textContent = stats.completed_tasks || 0;
+        document.getElementById('pendingTasks').textContent = stats.pending_tasks || 0;
+        document.getElementById('completionRate').textContent = (stats.completion_rate || 0) + '%';
+    }
+
+    // Grafikleri güncelle
+    function updateCharts(data) {
+        updateStatusChart(data.charts.status);
+        updatePriorityChart(data.charts.priority);
+        updateUserChart(data.charts.user);
+        updateUserCompletedChart(data.charts.user_completed);
+        updateTrendChart(data.charts.trend);
+    }
+
+    // Durum dağılımı grafiği
+    function updateStatusChart(data) {
+        const ctx = document.getElementById('statusChart').getContext('2d');
+
+        if (charts.status) {
+            charts.status.destroy();
+        }
+
+        charts.status = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.values,
+                    backgroundColor: data.colors,
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+
+    // Öncelik dağılımı grafiği
+    function updatePriorityChart(data) {
+        const ctx = document.getElementById('priorityChart').getContext('2d');
+
+        if (charts.priority) {
+            charts.priority.destroy();
+        }
+
+        // Öncelik etiketlerini çevir
+        const translatedLabels = (data.labels || []).map(label => translatePriorityName(label));
+
+        charts.priority = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: translatedLabels,
+                datasets: [{
+                    label: t.taskCount,
+                    data: data.values,
+                    backgroundColor: data.colors,
+                    borderColor: data.colors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            callback: function (value) {
+                                return Number.isInteger(value) ? value : null;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Kullanıcı dağılımı grafiği
+    function updateUserChart(data) {
+        const ctx = document.getElementById('userChart').getContext('2d');
+
+        if (charts.user) {
+            charts.user.destroy();
+        }
+
+        charts.user = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: t.taskCount,
+                    data: data.values,
+                    backgroundColor: data.colors,
+                    borderColor: data.colors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            callback: function (value) {
+                                return Number.isInteger(value) ? value : null;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Kullanıcı tamamlanan görevler grafiği
+    function updateUserCompletedChart(data) {
+        const ctx = document.getElementById('userCompletedChart').getContext('2d');
+
+        if (charts.userCompleted) {
+            charts.userCompleted.destroy();
+        }
+
+        charts.userCompleted = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: t.completedTasks,
+                    data: data.values,
+                    backgroundColor: data.colors,
+                    borderColor: data.colors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            callback: function (value) {
+                                return Number.isInteger(value) ? value : null;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Trend grafiği
+    function updateTrendChart(data) {
+        const ctx = document.getElementById('trendChart').getContext('2d');
+
+        if (charts.trend) {
+            charts.trend.destroy();
+        }
+
+        charts.trend = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: t.createdTasks,
+                    data: data.created,
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    tension: 0.4
+                }, {
+                    label: t.completedTasks,
+                    data: data.completed,
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            callback: function (value) {
+                                return Number.isInteger(value) ? value : null;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Görev tablosunu güncelle
+    function updateTasksTable(tasks) {
+        const tbody = document.getElementById('tasksTableBody');
+        tbody.innerHTML = '';
+
+        if (!Array.isArray(tasks) || tasks.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center no-data">${t.noData}</td></tr>`;
+            return;
+        }
+
+        tasks.forEach(task => {
+            const row = document.createElement('tr');
+            const statusText = translateStatusName(task.durum || '-');
+            const priorityText = translatePriorityName(task.oncelik || '-');
+            row.innerHTML = `
+            <td>${task.baslik || '-'}</td>
+            <td><span class="badge" style="background-color: ${task.durum_rengi || '#6c757d'}">${statusText}</span></td>
+            <td><span class="badge bg-${getPriorityClass(task.oncelik)}">${priorityText}</span></td>
+            <td>${task.kullanici_adi || '-'}</td>
+            <td>${formatDate(task.olusturma_tarihi)}</td>
+            <td>${formatDate(task.bitis_tarihi)}</td>
+            <td>${task.musteri_adi || '-'}</td>
+        `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // Öncelik sınıfını al
+    function getPriorityClass(priority) {
+        switch (priority) {
+            case 'Yüksek': return 'danger';
+            case 'Orta': return 'warning';
+            case 'Düşük': return 'success';
+            default: return 'secondary';
+        }
+    }
+
+    // Tarih formatla
+    function pad2(n) { return n.toString().padStart(2, '0'); }
+    function formatDate(dateString) {
+        if (!dateString) return '-';
+        const d = new Date(dateString);
+        if (isNaN(d.getTime())) return '-';
+        const day = pad2(d.getDate());
+        const month = pad2(d.getMonth() + 1);
+        const year = d.getFullYear();
+        const hour = pad2(d.getHours());
+        const minute = pad2(d.getMinutes());
+        return `${day}/${month}/${year} ${hour}:${minute}`;
+    }
+
+    // Excel'e aktar
+    function exportToExcel() {
+        if (!reportData || !reportData.tasks) {
+            alert(t.exportFirst);
+            return;
+        }
+
+        const ws = XLSX.utils.json_to_sheet(reportData.tasks.map(task => ({
+            [t.columnTask]: task.baslik,
+            [t.columnStatus]: task.durum,
+            [t.columnPriority]: task.oncelik,
+            [t.columnUser]: task.kullanici_adi || '-',
+            [t.columnCreated]: formatDate(task.olusturma_tarihi),
+            [t.columnEnd]: formatDate(task.bitis_tarihi),
+            [t.columnCustomer]: task.musteri_adi || '-'
+        })));
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, t.reportTitle);
+
+        const now = new Date();
+        const fileName = `gorev_raporu_${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+    }
+
+    // PDF'e aktar
+    function exportToPDF() {
+        if (!reportData || !reportData.tasks) {
+            alert(t.exportFirst);
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        // Başlık
+        doc.setFontSize(20);
+        doc.text(t.reportTitle, 14, 22);
+
+        // Tarih
+        doc.setFontSize(10);
+        doc.text(`${t.reportDate}: ${formatDate(new Date().toISOString())}`, 14, 30);
+
+        // Tablo
+        const tableData = reportData.tasks.map(task => [
+            task.baslik,
+            task.durum,
+            task.oncelik,
+            task.kullanici_adi || '-',
+            formatDate(task.olusturma_tarihi),
+            formatDate(task.bitis_tarihi),
+            task.musteri_adi || '-'
+        ]);
+
+        doc.autoTable({
+            head: [[t.columnTask, t.columnStatus, t.columnPriority, t.columnUser, t.columnCreated, t.columnEnd, t.columnCustomer]],
+            body: tableData,
+            startY: 40,
+            styles: { fontSize: 8 }
+        });
+
+        const d2 = new Date();
+        const pdfName = `gorev_raporu_${d2.getFullYear()}-${pad2(d2.getMonth() + 1)}-${pad2(d2.getDate())}.pdf`;
+        doc.save(pdfName);
+    }
+
+    // Yükleme göster
+    function showLoading() {
+        const tbody = document.getElementById('tasksTableBody');
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center loading"><i class="fas fa-spinner fa-spin"></i> ${t.loadingReport}</td></tr>`;
+    }
+
+    // Hata göster
+    function showError(message) {
+        const tbody = document.getElementById('tasksTableBody');
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">${message}</td></tr>`;
+    }
+</script>
+{% endblock %}

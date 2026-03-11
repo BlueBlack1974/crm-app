@@ -1,0 +1,1002 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Customer Excel Import') }} - Crandyx CRM{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-file-earmark-excel"></i> {{ _('Customer Excel Import') }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Progress Steps -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="progress-steps">
+                                <div class="step active" id="step1-indicator">
+                                    <div class="step-number">1</div>
+                                    <div class="step-label">{{ _('Upload File') }}</div>
+                                </div>
+                                <div class="step-line"></div>
+                                <div class="step" id="step2-indicator">
+                                    <div class="step-number">2</div>
+                                    <div class="step-label">{{ _('Map Columns') }}</div>
+                                </div>
+                                <div class="step-line"></div>
+                                <div class="step" id="step3-indicator">
+                                    <div class="step-number">3</div>
+                                    <div class="step-label">{{ _('Preview & Validate') }}</div>
+                                </div>
+                                <div class="step-line"></div>
+                                <div class="step" id="step4-indicator">
+                                    <div class="step-number">4</div>
+                                    <div class="step-label">{{ _('Import') }}</div>
+                                </div>
+                                <div class="step-line"></div>
+                                <div class="step" id="step5-indicator">
+                                    <div class="step-number">5</div>
+                                    <div class="step-label">{{ _('Results') }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 1: Upload File -->
+                    <div class="wizard-step" id="step1" style="display: block;">
+                        <h5 class="mb-3">{{ _('Step 1: Upload Excel File') }}</h5>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>{{ _('Important Notes:') }}</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>{{ _('Excel file must be in .xlsx or .xls format') }}</li>
+                                <li>{{ _('First row must contain column headers') }}</li>
+                                <li>{{ _('Required columns: Name, Surname, Phone') }}</li>
+                                <li>{{ _('Phone numbers must be in 05XX format (11 digits)') }}</li>
+                            </ul>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ _('Download Template') }}</h6>
+                                        <p class="text-muted">{{ _('Download the Excel template with example data and
+                                            instructions') }}</p>
+                                        <a href="{{ url_for('musteri.musteri_import_template') }}"
+                                            class="btn btn-outline-primary">
+                                            <i class="bi bi-download"></i> {{ _('Download Template') }}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ _('Upload Your File') }}</h6>
+
+                                        <!-- Drag & Drop Zone -->
+                                        <div class="upload-zone" id="uploadZone">
+                                            <i class="bi bi-cloud-upload"></i>
+                                            <p class="mb-2">{{ _('Drag & drop Excel file here') }}</p>
+                                            <p class="text-muted small">{{ _('or') }}</p>
+                                            <button type="button" class="btn btn-primary" id="selectFileBtn">
+                                                <i class="bi bi-folder2-open"></i> {{ _('Select File') }}
+                                            </button>
+                                            <input type="file" id="excelFileInput" accept=".xlsx,.xls"
+                                                style="display: none;">
+                                        </div>
+
+                                        <div id="uploadProgress" style="display: none;">
+                                            <div class="progress mb-2">
+                                                <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                                    id="uploadProgressBar" role="progressbar" style="width: 0%">0%</div>
+                                            </div>
+                                            <small class="text-muted" id="uploadStatus">{{ _('Uploading...') }}</small>
+                                        </div>
+
+                                        <div id="uploadResult" style="display: none;">
+                                            <div class="alert alert-success">
+                                                <i class="bi bi-check-circle"></i>
+                                                <span id="uploadResultText"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-end mt-3">
+                            <button type="button" class="btn btn-primary" id="nextToStep2" disabled>
+                                {{ _('Next') }} <i class="bi bi-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Map Columns -->
+                    <div class="wizard-step" id="step2" style="display: none;">
+                        <h5 class="mb-3">{{ _('Step 2: Map Excel Columns to Database Fields') }}</h5>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            {{ _('Match your Excel columns with database fields. System will auto-detect common column
+                            names.') }}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-8 offset-md-2">
+                                <table class="table table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>{{ _('Excel Column') }}</th>
+                                            <th>{{ _('Database Field') }}</th>
+                                            <th>{{ _('Preview') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="columnMappingTable">
+                                        <!-- Dinamik olarak doldurulacak -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="text-end mt-3">
+                            <button type="button" class="btn btn-secondary" id="backToStep1">
+                                <i class="bi bi-arrow-left"></i> {{ _('Back') }}
+                            </button>
+                            <button type="button" class="btn btn-primary" id="nextToStep3">
+                                {{ _('Next') }} <i class="bi bi-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Preview & Validate -->
+                    <div class="wizard-step" id="step3" style="display: none;">
+                        <h5 class="mb-3">{{ _('Step 3: Preview and Validate Data') }}</h5>
+
+                        <div id="validationStats" class="row mb-3">
+                            <div class="col-md-3">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h3 class="text-primary mb-0" id="totalRows">0</h3>
+                                        <small class="text-muted">{{ _('Total Rows') }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h3 class="text-success mb-0" id="validRows">0</h3>
+                                        <small class="text-muted">{{ _('Valid') }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h3 class="text-warning mb-0" id="warningRows">0</h3>
+                                        <small class="text-muted">{{ _('Warnings') }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h3 class="text-danger mb-0" id="errorRows">0</h3>
+                                        <small class="text-muted">{{ _('Errors') }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="btn-group" role="group">
+                                <input type="radio" class="btn-check" name="filterRows" id="filterAll" value="all"
+                                    checked>
+                                <label class="btn btn-outline-primary" for="filterAll">{{ _('All') }}</label>
+
+                                <input type="radio" class="btn-check" name="filterRows" id="filterValid" value="valid">
+                                <label class="btn btn-outline-success" for="filterValid">{{ _('Valid') }}</label>
+
+                                <input type="radio" class="btn-check" name="filterRows" id="filterWarnings"
+                                    value="warning">
+                                <label class="btn btn-outline-warning" for="filterWarnings">{{ _('Warnings') }}</label>
+
+                                <input type="radio" class="btn-check" name="filterRows" id="filterErrors" value="error">
+                                <label class="btn btn-outline-danger" for="filterErrors">{{ _('Errors') }}</label>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th style="width: 50px;">{{ _('Row') }}</th>
+                                        <th>{{ _('First Name') }}</th>
+                                        <th>{{ _('Last Name') }}</th>
+                                        <th>{{ _('Country Code') }}</th>
+                                        <th>{{ _('Phone') }}</th>
+                                        <th>{{ _('Email') }}</th>
+                                        <th>{{ _('Status') }}</th>
+                                        <th>{{ _('Messages') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="previewTable">
+                                    <!-- Dinamik olarak doldurulacak -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="text-end mt-3">
+                            <button type="button" class="btn btn-secondary" id="backToStep2">
+                                <i class="bi bi-arrow-left"></i> {{ _('Back') }}
+                            </button>
+                            <button type="button" class="btn btn-primary" id="nextToStep4">
+                                {{ _('Next') }} <i class="bi bi-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Import Options -->
+                    <div class="wizard-step" id="step4" style="display: none;">
+                        <h5 class="mb-3">{{ _('Step 4: Import Options') }}</h5>
+
+                        <div class="row">
+                            <div class="col-md-8 offset-md-2">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title mb-3">{{ _('How should we handle different situations?')
+                                            }}</h6>
+
+                                        <div class="mb-3">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="skipErrors" checked>
+                                                <label class="form-check-label" for="skipErrors">
+                                                    <strong>{{ _('Skip rows with errors') }}</strong><br>
+                                                    <small class="text-muted">{{ _('Rows with validation errors will be
+                                                        skipped') }}</small>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="updateDuplicates">
+                                                <label class="form-check-label" for="updateDuplicates">
+                                                    <strong>{{ _('Update existing customers') }}</strong><br>
+                                                    <small class="text-muted">{{ _('If phone number exists, update
+                                                        customer information') }}</small>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="skipDuplicates"
+                                                    checked>
+                                                <label class="form-check-label" for="skipDuplicates">
+                                                    <strong>{{ _('Skip duplicate customers') }}</strong><br>
+                                                    <small class="text-muted">{{ _('If phone number exists and update is
+                                                        disabled, skip') }}</small>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="alert alert-warning">
+                                            <i class="bi bi-exclamation-triangle"></i>
+                                            <strong>{{ _('Warning:') }}</strong>
+                                            <span id="importWarningText"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-end mt-3">
+                            <button type="button" class="btn btn-secondary" id="backToStep3">
+                                <i class="bi bi-arrow-left"></i> {{ _('Back') }}
+                            </button>
+                            <button type="button" class="btn btn-success btn-lg" id="startImport">
+                                <i class="bi bi-upload"></i> {{ _('Start Import') }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 5: Results -->
+                    <div class="wizard-step" id="step5" style="display: none;">
+                        <h5 class="mb-3">{{ _('Step 5: Import Results') }}</h5>
+
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h2 class="text-success mb-0" id="resultSuccess">0</h2>
+                                        <small class="text-muted">{{ _('Successfully Added') }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h2 class="text-info mb-0" id="resultUpdated">0</h2>
+                                        <small class="text-muted">{{ _('Updated') }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h2 class="text-warning mb-0" id="resultSkipped">0</h2>
+                                        <small class="text-muted">{{ _('Skipped') }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h2 class="text-danger mb-0" id="resultErrors">0</h2>
+                                        <small class="text-muted">{{ _('Errors') }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">{{ _('Detailed Results') }}</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                    <table class="table table-sm">
+                                        <thead class="table-light sticky-top">
+                                            <tr>
+                                                <th>{{ _('Row') }}</th>
+                                                <th>{{ _('Status') }}</th>
+                                                <th>{{ _('Message') }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="resultsDetailTable">
+                                            <!-- Dinamik olarak doldurulacak -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-4">
+                            <a href="/rapor/musteriler" class="btn btn-primary btn-lg">
+                                <i class="bi bi-people"></i> {{ _('Go to Customers') }}
+                            </a>
+                            <button type="button" class="btn btn-secondary btn-lg" id="startOver">
+                                <i class="bi bi-arrow-clockwise"></i> {{ _('Import Another File') }}
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Progress Steps */
+    .progress-steps {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 30px;
+    }
+
+    .step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+    }
+
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #e9ecef;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-bottom: 8px;
+        transition: all 0.3s;
+    }
+
+    .step-label {
+        font-size: 12px;
+        color: #6c757d;
+        text-align: center;
+        max-width: 100px;
+    }
+
+    .step.active .step-number {
+        background-color: #0d6efd;
+        color: white;
+    }
+
+    .step.completed .step-number {
+        background-color: #198754;
+        color: white;
+    }
+
+    .step-line {
+        width: 60px;
+        height: 2px;
+        background-color: #e9ecef;
+        margin: 0 10px 30px;
+    }
+
+    /* Upload Zone */
+    .upload-zone {
+        border: 2px dashed #0d6efd;
+        border-radius: 8px;
+        padding: 40px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .upload-zone:hover {
+        background-color: #f8f9fa;
+        border-color: #0a58ca;
+    }
+
+    .upload-zone.drag-over {
+        background-color: #e7f1ff;
+        border-color: #0a58ca;
+    }
+
+    .upload-zone i {
+        font-size: 48px;
+        color: #0d6efd;
+        margin-bottom: 15px;
+        display: block;
+    }
+
+    /* Validation Status Colors */
+    .status-valid {
+        color: #198754;
+    }
+
+    .status-warning {
+        color: #ffc107;
+    }
+
+    .status-error {
+        color: #dc3545;
+    }
+
+    .status-duplicate {
+        color: #fd7e14;
+    }
+
+    /* Table Row Colors */
+    tr.row-valid {
+        background-color: #d1e7dd;
+    }
+
+    tr.row-warning {
+        background-color: #fff3cd;
+    }
+
+    tr.row-error {
+        background-color: #f8d7da;
+    }
+
+    tr.row-duplicate {
+        background-color: #ffe5d0;
+    }
+</style>
+
+<script>
+    // Translations
+    const translations = {
+        selectValidFile: {{ _("Please select a valid Excel file (.xlsx or .xls)") | tojson }},
+    error: { { _("Error") | tojson } },
+    uploadError: { { _("An error occurred while uploading the file") | tojson } },
+    mapRequired: { { _("Please map required fields") | tojson } },
+    validationError: { { _("An error occurred during validation") | tojson } },
+    importError: { { _("An error occurred during import") | tojson } },
+    approximately: { { _("Approximately") | tojson } },
+    of: { { _("of") | tojson } },
+    customersWillImport: { { _("customers will be imported") | tojson } },
+    valid: { { _("Valid") | tojson } },
+    warning: { { _("Warning") | tojson } },
+    duplicate: { { _("Duplicate") | tojson } },
+    success: { { _("Success") | tojson } },
+    updated: { { _("Updated") | tojson } },
+    skipped: { { _("Skipped") | tojson } }
+};
+
+    let uploadedFile = null;
+    let uploadedData = null;
+    let columnMapping = {};
+    let validatedData = null;
+
+    // Step 1: File Upload
+    document.addEventListener('DOMContentLoaded', function () {
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('excelFileInput');
+        const selectFileBtn = document.getElementById('selectFileBtn');
+
+        if (!uploadZone || !fileInput || !selectFileBtn) {
+            console.error('Excel import: Required elements not found!');
+            return;
+        }
+        console.log('Excel import initialized successfully');
+
+        // Drag & Drop Events
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('drag-over');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('drag-over');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileUpload(files[0]);
+            }
+        });
+
+        // Click to Select File
+        selectFileBtn.addEventListener('click', () => {
+            console.log('Select file button clicked');
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileUpload(e.target.files[0]);
+            }
+        });
+
+        // Upload File
+        function handleFileUpload(file) {
+            // Dosya türü kontrolü
+            if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+                alert(translations.selectValidFile);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            document.getElementById('uploadProgress').style.display = 'block';
+            document.getElementById('uploadProgressBar').style.width = '0%';
+
+            fetch("{{ url_for('musteri.musteri_import_upload') }}", {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        uploadedFile = data;
+                        document.getElementById('uploadProgressBar').style.width = '100%';
+                        document.getElementById('uploadProgressBar').textContent = '100%';
+
+                        setTimeout(() => {
+                            document.getElementById('uploadProgress').style.display = 'none';
+                            document.getElementById('uploadResult').style.display = 'block';
+                            document.getElementById('uploadResultText').textContent = data.message;
+                            document.getElementById('nextToStep2').disabled = false;
+                        }, 500);
+                    } else {
+                        alert(translations.error + ': ' + data.message);
+                        document.getElementById('uploadProgress').style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(translations.uploadError);
+                    document.getElementById('uploadProgress').style.display = 'none';
+                });
+        }
+
+        // Next to Step 2
+        document.getElementById('nextToStep2').addEventListener('click', () => {
+            goToStep(2);
+            loadColumnMapping();
+        });
+    });
+
+    // Step Navigation
+    function goToStep(stepNumber) {
+        // Hide all steps
+        document.querySelectorAll('.wizard-step').forEach(step => {
+            step.style.display = 'none';
+        });
+
+        // Show current step
+        document.getElementById('step' + stepNumber).style.display = 'block';
+
+        // Update progress indicators
+        document.querySelectorAll('.step').forEach((step, index) => {
+            step.classList.remove('active', 'completed');
+            if (index + 1 < stepNumber) {
+                step.classList.add('completed');
+            } else if (index + 1 === stepNumber) {
+                step.classList.add('active');
+            }
+        });
+    }
+
+    // Step 2: Column Mapping
+    function loadColumnMapping() {
+        const table = document.getElementById('columnMappingTable');
+        table.innerHTML = '';
+
+        const fieldMapping = {
+            // Turkish
+            'Ad': 'MusteriAdi',
+            'Soyad': 'MusteriSoyadi',
+            'Ülke Kodu': 'UlkeKodu',
+            'Telefon': 'Telefon',
+            'Email': 'Email',
+            'Cinsiyet': 'Cinsiyet',
+            'Doğum Tarihi': 'DogumTarihi',
+            'Adres': 'Adres',
+            'Notlar': 'Notlar',
+            // French
+            'Prénom': 'MusteriAdi',
+            'Nom': 'MusteriSoyadi',
+            'Code Pays': 'UlkeKodu',
+            'Téléphone': 'Telefon',
+            'E-mail': 'Email',
+            'Genre': 'Cinsiyet',
+            'Date de Naissance': 'DogumTarihi',
+            'Adresse': 'Adres',
+            'Notes': 'Notlar',
+            // German
+            'Vorname': 'MusteriAdi',
+            'Nachname': 'MusteriSoyadi',
+            'Ländercode': 'UlkeKodu',
+            'Telefon': 'Telefon',
+            'E-Mail': 'Email',
+            'Geschlecht': 'Cinsiyet',
+            'Geburtsdatum': 'DogumTarihi',
+            'Adresse': 'Adres',
+            // English
+            'Name': 'MusteriAdi',
+            'Surname': 'MusteriSoyadi',
+            'Country Code': 'UlkeKodu',
+            'Phone': 'Telefon',
+            'Email': 'Email',
+            'Gender': 'Cinsiyet',
+            'Birth Date': 'DogumTarihi',
+            'Address': 'Adres'
+        };
+
+        const dbFields = [
+            { value: '', label: {{ _("-- Not Mapped --")| tojson }} },
+    { value: 'MusteriAdi', label: { { _("First Name") | tojson } } },
+    { value: 'MusteriSoyadi', label: { { _("Last Name") | tojson } } },
+    { value: 'UlkeKodu', label: { { _("Country Code") | tojson } } },
+    { value: 'Telefon', label: { { _("Phone") | tojson } } },
+    { value: 'Email', label: { { _("Email") | tojson } } },
+    { value: 'Cinsiyet', label: { { _("Gender") | tojson } } },
+    { value: 'DogumTarihi', label: { { _("Birth Date") | tojson } } },
+    { value: 'Adres', label: { { _("Address") | tojson } } },
+    { value: 'Notlar', label: { { _("Notes") | tojson } } }
+    ];
+
+    uploadedFile.columns.forEach((col, index) => {
+        const row = document.createElement('tr');
+
+        // Excel Column
+        const colCell = document.createElement('td');
+        colCell.textContent = col;
+        row.appendChild(colCell);
+
+        // Database Field Selector
+        const fieldCell = document.createElement('td');
+        const select = document.createElement('select');
+        select.className = 'form-select';
+        select.dataset.excelColumn = col;
+
+        dbFields.forEach(field => {
+            const option = document.createElement('option');
+            option.value = field.value;
+            option.textContent = field.label;
+
+            // Auto-detect
+            if (fieldMapping[col] === field.value) {
+                option.selected = true;
+                columnMapping[col] = field.value;
+            }
+
+            select.appendChild(option);
+        });
+
+        select.addEventListener('change', (e) => {
+            const excelCol = e.target.dataset.excelColumn;
+            const dbField = e.target.value;
+            if (dbField) {
+                columnMapping[excelCol] = dbField;
+            } else {
+                delete columnMapping[excelCol];
+            }
+        });
+
+        fieldCell.appendChild(select);
+        row.appendChild(fieldCell);
+
+        // Preview
+        const previewCell = document.createElement('td');
+        if (uploadedFile.preview && uploadedFile.preview[0]) {
+            previewCell.textContent = uploadedFile.preview[0][col] || '';
+            previewCell.className = 'text-muted small';
+        }
+        row.appendChild(previewCell);
+
+        table.appendChild(row);
+    });
+}
+
+    document.getElementById('backToStep1').addEventListener('click', () => goToStep(1));
+    document.getElementById('nextToStep3').addEventListener('click', () => {
+        // Validate required fields
+        const requiredFields = ['MusteriAdi', 'MusteriSoyadi', 'Telefon'];
+        const mappedFields = Object.values(columnMapping);
+        const missingFields = requiredFields.filter(field => !mappedFields.includes(field));
+
+        if (missingFields.length > 0) {
+            alert(translations.mapRequired + ': ' + missingFields.join(', '));
+            return;
+        }
+
+        goToStep(3);
+        loadPreview();
+    });
+
+    // Step 3: Preview & Validation
+    function loadPreview() {
+        fetch("{{ url_for('musteri.musteri_import_preview') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                filepath: uploadedFile.filepath,
+                column_mapping: columnMapping
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    validatedData = data.data;
+
+                    // Update stats
+                    document.getElementById('totalRows').textContent = data.stats.total;
+                    document.getElementById('validRows').textContent = data.stats.valid;
+                    document.getElementById('warningRows').textContent = data.stats.warnings;
+                    document.getElementById('errorRows').textContent = data.stats.errors;
+
+                    // Load preview table
+                    displayPreview('all');
+                } else {
+                    alert(translations.error + ': ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(translations.validationError);
+            });
+    }
+
+    function displayPreview(filter) {
+        const table = document.getElementById('previewTable');
+        table.innerHTML = '';
+
+        let filteredData = validatedData;
+        if (filter !== 'all') {
+            filteredData = validatedData.filter(row => row.status === filter);
+        }
+
+        filteredData.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.className = 'row-' + row.status;
+
+            // Row Number
+            const rowNumCell = document.createElement('td');
+            rowNumCell.textContent = row.row_number;
+            tr.appendChild(rowNumCell);
+
+            // Data Fields
+            ['MusteriAdi', 'MusteriSoyadi', 'UlkeKodu', 'Telefon', 'Email'].forEach(field => {
+                const cell = document.createElement('td');
+                cell.textContent = row.data[field] || '';
+                tr.appendChild(cell);
+            });
+
+            // Status
+            const statusCell = document.createElement('td');
+            const statusBadge = document.createElement('span');
+            statusBadge.className = 'badge';
+
+            switch (row.status) {
+                case 'valid':
+                    statusBadge.classList.add('bg-success');
+                    statusBadge.textContent = translations.valid;
+                    break;
+                case 'warning':
+                    statusBadge.classList.add('bg-warning');
+                    statusBadge.textContent = translations.warning;
+                    break;
+                case 'error':
+                    statusBadge.classList.add('bg-danger');
+                    statusBadge.textContent = translations.error;
+                    break;
+                case 'duplicate':
+                    statusBadge.classList.add('bg-warning');
+                    statusBadge.textContent = translations.duplicate;
+                    break;
+            }
+
+            statusCell.appendChild(statusBadge);
+            tr.appendChild(statusCell);
+
+            // Messages
+            const messagesCell = document.createElement('td');
+            const messages = [...row.errors, ...row.warnings];
+            messagesCell.innerHTML = messages.map(msg =>
+                `<small class="d-block">${msg}</small>`
+            ).join('');
+            tr.appendChild(messagesCell);
+
+            table.appendChild(tr);
+        });
+    }
+
+    // Filter buttons
+    document.querySelectorAll('input[name="filterRows"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            displayPreview(e.target.value);
+        });
+    });
+
+    document.getElementById('backToStep2').addEventListener('click', () => goToStep(2));
+    document.getElementById('nextToStep4').addEventListener('click', () => {
+        goToStep(4);
+        updateImportWarning();
+    });
+
+    // Step 4: Import Options
+    function updateImportWarning() {
+        const skipErrors = document.getElementById('skipErrors').checked;
+        const updateDuplicates = document.getElementById('updateDuplicates').checked;
+        const skipDuplicates = document.getElementById('skipDuplicates').checked;
+
+        const stats = {
+            total: validatedData.length,
+            errors: validatedData.filter(r => r.status === 'error').length,
+            duplicates: validatedData.filter(r => r.status === 'duplicate').length,
+            valid: validatedData.filter(r => r.status === 'valid').length
+        };
+
+        let willImport = stats.valid;
+        if (!skipErrors) willImport += stats.errors;
+        if (updateDuplicates) willImport += stats.duplicates;
+        else if (!skipDuplicates) willImport += stats.duplicates;
+
+        document.getElementById('importWarningText').textContent =
+            `${translations.approximately} ${willImport} ${translations.of} ${stats.total} ${translations.customersWillImport}.`;
+    }
+
+    document.getElementById('skipErrors').addEventListener('change', updateImportWarning);
+    document.getElementById('updateDuplicates').addEventListener('change', updateImportWarning);
+    document.getElementById('skipDuplicates').addEventListener('change', updateImportWarning);
+
+    document.getElementById('backToStep3').addEventListener('click', () => goToStep(3));
+    document.getElementById('startImport').addEventListener('click', () => {
+        const options = {
+            skip_errors: document.getElementById('skipErrors').checked,
+            update_duplicates: document.getElementById('updateDuplicates').checked,
+            skip_duplicates: document.getElementById('skipDuplicates').checked
+        };
+
+        processImport(options);
+    });
+
+    // Step 5: Process Import
+    function processImport(options) {
+        goToStep(5);
+
+        fetch('/api/musteri-import/process', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                data: validatedData,
+                options: options
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const results = data.results;
+
+                    // Update result stats
+                    document.getElementById('resultSuccess').textContent = results.success;
+                    document.getElementById('resultUpdated').textContent = results.updated;
+                    document.getElementById('resultSkipped').textContent = results.skipped;
+                    document.getElementById('resultErrors').textContent = results.errors;
+
+                    // Load detail table
+                    const table = document.getElementById('resultsDetailTable');
+                    table.innerHTML = '';
+
+                    results.details.forEach(detail => {
+                        const tr = document.createElement('tr');
+
+                        const rowCell = document.createElement('td');
+                        rowCell.textContent = detail.row;
+                        tr.appendChild(rowCell);
+
+                        const statusCell = document.createElement('td');
+                        const badge = document.createElement('span');
+                        badge.className = 'badge';
+
+                        switch (detail.status) {
+                            case 'success':
+                                badge.classList.add('bg-success');
+                                badge.textContent = translations.success;
+                                break;
+                            case 'updated':
+                                badge.classList.add('bg-info');
+                                badge.textContent = translations.updated;
+                                break;
+                            case 'skipped':
+                                badge.classList.add('bg-warning');
+                                badge.textContent = translations.skipped;
+                                break;
+                            case 'error':
+                                badge.classList.add('bg-danger');
+                                badge.textContent = translations.error;
+                                break;
+                        }
+
+                        statusCell.appendChild(badge);
+                        tr.appendChild(statusCell);
+
+                        const messageCell = document.createElement('td');
+                        messageCell.textContent = detail.message;
+                        tr.appendChild(messageCell);
+
+                        table.appendChild(tr);
+                    });
+                } else {
+                    alert(translations.error + ': ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(translations.importError);
+            });
+    }
+
+    // Start Over
+    document.getElementById('startOver').addEventListener('click', () => {
+        location.reload();
+    });
+</script>
+{% endblock %}

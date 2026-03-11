@@ -1,0 +1,3 @@
+Searching for firma_id: 2 (type: <class 'int'>)
+Total Settings in DB: 1
+ - Setting FirmaID: 1 (type: <class 'int'>)

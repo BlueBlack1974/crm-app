@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('WhatsApp Settings') }} - Crandyx CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ _('WhatsApp Settings') }}</h1>
+    <a href="{{ url_for('ayarlar') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>{{ _('Settings') }}
+    </a>
+</div>
+
+{% if is_admin %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <label for="firmaSelect" class="form-label">{{ _('Select Company') }}</label>
+        <select class="form-select" id="firmaSelect" onchange="changeFirma()">
+            <option value="">{{ _('Select Company') }}</option>
+            {% for f in firmalar %}
+            <option value="{{ f.FirmaID }}" {% if firma and f.FirmaID==firma.FirmaID %}selected{% endif %}>
+                {{ f.FirmaAdi }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('WhatsApp Business API Settings') }}</h6>
+            </div>
+            <div class="card-body">
+                {% if whatsapp_ayar %}
+                <form method="POST"
+                    action="{{ url_for('ayarlar_whatsapp_guncelle', ayar_id=whatsapp_ayar.WhatsAppAyarID) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% if is_admin %}
+                    <input type="hidden" name="firma_id" value="{{ firma.FirmaID }}">
+                    {% endif %}
+                    {% else %}
+                    <form method="POST" action="{{ url_for('ayarlar_whatsapp_ekle') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% if is_admin %}
+                        <input type="hidden" name="firma_id" value="{{ firma.FirmaID }}">
+                        {% endif %}
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ _('Access Token') }} *</label>
+                                    <input type="text" name="access_token" class="form-control"
+                                        value="{{ whatsapp_ayar.AccessToken if whatsapp_ayar else '' }}"
+                                        placeholder="EAAxxxxxxxxxxxxxxxxxxxx" required>
+                                    <small class="form-text text-muted">
+                                        {{ _('WhatsApp Business API Access Token') }}
+                                        <br>
+                                        <span class="text-warning">
+                                            <i class="fas fa-exclamation-triangle"></i> 
+                                            {{ _('Tokens expire after 60 days. Refresh from Meta for Developers if you get error code 190.') }}
+                                        </span>
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ _('Phone Number ID') }} *</label>
+                                    <input type="text" name="phone_number_id" class="form-control"
+                                        value="{{ whatsapp_ayar.PhoneNumberID if whatsapp_ayar else '' }}"
+                                        placeholder="123456789012345" required>
+                                    <small class="form-text text-muted">{{ _('WhatsApp Business Phone Number ID')
+                                        }}</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ _('Business Account ID') }}</label>
+                                    <input type="text" name="business_account_id" class="form-control"
+                                        value="{{ whatsapp_ayar.BusinessAccountID if whatsapp_ayar else '' }}"
+                                        placeholder="123456789012345">
+                                    <small class="form-text text-muted">{{ _('WhatsApp Business Account ID (Optional)')
+                                        }}</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ _('Webhook Verify Token') }}</label>
+                                    <input type="text" name="webhook_verify_token" class="form-control"
+                                        value="{{ whatsapp_ayar.WebhookVerifyToken if whatsapp_ayar else '' }}"
+                                        placeholder="your_verify_token">
+                                    <small class="form-text text-muted">{{ _('Webhook verification token (Optional)')
+                                        }}</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ _('Test Number (Registered)') }}</label>
+                                    <input type="text" name="test_numarasi" class="form-control"
+                                        value="{{ whatsapp_ayar.TestNumarasi if whatsapp_ayar else '' }}"
+                                        placeholder="+90 536 243 84 46">
+                                    <small class="form-text text-muted">
+                                        {{ _('Test numarası ile mesaj göndermek için kayıtlı test numarası. Meta Business Suite\'te bu numarayı contacts\'a ekleyin.') }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+                        <h6 class="mb-3">{{ _('Message Templates') }}</h6>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ _('Appointment Creation Message') }}</label>
+                            <textarea name="randevu_olusturma_mesaji" class="form-control" rows="3"
+                                placeholder="{{ _('Hello') }} {musteri_adi}, {{ _('your appointment has been created for') }} {tarih} {saat}.">{{ whatsapp_ayar.RandevuOlusturmaMesaji if whatsapp_ayar else '' }}</textarea>
+                            <small class="form-text text-muted">{{ _('Variables: {musteri_adi}, {tarih}, {saat},
+                                {defter}') }}</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ _('Appointment Reminder Message') }}</label>
+                            <textarea name="randevu_hatirlatma_mesaji" class="form-control" rows="3"
+                                placeholder="{{ _('Hello') }} {musteri_adi}, {{ _('you have an appointment tomorrow at') }} {saat}.">{{ whatsapp_ayar.RandevuHatirlatmaMesaji if whatsapp_ayar else '' }}</textarea>
+                            <small class="form-text text-muted">{{ _('Variables: {musteri_adi}, {tarih}, {saat},
+                                {defter}') }}</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ _('Appointment Cancellation Message') }}</label>
+                            <textarea name="randevu_iptal_mesaji" class="form-control" rows="3"
+                                placeholder="{{ _('Hello') }} {musteri_adi}, {{ _('your appointment on') }} {tarih} {saat} {{ _('has been cancelled') }}.">{{ whatsapp_ayar.RandevuIptalMesaji if whatsapp_ayar else '' }}</textarea>
+                            <small class="form-text text-muted">{{ _('Variables: {musteri_adi}, {tarih}, {saat},
+                                {defter}') }}</small>
+                        </div>
+
+                        <hr>
+                        <h6 class="mb-3">{{ _('Message Sending Options') }}</h6>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="mesaj_gonder_on_create"
+                                        id="mesaj_gonder_on_create" {% if whatsapp_ayar and
+                                        whatsapp_ayar.MesajGonderOnCreate %}checked{% endif %}>
+                                    <label class="form-check-label" for="mesaj_gonder_on_create">
+                                        {{ _('Send message when appointment is created') }}
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="mesaj_gonder_24_saat_once"
+                                        id="mesaj_gonder_24_saat_once" {% if whatsapp_ayar and
+                                        whatsapp_ayar.MesajGonder24SaatOnce %}checked{% endif %}>
+                                    <label class="form-check-label" for="mesaj_gonder_24_saat_once">
+                                        {{ _('Send reminder 24 hours before') }}
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="mesaj_gonder_1_saat_once"
+                                        id="mesaj_gonder_1_saat_once" {% if whatsapp_ayar and
+                                        whatsapp_ayar.MesajGonder1SaatOnce %}checked{% endif %}>
+                                    <label class="form-check-label" for="mesaj_gonder_1_saat_once">
+                                        {{ _('Send reminder 1 hour before') }}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            {% if whatsapp_ayar %}
+                            <button type="button" class="btn btn-info" id="testConnectionBtn" onclick="testWhatsAppConnection()">
+                                <i class="fas fa-vial me-1"></i>{{ _('Test Connection') }}
+                            </button>
+                            <a href="{{ url_for('ayarlar_whatsapp_sil', ayar_id=whatsapp_ayar.WhatsAppAyarID) }}"
+                                class="btn btn-danger"
+                                onclick="return confirm({{ _('Are you sure you want to delete WhatsApp settings?')|tojson }})">
+                                <i class="fas fa-trash me-1"></i>{{ _('Delete') }}
+                            </a>
+                            {% endif %}
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>
+                                {% if whatsapp_ayar %}{{ _('Update') }}{% else %}{{ _('Add') }}{% endif %}
+                            </button>
+                        </div>
+                        
+                        <div id="testResult" class="mt-3" style="display: none;"></div>
+                    </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">{{ _('Information') }}</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>{{ _('Note') }}:</strong> {{ _('WhatsApp Business API setup is required for sending
+                    messages.') }}
+                </div>
+
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>{{ _('Important') }}:</strong> {{ _('Access Tokens expire after 60 days. If you receive error code 190, please refresh your Access Token from Meta for Developers.') }}
+                </div>
+
+                <h6>{{ _('Setup Steps') }}:</h6>
+                <ol class="small">
+                    <li>{{ _('Create a WhatsApp Business Account') }}</li>
+                    <li>{{ _('Get your Access Token from Meta for Developers') }}</li>
+                    <li>{{ _('Get your Phone Number ID') }}</li>
+                    <li>{{ _('Configure webhook (optional)') }}</li>
+                </ol>
+
+                <h6>{{ _('Message Variables') }}:</h6>
+                <ul class="small">
+                    <li><code>{musteri_adi}</code> - {{ _('Customer Name') }}</li>
+                    <li><code>{tarih}</code> - {{ _('Date') }}</li>
+                    <li><code>{saat}</code> - {{ _('Time') }}</li>
+                    <li><code>{defter}</code> - {{ _('Book') }}</li>
+                    <li><code>{referans}</code> - {{ _('Reference') }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function changeFirma() {
+        const firmaId = document.getElementById('firmaSelect').value;
+        if (firmaId) {
+            window.location.href = '{{ url_for("ayarlar_whatsapp") }}?firma_id=' + firmaId;
+        }
+    }
+    
+    function testWhatsAppConnection() {
+        const testBtn = document.getElementById('testConnectionBtn');
+        const testResult = document.getElementById('testResult');
+        const accessToken = document.querySelector('input[name="access_token"]').value;
+        const phoneNumberId = document.querySelector('input[name="phone_number_id"]').value;
+        
+        if (!accessToken || !phoneNumberId) {
+            testResult.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Lütfen Access Token ve Phone Number ID girin.</div>';
+            testResult.style.display = 'block';
+            return;
+        }
+        
+        testBtn.disabled = true;
+        testBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>{{ _("Testing") }}...';
+        testResult.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Bağlantı test ediliyor...</div>';
+        testResult.style.display = 'block';
+        
+        fetch('/api/whatsapp/test', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                access_token: accessToken,
+                phone_number_id: phoneNumberId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                testResult.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> <strong>Bağlantı başarılı!</strong><br>' + (data.message || 'Access Token ve Phone Number ID doğru çalışıyor.') + '</div>';
+            } else {
+                testResult.innerHTML = '<div class="alert alert-danger"><i class="fas fa-times-circle"></i> <strong>Bağlantı başarısız!</strong><br>' + (data.error || 'Bilinmeyen hata') + '</div>';
+            }
+        })
+        .catch(error => {
+            testResult.innerHTML = '<div class="alert alert-danger"><i class="fas fa-times-circle"></i> <strong>Hata:</strong> ' + error.message + '</div>';
+        })
+        .finally(() => {
+            testBtn.disabled = false;
+            testBtn.innerHTML = '<i class="fas fa-vial me-1"></i>{{ _("Test Connection") }}';
+        });
+    }
+</script>
+{% endblock %}

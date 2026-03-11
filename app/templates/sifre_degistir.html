@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Şifre Değiştir - Crandyx CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">Şifre Değiştir</h1>
+  <span class="text-muted">Güvenlik için yeni şifre belirleyin</span>
+  </div>
+
+<div class="row">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-body">
+        <form method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label class="form-label">Yeni Şifre</label>
+            <input type="password" name="yeni" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Yeni Şifre (Tekrar)</label>
+            <input type="password" name="yeni2" class="form-control" required>
+          </div>
+          <div class="alert alert-info">
+            En az 8 karakter, bir büyük harf, bir küçük harf, bir rakam ve bir özel karakter içermelidir.
+          </div>
+          <button type="submit" class="btn btn-primary">Güncelle</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+
+
+
+
+
