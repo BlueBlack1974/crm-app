@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
-from flask_babel import get_locale
+from flask_babel import get_locale, gettext as _
 from app.extensions import db, csrf
 from app.models import (
     Randevu, RandevuYetki, RandevuReferans, RandevuDefterAyar, Kullanici, 
@@ -189,7 +189,7 @@ def randevu_ekle():
                 if has_conflict:
                     return jsonify({
                         'success': False, 
-                        'message': f'Seçili müşterinin bu saatte başka bir randevusu mevcut: {c_rnd.RandevuBaslik}'
+                        'message': _('Selected customer already has another appointment at this time: %(title)s', title=c_rnd.RandevuBaslik)
                     }), 400
                 
             # Müşteri bul veya oluştur
@@ -1002,7 +1002,7 @@ def api_slot_check():
             return jsonify({
                 "success": True, 
                 "available": False, 
-                "message": "Seçilen saatte başka bir randevu mevcut",
+                "message": _("Another appointment exists at the selected time"),
                 "cakisan_randevu": {
                     "baslik": cakisan_randevu.RandevuBaslik,
                     "saat": cakisan_randevu.RandevuTarihi.strftime('%H:%M')
@@ -1016,7 +1016,7 @@ def api_slot_check():
                 return jsonify({
                     "success": True, 
                     "available": False, 
-                    "message": "Bu müşterinin aynı saatte başka bir randevusu mevcut",
+                    "message": _("This customer already has another appointment at the same time"),
                     "cakisan_randevu": {
                         "baslik": c_randevu.RandevuBaslik,
                         "saat": c_randevu.RandevuTarihi.strftime('%H:%M')
@@ -1078,7 +1078,7 @@ def api_randevu_seri_kaydet():
         randevular_data = data.get('randevular', [])
         
         if not baslik or not defter_id or not musteri_id or not randevular_data:
-            return jsonify({"success": False, "message": "Eksik parametreler. Başlık, Defter, Müşteri ve en az 1 tarih gerekli."}), 400
+            return jsonify({"success": False, "message": _("Missing parameters. Title, Book, Customer and at least 1 date are required.")}), 400
             
         # Müşteriyi bul
         from app.models import Musteri, RandevuIslem, RandevuDefterAyar, RandevuSeri
@@ -1147,7 +1147,7 @@ def api_randevu_seri_kaydet():
         # Eğer hiçbiri eklenemediyse hata ver
         if not eklenen_randevular:
             db.session.rollback()
-            return jsonify({"success": False, "message": "Geçerli tarih/saat bilgisi bulunamadı."}), 400
+            return jsonify({"success": False, "message": _("No valid date/time information found.")}), 400
             
         # Admin değilse yetkileri ekle
         is_admin = session.get('is_admin', False)

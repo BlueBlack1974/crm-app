@@ -3084,3 +3084,18 @@ msgstr "Cliquez sur Calculer les dates pour générer le calendrier."
 
 msgid "Save Series"
 msgstr "Enregistrer la série"
+
+msgid "Selected customer already has another appointment at this time: %(title)s"
+msgstr "Le client sélectionné a déjà un autre rendez-vous à cette heure: %(title)s"
+
+msgid "Another appointment exists at the selected time"
+msgstr "Un autre rendez-vous existe déjà à l'heure sélectionnée"
+
+msgid "This customer already has another appointment at the same time"
+msgstr "Ce client a déjà un autre rendez-vous à la même heure"
+
+msgid "Missing parameters. Title, Book, Customer and at least 1 date are required."
+msgstr "Paramètres manquants. Le titre, le livre, le client et au moins une date sont requis."
+
+msgid "No valid date/time information found."
+msgstr "Aucune information de date/heure valide n'a été trouvée."

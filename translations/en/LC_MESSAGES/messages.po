@@ -2990,3 +2990,18 @@ msgstr "Click Calculate Dates to generate the schedule."
 
 msgid "Save Series"
 msgstr "Save Series"
+
+msgid "Selected customer already has another appointment at this time: %(title)s"
+msgstr "Selected customer already has another appointment at this time: %(title)s"
+
+msgid "Another appointment exists at the selected time"
+msgstr "Another appointment exists at the selected time"
+
+msgid "This customer already has another appointment at the same time"
+msgstr "This customer already has another appointment at the same time"
+
+msgid "Missing parameters. Title, Book, Customer and at least 1 date are required."
+msgstr "Missing parameters. Title, Book, Customer and at least 1 date are required."
+
+msgid "No valid date/time information found."
+msgstr "No valid date/time information found."

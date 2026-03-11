@@ -3079,3 +3079,18 @@ msgstr "Klicken Sie auf Daten berechnen, um den Zeitplan zu erstellen."
 
 msgid "Save Series"
 msgstr "Serie speichern"
+
+msgid "Selected customer already has another appointment at this time: %(title)s"
+msgstr "Der ausgewählte Kunde hat bereits einen anderen Termin zu dieser Zeit: %(title)s"
+
+msgid "Another appointment exists at the selected time"
+msgstr "Zu der gewählten Zeit existiert bereits ein anderer Termin"
+
+msgid "This customer already has another appointment at the same time"
+msgstr "Dieser Kunde hat bereits einen weiteren Termin zur gleichen Zeit"
+
+msgid "Missing parameters. Title, Book, Customer and at least 1 date are required."
+msgstr "Fehlende Parameter. Titel, Buch, Kunde und mindestens 1 Datum sind erforderlich."
+
+msgid "No valid date/time information found."
+msgstr "Keine gültigen Datums-/Uhrzeitinformationen gefunden."

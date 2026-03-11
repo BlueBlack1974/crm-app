@@ -3154,3 +3154,18 @@ msgstr "Takvimi oluşturmak için Tarihleri Hesapla butonuna tıklayın."
 
 msgid "Save Series"
 msgstr "Seriyi Kaydet"
+
+msgid "Selected customer already has another appointment at this time: %(title)s"
+msgstr "Seçili müşterinin bu saatte başka bir randevusu mevcut: %(title)s"
+
+msgid "Another appointment exists at the selected time"
+msgstr "Seçilen saatte başka bir randevu mevcut"
+
+msgid "This customer already has another appointment at the same time"
+msgstr "Bu müşterinin aynı saatte başka bir randevusu mevcut"
+
+msgid "Missing parameters. Title, Book, Customer and at least 1 date are required."
+msgstr "Eksik parametreler. Başlık, Defter, Müşteri ve en az 1 tarih gerekli."
+
+msgid "No valid date/time information found."
+msgstr "Geçerli tarih/saat bilgisi bulunamadı."
