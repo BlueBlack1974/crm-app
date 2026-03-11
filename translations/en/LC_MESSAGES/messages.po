@@ -1633,16 +1633,7 @@ msgid "Confirm New Password"
 msgstr "Reset Password"
 
 msgid "Back to Login"
-msgstr "Customer"
-
-msgid "Passwords do not match"
-msgstr ""
-
-msgid "Social Media"
-msgstr "Social Media"
-
-msgid "New appointments"
-msgstr "New appointments"
+msgstr "Back to Login"
 
 msgid "Yapılacaklar Listesi"
 msgstr "Todo List"

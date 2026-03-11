@@ -1649,7 +1649,7 @@ msgid "Confirm New Password"
 msgstr "Reset Password"
 
 msgid "Back to Login"
-msgstr "Customer"
+msgstr "Zurück zum Login"
 
 msgid "Passwords do not match"
 msgstr "Passwörter stimmen nicht überein"

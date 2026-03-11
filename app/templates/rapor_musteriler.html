@@ -326,6 +326,43 @@
                         </tbody>
                     </table>
                 </div>
+                <!-- Sayfalama -->
+                {% if toplam_sayfa > 1 %}
+                {% set filtre_qs %}\
+                {% for k, v in filtreler.items() %}{% if v %}&{{ k }}={{ v }}{% endif %}{% endfor %}\
+                {% endset %}
+                <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+                    <small class="text-muted">
+                        Toplam <strong>{{ toplam_kayit }}</strong> kayıt &nbsp;|&nbsp;
+                        Sayfa <strong>{{ sayfa }}</strong> / {{ toplam_sayfa }}
+                    </small>
+                    <nav aria-label="Müşteri listesi sayfalama">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item {% if sayfa == 1 %}disabled{% endif %}">
+                                <a class="page-link" href="?sayfa={{ sayfa - 1 }}{{ filtre_qs }}">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% for p in range(1, toplam_sayfa + 1) %}
+                            {% if p == sayfa %}
+                            <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+                            {% elif p == 1 or p == toplam_sayfa or (p >= sayfa - 2 and p <= sayfa + 2) %} <li
+                                class="page-item">
+                                <a class="page-link" href="?sayfa={{ p }}{{ filtre_qs }}">{{ p }}</a>
+                                </li>
+                                {% elif p == sayfa - 3 or p == sayfa + 3 %}
+                                <li class="page-item disabled"><span class="page-link">…</span></li>
+                                {% endif %}
+                                {% endfor %}
+                                <li class="page-item {% if sayfa == toplam_sayfa %}disabled{% endif %}">
+                                    <a class="page-link" href="?sayfa={{ sayfa + 1 }}{{ filtre_qs }}">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
                 {% else %}
                 <div class="text-muted">{{ _('No records found.') }}</div>
                 {% endif %}

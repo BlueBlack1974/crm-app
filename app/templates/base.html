@@ -42,8 +42,8 @@
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Font Awesome (yerel - CDN gecikmesi yok) -->
+    <link href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}" rel="stylesheet">
     <!-- SweetAlert2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 
@@ -59,6 +59,69 @@
             background-color: white;
             transform: translateY(-2px);
         }
+
+        /* ===== GLOBAL DARK MODE OVERRIDEleri ===== */
+        /* bg-white olan tüm elementleri karanlık modda düzelt */
+        html.dark-mode .bg-white {
+            background-color: #2d3035 !important;
+            color: #e9ecef !important;
+        }
+
+        /* Autocomplete / typeahead dropdown'lar */
+        html.dark-mode .list-group-item {
+            background-color: #2d3035;
+            color: #e9ecef;
+            border-color: #495057;
+        }
+
+        html.dark-mode .list-group-item:hover,
+        html.dark-mode .list-group-item:focus,
+        html.dark-mode .list-group-item.active {
+            background-color: #0d6efd;
+            color: #fff;
+            border-color: #0d6efd;
+        }
+
+        html.dark-mode .list-group-item-action:hover {
+            background-color: #0d6efd !important;
+            color: #fff !important;
+        }
+
+        /* Konum mutlak dropdown'lar (position-absolute) */
+        html.dark-mode [style*="z-index: 1000"],
+        html.dark-mode [style*="z-index:1000"],
+        html.dark-mode [style*="z-index: 1050"],
+        html.dark-mode [style*="z-index:1050"] {
+            background-color: #2d3035;
+            color: #e9ecef;
+        }
+
+        /* form-control karanlık mod */
+        html.dark-mode .form-control,
+        html.dark-mode .form-select {
+            background-color: #343a40;
+            color: #e9ecef;
+            border-color: #495057;
+        }
+
+        html.dark-mode .form-control:focus,
+        html.dark-mode .form-select:focus {
+            background-color: #3a4148;
+            color: #e9ecef;
+            border-color: #0d6efd;
+        }
+
+        html.dark-mode .form-control::placeholder {
+            color: #adb5bd;
+        }
+
+        html.dark-mode .input-group-text {
+            background-color: #343a40;
+            color: #e9ecef;
+            border-color: #495057;
+        }
+
+        /* ===== DARK MODE OVERRIDEleri SONU ===== */
 
         /* Modal dialog'a hafif gölge ekle */
         .modal-dialog {
