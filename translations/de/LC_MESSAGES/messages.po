@@ -3028,3 +3028,54 @@ msgstr "Wählen Sie einen Kunden aus der Liste, um Nachrichten anzuzeigen"
 
 msgid "New Customer"
 msgstr "Neuer Kunde"
+
+msgid "Plan Appointment Series"
+msgstr "Terminserie planen"
+
+msgid "Series Settings"
+msgstr "Serieneinstellungen"
+
+msgid "Series Title"
+msgstr "Serientitel"
+
+msgid "e.g. Physiotherapy Sessions"
+msgstr "z.B. Physiotherapie-Sitzungen"
+
+msgid "Total Sessions"
+msgstr "Gesamtsitzungen"
+
+msgid "Frequency"
+msgstr "Häufigkeit"
+
+msgid "Every Day"
+msgstr "Jeden Tag"
+
+msgid "Every 2 Days"
+msgstr "Alle 2 Tage"
+
+msgid "Every 3 Days"
+msgstr "Alle 3 Tage"
+
+msgid "Once a Week"
+msgstr "Einmal wöchentlich"
+
+msgid "Every 2 Weeks"
+msgstr "Alle 2 Wochen"
+
+msgid "Once a Month"
+msgstr "Einmal im Monat"
+
+msgid "Closed days based on the selected book will be automatically skipped."
+msgstr "Ruhetage des ausgewählten Buchs werden automatisch übersprungen."
+
+msgid "Calculate Dates"
+msgstr "Daten berechnen"
+
+msgid "Calculated Dates"
+msgstr "Berechnete Daten"
+
+msgid "Click Calculate Dates to generate the schedule."
+msgstr "Klicken Sie auf Daten berechnen, um den Zeitplan zu erstellen."
+
+msgid "Save Series"
+msgstr "Serie speichern"

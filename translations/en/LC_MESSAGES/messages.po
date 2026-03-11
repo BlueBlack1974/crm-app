@@ -2939,3 +2939,54 @@ msgstr "Select a customer from the list to view messages"
 
 msgid "New Customer"
 msgstr "New Customer"
+
+msgid "Plan Appointment Series"
+msgstr "Plan Appointment Series"
+
+msgid "Series Settings"
+msgstr "Series Settings"
+
+msgid "Series Title"
+msgstr "Series Title"
+
+msgid "e.g. Physiotherapy Sessions"
+msgstr "e.g. Physiotherapy Sessions"
+
+msgid "Total Sessions"
+msgstr "Total Sessions"
+
+msgid "Frequency"
+msgstr "Frequency"
+
+msgid "Every Day"
+msgstr "Every Day"
+
+msgid "Every 2 Days"
+msgstr "Every 2 Days"
+
+msgid "Every 3 Days"
+msgstr "Every 3 Days"
+
+msgid "Once a Week"
+msgstr "Once a Week"
+
+msgid "Every 2 Weeks"
+msgstr "Every 2 Weeks"
+
+msgid "Once a Month"
+msgstr "Once a Month"
+
+msgid "Closed days based on the selected book will be automatically skipped."
+msgstr "Closed days based on the selected book will be automatically skipped."
+
+msgid "Calculate Dates"
+msgstr "Calculate Dates"
+
+msgid "Calculated Dates"
+msgstr "Calculated Dates"
+
+msgid "Click Calculate Dates to generate the schedule."
+msgstr "Click Calculate Dates to generate the schedule."
+
+msgid "Save Series"
+msgstr "Save Series"
