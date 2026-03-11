@@ -12,6 +12,42 @@ from collections import defaultdict
 
 randevu_bp = Blueprint('randevu', __name__)
 
+def check_customer_conflict(musteri_id, randevu_tarihi, sure, exclude_randevu_id=None):
+    """
+    Belirli bir müşterinin, belirtilen zaman diliminde (farklı bir defterde dahi olsa) 
+    başka bir randevusu olup olmadığını kontrol eder.
+    """
+    if not musteri_id:
+        return False, None
+        
+    randevu_bas = randevu_tarihi
+    randevu_bit = randevu_tarihi + timedelta(minutes=sure)
+    
+    day_start = datetime(randevu_tarihi.year, randevu_tarihi.month, randevu_tarihi.day, 0, 0)
+    day_end = day_start + timedelta(days=1)
+    
+    q = Randevu.query.filter(
+        Randevu.MusteriID == musteri_id,
+        Randevu.RandevuTarihi >= day_start,
+        Randevu.RandevuTarihi < day_end,
+        Randevu.Durum != 'iptal'
+    )
+    
+    if exclude_randevu_id:
+        q = q.filter(Randevu.RandevuID != exclude_randevu_id)
+        
+    existing_randevular = q.all()
+    
+    for r in existing_randevular:
+        r_bas = r.RandevuTarihi
+        r_bit = r_bas + timedelta(minutes=(r.RandevuSuresi or 60))
+        
+        # Çakışma var mı?
+        if (randevu_bas < r_bit and randevu_bit > r_bas):
+            return True, r
+            
+    return False, None
+
 @randevu_bp.route('/randevular')
 @login_required
 def randevular():
@@ -146,6 +182,15 @@ def randevu_ekle():
                 randevu_tarihi = datetime.strptime(f"{tarih_gun} {saat}", "%Y-%m-%d %H:%M")
             except ValueError:
                 return jsonify({'success': False, 'message': 'Geçersiz tarih formatı!'}), 400
+                
+            # Müşteri çakışma kontrolü
+            if secilen_musteri_id:
+                has_conflict, c_rnd = check_customer_conflict(secilen_musteri_id, randevu_tarihi, sure)
+                if has_conflict:
+                    return jsonify({
+                        'success': False, 
+                        'message': f'Seçili müşterinin bu saatte başka bir randevusu mevcut: {c_rnd.RandevuBaslik}'
+                    }), 400
                 
             # Müşteri bul veya oluştur
             musteri = None
@@ -742,6 +787,7 @@ def api_slots():
     # Inputs
     date_str = request.args.get('date')  # YYYY-MM-DD
     defter_id = request.args.get('defter_id', type=int)
+    musteri_id = request.args.get('musteri_id', type=int)
     include_unavailable = request.args.get('all', '0') == '1'
     if not date_str:
         return jsonify({"success": False, "message": "date parametresi zorunlu"}), 400
@@ -841,11 +887,20 @@ def api_slots():
     ).all()
 
     def is_overlapping(slot_start: datetime, slot_end: datetime) -> bool:
+        # Önce defterdeki mevcut randevularla çakışmaya bak
         for r in existing:
             r_start = r.RandevuTarihi
             r_end = r_start + timedelta(minutes=(r.RandevuSuresi or 60))
             if r_start < slot_end and slot_start < r_end:
                 return True
+                
+        # Eğer musteri_id verilmişse, müşterinin başka defterlerdeki (veya bu defterdeki) 
+        # randevularıyla çakışmasını da kontrol et
+        if musteri_id:
+            has_conflict, _ = check_customer_conflict(musteri_id, slot_start, slot_dk)
+            if has_conflict:
+                return True
+                
         return False
 
     # Slotlari olustur
@@ -878,6 +933,12 @@ def api_slot_check():
         randevu_suresi = int(data.get('sure', 60))
         exclude_randevu_id = int(data.get('exclude_randevu_id', 0)) if data.get('exclude_randevu_id') else None  # Düzenleme sırasında kendi randevusunu hariç tut
         
+        musteri_id = data.get('musteri_id')
+        if musteri_id:
+            try:
+                musteri_id = int(musteri_id)
+            except ValueError:
+                musteri_id = None
         if not tarih_str or not saat_str or not defter_id:
             return jsonify({"success": False, "message": "Eksik parametreler"}), 400
         
@@ -947,6 +1008,20 @@ def api_slot_check():
                     "saat": cakisan_randevu.RandevuTarihi.strftime('%H:%M')
                 }
             })
+            
+        # Müşterinin başka bir randevusu var mı? (Tüm defterlerde)
+        if musteri_id:
+            has_conflict, c_randevu = check_customer_conflict(musteri_id, randevu_dt, randevu_suresi, exclude_randevu_id)
+            if has_conflict:
+                return jsonify({
+                    "success": True, 
+                    "available": False, 
+                    "message": "Bu müşterinin aynı saatte başka bir randevusu mevcut",
+                    "cakisan_randevu": {
+                        "baslik": c_randevu.RandevuBaslik,
+                        "saat": c_randevu.RandevuTarihi.strftime('%H:%M')
+                    }
+                })
             
         # Blok kontrolü
         bloklar = RandevuDefterBlok.query.filter(
@@ -1034,6 +1109,17 @@ def api_randevu_seri_kaydet():
                 sure = rnd_data.get('sure', 60)
                 
                 randevu_dt = datetime.strptime(f"{tarih_str} {saat_str}", "%Y-%m-%d %H:%M")
+                
+                # Müşteri çakışma kontrolü
+                has_conflict, c_rnd = check_customer_conflict(musteri_id, randevu_dt, sure)
+                if has_conflict:
+                    print(f"[WARN] Müşteri çakışması tespit edildi: {tarih_str} {saat_str}")
+                    # Eğer çakışma varsa bu slotu atlayabilir veya hata verebiliriz. 
+                    # Kullanıcı "başka saate olabilir" dediği için seride çakışanları atlamak yerine 
+                    # kayıt sırasında hata verip düzeltmesini istemek daha güvenli olabilir.
+                    # Ancak seri planlama sırasında slotlar zaten boş olanlara göre hesaplandığı için 
+                    # buraya düşmesi eşzamanlı bir kayıt durumunda olur.
+                    continue
                 
                 yeni_randevu = Randevu(
                     RandevuBaslik=f"{baslik} - Seans {index+1}",

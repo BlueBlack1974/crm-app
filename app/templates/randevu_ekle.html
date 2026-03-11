@@ -946,16 +946,17 @@
             loadingMessage = 'Uygun saatler yükleniyor...';
         }
         container.innerHTML = '<div class="text-muted small">' + loadingMessage + '</div>';
-        fetch(`{{ url_for('randevu.api_slots') }}?date=${date}&defter_id=${defterId}&all=1`, {
+        const musteriId = document.getElementById('secilen_musteri_id').value;
+        fetch(`{{ url_for('randevu.api_slots') }}?date=${date}&defter_id=${defterId}&all=1&musteri_id=${musteriId}`, {
             credentials: 'same-origin',
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
             .then(r => {
                 if (r.status === 401) {
                     alert({{ _("Session expired. Please login again.") | tojson }});
-        return Promise.reject(new Error('Unauthorized'));
-    }
-    return r.json();
+                    return Promise.reject(new Error('Unauthorized'));
+                }
+                return r.json();
             })
             .then(data => {
         if (!data.success) { throw new Error(data.message || 'Hata'); }
@@ -1362,6 +1363,9 @@
 
         // Hidden input'a müşteri ID'sini kaydet
         document.getElementById('secilen_musteri_id').value = musteri.id;
+
+        // Müşteri değiştiği için müsait slotları tekrar yükle (çakışma kontrolü için)
+        loadSlots();
 
         // Seçilen müşteri bilgisini göster
         const tamAdi = musteri.display || (musteri.ad + ' ' + musteri.soyad).trim();
@@ -2719,7 +2723,8 @@
                         const csrfMatch = document.cookie.match(/csrf_access_token=([^;]+)/);
                         const csrfToken = csrfMatch ? csrfMatch[1] : '';
                         
-                        const req = await fetch(`{{ url_for("randevu.api_slots") }}?date=${checkDateStr}&defter_id=${defterId}`, {
+                        const musteriId = document.getElementById('secilen_musteri_id').value;
+                        const req = await fetch(`{{ url_for("randevu.api_slots") }}?date=${checkDateStr}&defter_id=${defterId}&musteri_id=${musteriId}`, {
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest'
                             }
