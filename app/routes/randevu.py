@@ -1077,9 +1077,18 @@ def api_randevu_seri_kaydet():
                 )
                 db.session.add(yeni_yetki)
                 
-        # Activity Log
-        from app.utils.logging import log_user_action_decorator
-        
+        # Aktivite loglarını (ve diğer logları) oluştur
+        try:
+            from app.routes.aktivite import create_activity_for_appointment
+            from app.utils.logging import log_user_action
+            
+            for r in eklenen_randevular:
+                create_activity_for_appointment(r)
+                log_user_action('CREATE', 'Randevu', r.RandevuID, 
+                                detail=f"Randevu serisi oluşturuldu: {r.RandevuTarihi.strftime('%d.%m.%Y %H:%M')} - {r.MusteriAdi}")
+        except Exception as e:
+            print(f"[WARN] Randevu serisi için log oluşturma hatası: {e}")
+            
         db.session.commit()
         return jsonify({
             "success": True, 
