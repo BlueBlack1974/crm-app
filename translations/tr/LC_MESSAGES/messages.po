@@ -3103,3 +3103,54 @@ msgstr "Mesajları görüntülemek için listeden bir müşteri seçin"
 
 msgid "New Customer"
 msgstr "Yeni Müşteri"
+
+msgid "Plan Appointment Series"
+msgstr "Randevu Serisi Planla"
+
+msgid "Series Settings"
+msgstr "Seri Ayarları"
+
+msgid "Series Title"
+msgstr "Seri Başlığı"
+
+msgid "e.g. Physiotherapy Sessions"
+msgstr "Örn. Fizyoterapi Seansları"
+
+msgid "Total Sessions"
+msgstr "Toplam Seans"
+
+msgid "Frequency"
+msgstr "Sıklık"
+
+msgid "Every Day"
+msgstr "Her Gün"
+
+msgid "Every 2 Days"
+msgstr "2 Günde Bir"
+
+msgid "Every 3 Days"
+msgstr "3 Günde Bir"
+
+msgid "Once a Week"
+msgstr "Haftada Bir"
+
+msgid "Every 2 Weeks"
+msgstr "2 Haftada Bir"
+
+msgid "Once a Month"
+msgstr "Ayda Bir"
+
+msgid "Closed days based on the selected book will be automatically skipped."
+msgstr "Seçilen deftere göre kapalı olan günler otomatik atlanacaktır."
+
+msgid "Calculate Dates"
+msgstr "Tarihleri Hesapla"
+
+msgid "Calculated Dates"
+msgstr "Hesaplanan Tarihler"
+
+msgid "Click Calculate Dates to generate the schedule."
+msgstr "Takvimi oluşturmak için Tarihleri Hesapla butonuna tıklayın."
+
+msgid "Save Series"
+msgstr "Seriyi Kaydet"
