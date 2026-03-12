@@ -13,6 +13,10 @@ def index():
         return redirect(url_for('main.dashboard'))
     return render_template('home.html')
 
+@main_bp.route('/home-new')
+def home_new():
+    return render_template('home_new.html')
+
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():

@@ -1,0 +1,253 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Crandyx CRM - {{ _('Modern CRM Solutions') }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section {
+        padding-top: 180px;
+        padding-bottom: 100px;
+        position: relative;
+    }
+
+    .hero-title {
+        font-weight: 700;
+        font-size: 4.5rem;
+        line-height: 1.1;
+        margin-bottom: 24px;
+    }
+
+    .hero-subtitle {
+        font-size: 1.25rem;
+        color: var(--text-muted);
+        max-width: 600px;
+        margin-bottom: 40px;
+    }
+
+    .hero-image-wrap {
+        position: relative;
+        perspective: 1000px;
+    }
+
+    .hero-image-container {
+        transform: rotateY(-10deg) rotateX(5deg);
+        box-shadow: -20px 20px 60px rgba(0,0,0,0.5);
+        border-radius: 24px;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.1);
+        transition: transform 0.5s ease;
+    }
+
+    .hero-image-container:hover {
+        transform: rotateY(0deg) rotateX(0deg);
+    }
+
+    .feature-icon {
+        width: 60px;
+        height: 60px;
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--accent-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 16px;
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+    }
+
+    .stats-item {
+        padding: 0 40px;
+        border-right: 1px solid var(--glass-border);
+    }
+
+    .stats-item:last-child {
+        border-right: none;
+    }
+
+    .reveal {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: all 0.8s ease-out;
+    }
+
+    .reveal.active {
+        opacity: 1;
+        transform: translateY(0);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 reveal">
+                <h1 class="hero-title text-gradient">
+                    {{ _('Scale Faster with') }} <br>
+                    <span style="color: var(--accent-color)">Crandyx CRM</span>
+                </h1>
+                <p class="hero-subtitle">
+                    {{ _('Transform your business with intelligent appointment scheduling, deep analytics, and AI-driven insights—all in one elegant platform.') }}
+                </p>
+                <div class="d-flex gap-3">
+                    <a href="{{ url_for('auth.login') }}" class="btn-premium btn-lg d-flex align-items-center">
+                        {{ _('Get Started Now') }} <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
+                    <a href="#features" class="btn btn-outline-light btn-lg rounded-pill px-4">
+                        {{ _('Live Demo') }}
+                    </a>
+                </div>
+                
+                <div class="mt-5 d-flex align-items-center">
+                    <div class="stats-item">
+                        <div class="h3 fw-bold mb-0">99%</div>
+                        <small class="text-muted">{{ _('Uptime') }}</small>
+                    </div>
+                    <div class="stats-item">
+                        <div class="h3 fw-bold mb-0">5k+</div>
+                        <small class="text-muted">{{ _('Active Users') }}</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 hero-image-wrap mt-5 mt-lg-0 reveal" style="transition-delay: 0.2s">
+                <div class="hero-image-container">
+                    <img src="{{ url_for('static', filename='img/modern_hero.png') }}" alt="CRM Dashboard" class="img-fluid">
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="features" class="py-5">
+    <div class="container">
+        <div class="text-center mb-5 reveal">
+            <h2 class="display-4 fw-bold text-gradient">{{ _('Engineered for Growth') }}</h2>
+            <p class="text-muted">{{ _('High-performance features to help you lead your industry.') }}</p>
+        </div>
+        
+        <div class="row g-4">
+            <!-- Ana Özellikler -->
+            <div class="col-md-4 reveal" style="transition-delay: 0.1s">
+                <div class="glass-card p-4 h-100">
+                    <div class="feature-icon"><i class="fas fa-calendar-check"></i></div>
+                    <h3>{{ _('Quick Appointments') }}</h3>
+                    <p class="text-muted">{{ _('Create, manage, and track appointments with powerful calendar views and capacity-aware scheduling.') }}</p>
+                </div>
+            </div>
+            <div class="col-md-4 reveal" style="transition-delay: 0.2s">
+                <div class="glass-card p-4 h-100">
+                    <div class="feature-icon"><i class="fas fa-chart-pie"></i></div>
+                    <h3>{{ _('Effective Reports') }}</h3>
+                    <p class="text-muted">{{ _('Make data-driven decisions with busy hour heatmaps, performance KPIs, and much more.') }}</p>
+                </div>
+            </div>
+            <div class="col-md-4 reveal" style="transition-delay: 0.3s">
+                <div class="glass-card p-4 h-100">
+                    <div class="feature-icon"><i class="fas fa-heart"></i></div>
+                    <h3>{{ _('Customer Satisfaction') }}</h3>
+                    <p class="text-muted">{{ _('Increase loyalty with single customer views, smart reminders, and personalized insights.') }}</p>
+                </div>
+            </div>
+
+            <!-- Diğer Modüller -->
+            <div class="col-md-3 reveal" style="transition-delay: 0.1s">
+                <div class="glass-card p-4 h-100 text-center">
+                    <i class="fas fa-tasks fa-2x mb-3 text-info"></i>
+                    <h5>{{ _('Task Management') }}</h5>
+                    <small class="text-muted d-block mb-3">{{ _('Auto-create tasks from appointments.') }}</small>
+                    <span class="badge bg-primary">{{ _('New') }}</span>
+                </div>
+            </div>
+            <div class="col-md-3 reveal" style="transition-delay: 0.2s">
+                <div class="glass-card p-4 h-100 text-center">
+                    <i class="fas fa-bell fa-2x mb-3 text-warning"></i>
+                    <h5>{{ _('Smart Reminders') }}</h5>
+                    <small class="text-muted d-block mb-3">{{ _('Flashing notifications and daily alerts.') }}</small>
+                    <span class="badge bg-danger">{{ _('Active') }}</span>
+                </div>
+            </div>
+            <div class="col-md-3 reveal" style="transition-delay: 0.3s">
+                <div class="glass-card p-4 h-100 text-center">
+                    <i class="fas fa-language fa-2x mb-3 text-success"></i>
+                    <h5>{{ _('Multilingual') }}</h5>
+                    <small class="text-muted d-block mb-3">{{ _('TR, EN, FR, DE dynamic translation.') }}</small>
+                    <span class="badge bg-secondary">{{ _('4 Languages') }}</span>
+                </div>
+            </div>
+            <div class="col-md-3 reveal" style="transition-delay: 0.4s">
+                <div class="glass-card p-4 h-100 text-center">
+                    <i class="fab fa-whatsapp fa-2x mb-3 text-success"></i>
+                    <h5>{{ _('Omnichannel') }}</h5>
+                    <small class="text-muted d-block mb-3">{{ _('WhatsApp and Instagram integration.') }}</small>
+                    <span class="badge bg-info">{{ _('Integrated') }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5 bg-dark bg-opacity-25">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 reveal">
+                <h3 class="display-5 fw-bold mb-4 text-gradient">{{ _('Why Choose Crandyx?') }}</h3>
+                <ul class="list-unstyled">
+                    <li class="mb-3 d-flex align-items-center">
+                        <i class="fas fa-check-circle text-success me-3 fs-4"></i>
+                        <span>{{ _('Ultra-fast planning with smart slot management') }}</span>
+                    </li>
+                    <li class="mb-3 d-flex align-items-center">
+                        <i class="fas fa-check-circle text-success me-3 fs-4"></i>
+                        <span>{{ _('Rich analytics: busy hours, efficiency, capacity usage') }}</span>
+                    </li>
+                    <li class="mb-3 d-flex align-items-center">
+                        <i class="fas fa-check-circle text-success me-3 fs-4"></i>
+                        <span>{{ _('Modern interface that works flawlessly on every device') }}</span>
+                    </li>
+                    <li class="mb-3 d-flex align-items-center">
+                        <i class="fas fa-check-circle text-success me-3 fs-4"></i>
+                        <span>{{ _('Secure, role-based access and fine-tuned permissions') }}</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-lg-6 reveal text-center" style="transition-delay: 0.2s">
+                <div class="p-5 glass-card d-inline-block">
+                    <i class="fas fa-rocket fa-5x text-gradient" style="opacity: 0.8"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5 mt-5">
+    <div class="container">
+        <div class="glass-card p-5 text-center reveal">
+            <h2 class="display-5 fw-bold mb-4">{{ _('Ready to revolutionize your business?') }}</h2>
+            <p class="text-muted mb-4 fs-5">{{ _('Join thousands of businesses scaling their operations with Crandyx CRM.') }}</p>
+            <a href="{{ url_for('auth.login') }}" class="btn-premium btn-lg px-5">
+                {{ _('Create Free Account') }}
+            </a>
+            <p class="small text-muted mt-3">{{ _('No credit card required • Instant access') }}</p>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function reveal() {
+        var reveals = document.querySelectorAll(".reveal");
+        for (var i = 0; i < reveals.length; i++) {
+            var windowHeight = window.innerHeight;
+            var elementTop = reveals[i].getBoundingClientRect().top;
+            var elementVisible = 150;
+            if (elementTop < windowHeight - elementVisible) {
+                reveals[i].classList.add("active");
+            }
+        }
+    }
+
+    window.addEventListener("scroll", reveal);
+    window.addEventListener("load", reveal);
+</script>
+{% endblock %}
