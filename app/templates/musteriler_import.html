@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.html" if not request.args.get('minimal') else "base_empty.html" %}
 
 {% block title %}{{ _('Customer Excel Import') }} - Crandyx CRM{% endblock %}
 
@@ -7,10 +7,11 @@
     <div class="row">
         <div class="col-12">
             <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h4 class="mb-0">
-                        <i class="bi bi-file-earmark-excel"></i> {{ _('Customer Excel Import') }}
+                        <i class="fas fa-file-excel"></i> {{ _('Customer Excel Import') }}
                     </h4>
+
                 </div>
                 <div class="card-body">
                     <!-- Progress Steps -->
@@ -50,7 +51,7 @@
                         <h5 class="mb-3">{{ _('Step 1: Upload Excel File') }}</h5>
 
                         <div class="alert alert-info">
-                            <i class="bi bi-info-circle"></i>
+                            <i class="fas fa-info-circle"></i>
                             <strong>{{ _('Important Notes:') }}</strong>
                             <ul class="mb-0 mt-2">
                                 <li>{{ _('Excel file must be in .xlsx or .xls format') }}</li>
@@ -69,7 +70,7 @@
                                             instructions') }}</p>
                                         <a href="{{ url_for('musteri.musteri_import_template') }}"
                                             class="btn btn-outline-primary">
-                                            <i class="bi bi-download"></i> {{ _('Download Template') }}
+                                            <i class="fas fa-download"></i> {{ _('Download Template') }}
                                         </a>
                                     </div>
                                 </div>
@@ -81,11 +82,11 @@
 
                                         <!-- Drag & Drop Zone -->
                                         <div class="upload-zone" id="uploadZone">
-                                            <i class="bi bi-cloud-upload"></i>
+                                            <i class="fas fa-cloud-upload-alt"></i>
                                             <p class="mb-2">{{ _('Drag & drop Excel file here') }}</p>
                                             <p class="text-muted small">{{ _('or') }}</p>
                                             <button type="button" class="btn btn-primary" id="selectFileBtn">
-                                                <i class="bi bi-folder2-open"></i> {{ _('Select File') }}
+                                                <i class="fas fa-folder-open"></i> {{ _('Select File') }}
                                             </button>
                                             <input type="file" id="excelFileInput" accept=".xlsx,.xls"
                                                 style="display: none;">
@@ -101,7 +102,7 @@
 
                                         <div id="uploadResult" style="display: none;">
                                             <div class="alert alert-success">
-                                                <i class="bi bi-check-circle"></i>
+                                                <i class="fas fa-check-circle"></i>
                                                 <span id="uploadResultText"></span>
                                             </div>
                                         </div>
@@ -112,7 +113,7 @@
 
                         <div class="text-end mt-3">
                             <button type="button" class="btn btn-primary" id="nextToStep2" disabled>
-                                {{ _('Next') }} <i class="bi bi-arrow-right"></i>
+                                {{ _('Next') }} <i class="fas fa-arrow-right"></i>
                             </button>
                         </div>
                     </div>
@@ -122,7 +123,7 @@
                         <h5 class="mb-3">{{ _('Step 2: Map Excel Columns to Database Fields') }}</h5>
 
                         <div class="alert alert-info">
-                            <i class="bi bi-info-circle"></i>
+                            <i class="fas fa-info-circle"></i>
                             {{ _('Match your Excel columns with database fields. System will auto-detect common column
                             names.') }}
                         </div>
@@ -146,10 +147,10 @@
 
                         <div class="text-end mt-3">
                             <button type="button" class="btn btn-secondary" id="backToStep1">
-                                <i class="bi bi-arrow-left"></i> {{ _('Back') }}
+                                <i class="fas fa-arrow-left"></i> {{ _('Back') }}
                             </button>
                             <button type="button" class="btn btn-primary" id="nextToStep3">
-                                {{ _('Next') }} <i class="bi bi-arrow-right"></i>
+                                {{ _('Next') }} <i class="fas fa-arrow-right"></i>
                             </button>
                         </div>
                     </div>
@@ -233,10 +234,10 @@
 
                         <div class="text-end mt-3">
                             <button type="button" class="btn btn-secondary" id="backToStep2">
-                                <i class="bi bi-arrow-left"></i> {{ _('Back') }}
+                                <i class="fas fa-arrow-left"></i> {{ _('Back') }}
                             </button>
                             <button type="button" class="btn btn-primary" id="nextToStep4">
-                                {{ _('Next') }} <i class="bi bi-arrow-right"></i>
+                                {{ _('Next') }} <i class="fas fa-arrow-right"></i>
                             </button>
                         </div>
                     </div>
@@ -287,7 +288,7 @@
                                         </div>
 
                                         <div class="alert alert-warning">
-                                            <i class="bi bi-exclamation-triangle"></i>
+                                            <i class="fas fa-exclamation-triangle"></i>
                                             <strong>{{ _('Warning:') }}</strong>
                                             <span id="importWarningText"></span>
                                         </div>
@@ -298,10 +299,10 @@
 
                         <div class="text-end mt-3">
                             <button type="button" class="btn btn-secondary" id="backToStep3">
-                                <i class="bi bi-arrow-left"></i> {{ _('Back') }}
+                                <i class="fas fa-arrow-left"></i> {{ _('Back') }}
                             </button>
                             <button type="button" class="btn btn-success btn-lg" id="startImport">
-                                <i class="bi bi-upload"></i> {{ _('Start Import') }}
+                                <i class="fas fa-upload"></i> {{ _('Start Import') }}
                             </button>
                         </div>
                     </div>
@@ -369,10 +370,10 @@
 
                         <div class="text-center mt-4">
                             <a href="/rapor/musteriler" class="btn btn-primary btn-lg">
-                                <i class="bi bi-people"></i> {{ _('Go to Customers') }}
+                                <i class="fas fa-users"></i> {{ _('Go to Customers') }}
                             </a>
                             <button type="button" class="btn btn-secondary btn-lg" id="startOver">
-                                <i class="bi bi-arrow-clockwise"></i> {{ _('Import Another File') }}
+                                <i class="fas fa-sync-alt"></i> {{ _('Import Another File') }}
                             </button>
                         </div>
                     </div>
@@ -503,20 +504,20 @@
     // Translations
     const translations = {
         selectValidFile: {{ _("Please select a valid Excel file (.xlsx or .xls)") | tojson }},
-    error: { { _("Error") | tojson } },
-    uploadError: { { _("An error occurred while uploading the file") | tojson } },
-    mapRequired: { { _("Please map required fields") | tojson } },
-    validationError: { { _("An error occurred during validation") | tojson } },
-    importError: { { _("An error occurred during import") | tojson } },
-    approximately: { { _("Approximately") | tojson } },
-    of: { { _("of") | tojson } },
-    customersWillImport: { { _("customers will be imported") | tojson } },
-    valid: { { _("Valid") | tojson } },
-    warning: { { _("Warning") | tojson } },
-    duplicate: { { _("Duplicate") | tojson } },
-    success: { { _("Success") | tojson } },
-    updated: { { _("Updated") | tojson } },
-    skipped: { { _("Skipped") | tojson } }
+        error: {{ _("Error") | tojson }},
+        uploadError: {{ _("An error occurred while uploading the file") | tojson }},
+        mapRequired: {{ _("Please map required fields") | tojson }},
+        validationError: {{ _("An error occurred during validation") | tojson }},
+        importError: {{ _("An error occurred during import") | tojson }},
+        approximately: {{ _("Approximately") | tojson }},
+        of: {{ _("of") | tojson }},
+        customersWillImport: {{ _("customers will be imported") | tojson }},
+        valid: {{ _("Valid") | tojson }},
+        warning: {{ _("Warning") | tojson }},
+        duplicate: {{ _("Duplicate") | tojson }},
+        success: {{ _("Success") | tojson }},
+        updated: {{ _("Updated") | tojson }},
+        skipped: {{ _("Skipped") | tojson }}
 };
 
     let uploadedFile = null;
@@ -687,15 +688,15 @@
 
         const dbFields = [
             { value: '', label: {{ _("-- Not Mapped --")| tojson }} },
-    { value: 'MusteriAdi', label: { { _("First Name") | tojson } } },
-    { value: 'MusteriSoyadi', label: { { _("Last Name") | tojson } } },
-    { value: 'UlkeKodu', label: { { _("Country Code") | tojson } } },
-    { value: 'Telefon', label: { { _("Phone") | tojson } } },
-    { value: 'Email', label: { { _("Email") | tojson } } },
-    { value: 'Cinsiyet', label: { { _("Gender") | tojson } } },
-    { value: 'DogumTarihi', label: { { _("Birth Date") | tojson } } },
-    { value: 'Adres', label: { { _("Address") | tojson } } },
-    { value: 'Notlar', label: { { _("Notes") | tojson } } }
+    { value: 'MusteriAdi', label: {{ _("First Name") | tojson }} },
+    { value: 'MusteriSoyadi', label: {{ _("Last Name") | tojson }} },
+    { value: 'UlkeKodu', label: {{ _("Country Code") | tojson }} },
+    { value: 'Telefon', label: {{ _("Phone") | tojson }} },
+    { value: 'Email', label: {{ _("Email") | tojson }} },
+    { value: 'Cinsiyet', label: {{ _("Gender") | tojson }} },
+    { value: 'DogumTarihi', label: {{ _("Birth Date") | tojson }} },
+    { value: 'Adres', label: {{ _("Address") | tojson }} },
+    { value: 'Notlar', label: {{ _("Notes") | tojson }} }
     ];
 
     uploadedFile.columns.forEach((col, index) => {
